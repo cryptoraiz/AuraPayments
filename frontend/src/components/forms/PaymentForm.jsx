@@ -335,7 +335,7 @@ export default function PaymentForm({ theme = 'modern' }) {
             <div className="grid grid-cols-3 gap-3">
               {/* WhatsApp */}
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Arc Invoice Payment Link:\n${generatedLink}`)}`}
+                href={`https://wa.me/?text=${encodeURIComponent(`ARC Connect Payment Link:\n${generatedLink}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-[#25D366]/5 border border-[#25D366]/20 hover:bg-[#25D366]/10 hover:scale-105 transition-all group/icon"
@@ -347,7 +347,7 @@ export default function PaymentForm({ theme = 'modern' }) {
               </a >
               {/* Telegram */}
               <a
-                href={`https://t.me/share/url?url=${encodeURIComponent(generatedLink)}&text=${encodeURIComponent('Arc Invoice Payment')}`}
+                href={`https://t.me/share/url?url=${encodeURIComponent(generatedLink)}&text=${encodeURIComponent('ARC Connect Payment')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-[#0088cc]/5 border border-[#0088cc]/20 hover:bg-[#0088cc]/10 hover:scale-105 transition-all group/icon"
@@ -359,7 +359,7 @@ export default function PaymentForm({ theme = 'modern' }) {
               </a>
               {/* Gmail */}
               <a
-                href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent('Arc Invoice Receipt')}&body=${encodeURIComponent(`Here is your payment link via Arc Invoice: ${generatedLink}`)}`}
+                href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent('ARC Connect Receipt')}&body=${encodeURIComponent(`Here is your payment link via ARC Connect: ${generatedLink}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex flex-col items-center justify-center gap-2 p-3 rounded-xl bg-red-500/5 border border-red-500/20 hover:bg-red-500/10 hover:scale-105 transition-all group/icon"

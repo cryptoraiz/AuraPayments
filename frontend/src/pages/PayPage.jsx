@@ -559,7 +559,7 @@ export default function PayPage() {
                         <div className="text-center space-y-1 mb-4">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
                                 <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-                                Arc Invoice
+                                ARC Connect
                             </div>
                             <h1 className="text-3xl font-black mt-2">Payment Request</h1>
 

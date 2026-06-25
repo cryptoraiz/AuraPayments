@@ -38,7 +38,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
     doc.setTextColor(...COLORS.text.light);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(26);
-    doc.text('Arc Invoice', 20, 25);
+    doc.text('ARC Connect', 20, 25);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -199,7 +199,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...COLORS.text.muted);
-    centerText('Generated via Arc Invoice - The new era of payments.', pageHeight - 8);
+    centerText('Generated via ARC Connect - The new era of payments.', pageHeight - 8);
 };
 
 /**
@@ -208,7 +208,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
 export const generatePaymentReceipt = (paymentData) => {
     const doc = new jsPDF();
     drawReceiptOnDoc(doc, paymentData);
-    const filename = `ArcReceipt_${paymentData.id ? paymentData.id.slice(0, 8) : 'New'}.pdf`;
+    const filename = `ArcConnect_Receipt_${paymentData.id ? paymentData.id.slice(0, 8) : 'New'}.pdf`;
     doc.save(filename);
 };
 
@@ -244,6 +244,6 @@ export const generateBatchReceipts = (paymentsArray, walletAddress) => {
         drawReceiptOnDoc(doc, item);
     });
 
-    const filename = `ArcBackup_${Date.now()}.pdf`;
+    const filename = `ArcConnect_Backup_${Date.now()}.pdf`;
     doc.save(filename);
 };
