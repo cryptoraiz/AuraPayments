@@ -60,7 +60,7 @@ export default function Navbar() {
       }
       return true
     } catch (rawErr) {
-      console.error("Raw Switch falhou:", rawErr)
+      console.error("Raw Switch failed:", rawErr)
       toast.error('Error switching network. Try manually.', { duration: 4000 })
       return false
     }
@@ -87,10 +87,10 @@ export default function Navbar() {
 
         const hexChainId = await provider.request({ method: 'eth_chainId' })
         const realChainId = parseInt(hexChainId, 16)
-        // console.log('🔍 Real chainId from provider:', { hexChainId, realChainId, wagmiChainId: chainId })
+        // console.log('🔍 Real chainId do provider:', { hexChainId, realChainId, wagmiChainId: chainId })
         return realChainId
       } catch (err) {
-        console.error('❌ Erro ao obter chainId do provider:', err)
+        console.error('⚠️ Error getting chainId from provider:', err)
         return null
       }
     }

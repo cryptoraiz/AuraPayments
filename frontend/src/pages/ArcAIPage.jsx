@@ -14,7 +14,7 @@ export default function ArcAIPage() {
     "[SYSTEM] Inicializando Circle Agent Stack...",
     "[SYSTEM] Conectado à Arc Testnet.",
     "[AGENT] Monitorando pools de liquidez USDC...",
-    "[AGENT] Módulo de Fatura 2.0 ativo."
+    "[AGENT] Invoice 2.0 Module active."
   ]);
 
   const scrollToBottom = () => {
@@ -51,27 +51,32 @@ export default function ArcAIPage() {
       let response = '';
 
       if (conversationState === 'IDLE') {
-        if (lowerInput.includes('swap') || lowerInput.includes('trocar') || lowerInput.includes('trade')) {
-          response = 'Excelente escolha! Para começarmos, de qual ativo para qual ativo você quer fazer o swap? (ex: USDC para EURC)';
+        if (lowerInput.includes('swap') || lowerInput.includes('trade')) {
+          response = 'Excellent choice! To get started, which asset do you want to swap to which asset? (e.g., USDC to EURC)';
           setConversationState('AWAITING_SWAP_PAIRS');
-          addLog(`[AGENT] Estado alterado para AWAITING_SWAP_PAIRS`);
-        } else if (lowerInput.includes('bridge') || lowerInput.includes('ponte') || lowerInput.includes('transferir')) {
-          response = 'Ótimo. O protocolo CCTP está pronto. Para qual rede de destino você deseja enviar seus tokens? (ex: Base, Arbitrum)';
+          addLog(`[AGENT] State changed to AWAITING_SWAP_PAIRS`);
+        } else if (lowerInput.includes('bridge') || lowerInput.includes('transfer')) {
+          response = 'Great. The CCTP protocol is ready. To which destination network do you want to send your tokens? (e.g., Base, Arbitrum)';
           setConversationState('AWAITING_BRIDGE_CHAIN');
-          addLog(`[AGENT] Estado alterado para AWAITING_BRIDGE_CHAIN`);
-        } else if (lowerInput.includes('invoice') || lowerInput.includes('fatura') || lowerInput.includes('cobrar')) {
-          response = 'Vamos gerar essa cobrança. Qual o nome do seu cliente e o valor da fatura? (ex: Alice Crypto, 500 USDC)';
+          addLog(`[AGENT] State changed to AWAITING_BRIDGE_CHAIN`);
+        } else if (lowerInput.includes('invoice') || lowerInput.includes('bill')) {
+          response = 'Let\'s generate this invoice. What is the name of your client and the invoice amount? (e.g., Alice Crypto, 500 USDC)';
           setConversationState('AWAITING_INVOICE_DETAILS');
+          addLog(`[AGENT] State changed to AWAITING_INVOICE_DETAILS`);
           addLog(`[AGENT] Estado alterado para AWAITING_INVOICE_DETAILS`);
         } else {
-          response = 'Não entendi completamente. Sou um agente focado em DeFi. Você quer que eu faça um Swap, uma Bridge ou gere uma Fatura?';
+          response = 'Não entendi bem. Sou um agente focado em DeFi. Você gostaria que eu realizasse um Swap, uma Bridge ou gerasse uma Fatura?';
         }
       } 
       
       else if (conversationState === 'AWAITING_SWAP_PAIRS') {
-        response = 'Perfeito, já mapeei a melhor rota nas pools. Qual o valor que você deseja trocar?';
-        setConversationState('AWAITING_SWAP_AMOUNT');
-        addLog(`[AGENT] Rota de liquidez encontrada. Aguardando valor.`);
+        if (lowerInput.includes('usdc') && lowerInput.includes('eurc')) {
+          response = 'Perfeito, já mapeei a melhor rota nas pools. Qual o valor que você deseja trocar?';
+          setConversationState('AWAITING_SWAP_AMOUNT');
+          addLog(`[AGENT] Estado alterado para AWAITING_SWAP_AMOUNT`);
+        } else {
+          response = 'Atualmente só consigo trocar USDC por EURC na Arc Testnet. Por favor, confirme esse par.';
+        }
       } 
       
       else if (conversationState === 'AWAITING_SWAP_AMOUNT') {
@@ -82,10 +87,14 @@ export default function ArcAIPage() {
       }
 
       else if (conversationState === 'AWAITING_BRIDGE_CHAIN') {
-        response = 'Rede confirmada. Iniciando a queima (burn) de USDC na Arc e o mint na rede de destino via Circle CCTP... 🌉 Sucesso! Seus fundos chegaram ao destino.';
-        setConversationState('IDLE');
-        addLog(`[TX] Executando Burn de USDC na rede origem...`);
-        addLog(`[TX] Mint de USDC na rede destino concluído.`);
+        if (lowerInput.includes('base') || lowerInput.includes('arbitrum')) {
+          response = 'Rede confirmada. Iniciando a queima (burn) de USDC na Arc e o mint na rede de destino via Circle CCTP... 🚀 Sucesso! Seus fundos chegaram ao destino.';
+          setConversationState('IDLE');
+          addLog(`[AGENT] Transferência Cross-Chain executada via CCTP`);
+          addLog(`[AGENT] Estado alterado para IDLE`);
+        } else {
+          response = 'Suporto apenas pontes para Base ou Arbitrum. Para qual delas?';
+        }
       }
 
       else if (conversationState === 'AWAITING_INVOICE_DETAILS') {

@@ -243,9 +243,9 @@ export default function PayPage() {
             } else if (msg.includes('different address than the sender') || msg.includes('invalid_address') || code.includes('invalid_address')) {
                 setShowSelfPayModal(true)
             } else if (msg.includes('insufficient') || msg.includes('balance')) {
-                toast.error('⚠️ Saldo insuficiente de USDC')
+                toast.error('💰 Insufficient USDC balance')
             } else {
-                toast.error('Erro no pagamento: ' + (err.message || 'Tente novamente'))
+                toast.error('Payment Error: ' + (err.message || 'Please try again'))
             }
         }
     }
@@ -600,7 +600,7 @@ export default function PayPage() {
                                     </div>
                                 )}
 
-                                {/* Detalhes */}
+                                {/* Details */}
                                 <div className="space-y-1.5 text-xs">
                                     <div className="flex justify-between p-2 rounded-lg bg-white/[0.02]">
                                         <span className="text-gray-400">Recipient</span>

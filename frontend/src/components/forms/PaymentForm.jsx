@@ -86,7 +86,7 @@ export default function PaymentForm({ theme = 'modern' }) {
         status: 'pending'
       }
 
-      // Save to backend FIRST (se falhar, não salva local nem mostra sucesso)
+      // Save to backend FIRST (if it fails, do not save locally or show success)
       const backendPayload = {
         id: newId,
         fromWallet: address,
@@ -99,7 +99,7 @@ export default function PaymentForm({ theme = 'modern' }) {
 
       await invoiceAPI.create(backendPayload)
 
-      // Só salva local se a API teve sucesso
+      // Only save locally if the API request succeeds
       savePaymentLink(linkData)
 
       // Generate Link

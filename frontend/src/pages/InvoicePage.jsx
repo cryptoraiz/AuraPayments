@@ -74,7 +74,7 @@ export default function InvoicePage() {
                 transition={{ duration: 0.2 }}
                 className="col-start-1 row-start-1 w-full flex justify-center"
               >
-                <div className="w-full max-w-[540px] relative h-[540px] flex flex-col">
+                <div className="w-full max-w-[540px] relative min-h-[540px] h-auto flex flex-col">
                   <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl blur-xl opacity-50 pointer-events-none"></div>
                   <div className="flex-1 overflow-hidden [&>div]:h-full">
                     <PaymentForm theme="modern" />
@@ -92,7 +92,7 @@ export default function InvoicePage() {
                 transition={{ duration: 0.2 }}
                 className="col-start-1 row-start-1 w-full flex justify-center"
               >
-                <div className="w-full max-w-[540px] bg-dark-card border border-dark-border rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[540px]">
+                <div className="w-full max-w-[540px] bg-dark-card border border-dark-border rounded-3xl overflow-hidden shadow-2xl flex flex-col min-h-[540px] h-auto">
               {/* History List */}
               <div className="grid grid-cols-4 px-6 py-4 border-b border-dark-border/50 text-xs font-bold text-dark-muted uppercase tracking-wider">
                 <div className="col-span-1">Invoice ID</div>
