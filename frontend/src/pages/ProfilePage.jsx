@@ -155,7 +155,7 @@ export default function ProfilePage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.2 }}
-                className="col-start-1 row-start-1 w-full bg-dark-card border border-dark-border rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[480px]"
+                className="col-start-1 row-start-1 w-full bg-dark-card border border-dark-border rounded-3xl overflow-hidden shadow-2xl flex flex-col min-h-[480px]"
               >
                 <div className="grid grid-cols-4 px-6 py-5 border-b border-dark-border/50 text-xs font-bold text-dark-muted uppercase tracking-wider">
                   <div className="col-span-2">Asset</div>
@@ -217,7 +217,7 @@ export default function ProfilePage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.2 }}
-                className="col-start-1 row-start-1 w-full bg-dark-card border border-dark-border rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[480px]"
+                className="col-start-1 row-start-1 w-full bg-dark-card border border-dark-border rounded-3xl overflow-hidden shadow-2xl flex flex-col min-h-[480px]"
               >
                 {/* Activity Header simulating search */}
                 <div className="px-6 py-5 border-b border-dark-border/50 bg-dark-bg/50">
