@@ -72,13 +72,13 @@ export default function ProfilePage() {
       <div className="w-full max-w-7xl mx-auto px-6 space-y-4 relative z-20">
         
         {/* Profile Header (Total Balance Card) */}
-        <div className="bg-dark-card border border-dark-border rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="bg-dark-card border border-dark-border rounded-3xl p-4 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Ambient Glow inside card */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
           
           <div className="flex items-center gap-6 z-10">
             {/* Avatar Upload */}
-            <div className="relative w-20 h-20 rounded-2xl shadow-lg border-2 border-dark-border/50 p-1 group cursor-pointer">
+            <div className="relative w-16 h-16 rounded-xl shadow-lg border-2 border-dark-border/50 p-1 group cursor-pointer">
               <input 
                 type="file" 
                 accept="image/*" 
@@ -87,7 +87,7 @@ export default function ProfilePage() {
                 title="Change Profile Picture"
               />
               <div 
-                className="w-full h-full rounded-xl overflow-hidden relative flex items-center justify-center bg-dark-bg" 
+                className="w-full h-full rounded-lg overflow-hidden relative flex items-center justify-center bg-dark-bg" 
                 style={!avatarUrl ? { background: avatarGradient } : {}}
               >
                 {avatarUrl && (
@@ -105,7 +105,7 @@ export default function ProfilePage() {
             </div>
             {/* Info */}
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-0.5">
                 <span className="text-sm font-mono text-dark-muted bg-dark-input px-3 py-1 rounded-full border border-dark-border/50">
                   {address.slice(0, 6)}...{address.slice(-4)}
                 </span>
@@ -113,8 +113,8 @@ export default function ProfilePage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> Connected
                 </span>
               </div>
-              <h1 className="text-4xl font-black text-white tracking-tight mt-2">{totalBalance}</h1>
-              <span className="text-sm text-dark-muted font-medium">Total Portfolio Value</span>
+              <h1 className="text-3xl font-black text-white tracking-tight mt-1">{totalBalance}</h1>
+              <span className="text-xs text-dark-muted font-medium">Total Portfolio Value</span>
             </div>
           </div>
 
