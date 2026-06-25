@@ -6,8 +6,8 @@ export default function Footer() {
 
   const handleMaintenance = (e) => {
     e.preventDefault()
-    toast.info('Em manutenção', {
-      description: 'Esta rede social estará disponível em breve.'
+    toast.info('Coming soon', {
+      description: 'This social network will be available shortly.'
     })
   }
 
