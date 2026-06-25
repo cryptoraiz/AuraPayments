@@ -1,0 +1,21 @@
+{
+    "name": "arc-invoice-backend",
+    "version": "1.0.0",
+    "description": "Arc Invoice serverless backend for invoice notifications",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "dev": "node api/index.js",
+        "deploy": "vercel"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "dotenv": "^17.2.3",
+        "ethers": "^6.13.5",
+        "express": "^5.2.1",
+        "pg": "^8.16.3"
+    },
+    "devDependencies": {
+        "vercel": "^33.0.0"
+    }
+}

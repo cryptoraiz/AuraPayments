@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arc Faucet | 50 USDC Grátis na Arc Network</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        * {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0a0e1a;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* Animated Gradient Background */
+        .gradient-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a1f35 25%, #0f1729 50%, #1e2a4a 75%, #0a0e1a 100%);
+            background-size: 400% 400%;
+            animation: gradient-animation 15s ease infinite;
+            z-index: 0;
+        }
+
+        @keyframes gradient-animation {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        /* Glowing Orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 20s ease-in-out infinite;
+            z-index: 1;
+        }
+
+        .orb-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.8) 0%, transparent 70%);
+            top: -10%;
+            left: -10%;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.6) 0%, transparent 70%);
+            bottom: -10%;
+            right: -10%;
+            animation-delay: 7s;
+        }
+
+        .orb-3 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.5) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            animation-delay: 14s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            25% {
+                transform: translate(50px, -50px) scale(1.1);
+            }
+
+            50% {
+                transform: translate(-30px, 50px) scale(0.9);
+            }
+
+            75% {
+                transform: translate(40px, 30px) scale(1.05);
+            }
+        }
+
+        /* Grid Pattern */
+        .grid-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* Premium Glass Card */
+        .glass-card {
+            background: linear-gradient(135deg,
+                    rgba(255, 255, 255, 0.1) 0%,
+                    rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow:
+                0 8px 32px 0 rgba(0, 0, 0, 0.37),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* Holographic Effect */
+        .holographic {
+            position: relative;
+            background: linear-gradient(135deg,
+                    rgba(59, 130, 246, 0.1) 0%,
+                    rgba(6, 182, 212, 0.1) 25%,
+                    rgba(139, 92, 246, 0.1) 50%,
+                    rgba(6, 182, 212, 0.1) 75%,
+                    rgba(59, 130, 246, 0.1) 100%);
+            background-size: 200% 200%;
+            animation: holographic-shift 3s ease infinite;
+        }
+
+        @keyframes holographic-shift {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        /* Neon Text */
+        .neon-text {
+            text-shadow:
+                0 0 10px rgba(59, 130, 246, 0.8),
+                0 0 20px rgba(59, 130, 246, 0.6),
+                0 0 30px rgba(59, 130, 246, 0.4),
+                0 0 40px rgba(59, 130, 246, 0.2);
+            animation: neon-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes neon-pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        /* Premium Button */
+        .premium-button {
+            position: relative;
+            background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .premium-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.6s;
+        }
+
+        .premium-button:hover::before {
+            left: 100%;
+        }
+
+        .premium-button:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow:
+                0 20px 60px rgba(59, 130, 246, 0.5),
+                0 0 40px rgba(6, 182, 212, 0.3);
+        }
+
+        .premium-button:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        /* Floating Animation */
+        .float-animation {
+            animation: smooth-float 6s ease-in-out infinite;
+        }
+
+        @keyframes smooth-float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        /* Shimmer Effect */
+        .shimmer {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shimmer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: shimmer-slide 3s infinite;
+        }
+
+        @keyframes shimmer-slide {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        /* Success Ripple */
+        .success-ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.4);
+            animation: ripple-expand 1s ease-out forwards;
+        }
+
+        @keyframes ripple-expand {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Particle Trail */
+        .particle-trail {
+            position: fixed;
+            width: 4px;
+            height: 4px;
+            background: rgba(59, 130, 246, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-fade 2s ease-out forwards;
+            z-index: 9999;
+        }
+
+        @keyframes particle-fade {
+            to {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+        }
+
+        /* Stats Counter Animation */
+        .counter {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(6, 182, 212, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        /* Social Button Hover */
+        .social-btn {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .social-btn::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: currentColor;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .social-btn:hover::after {
+            width: 80%;
+        }
+
+        .social-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Copy Notification */
+        .copy-notification {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+            transform: translateY(150%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+        }
+
+        .copy-notification.show {
+            transform: translateY(0);
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            border: 3px solid rgba(59, 130, 246, 0.1);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Amount Display */
+        .amount-display {
+            font-size: 5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 50%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% 200%;
+            animation: gradient-text 3s ease infinite;
+            letter-spacing: -0.05em;
+        }
+
+        @keyframes gradient-text {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .amount-display {
+                font-size: 3.5rem;
+            }
+
+            .orb {
+                filter: blur(40px);
+            }
+        }
+
+        /* Smooth Scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Background Elements -->
+    <div class="gradient-bg"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="grid-pattern"></div>
+
+    <!-- Main Content -->
+    <div class="relative z-10 min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <h1 class="text-4xl font-bold mb-8">Efeitos Visuais de Demonstração</h1>
+        <p class="text-xl text-gray-400 mb-12">Esta página demonstra apenas os estilos e animações solicitados.</p>
+
+        <div class="glass-card rounded-3xl p-1 max-w-2xl w-full">
+            <div class="holographic rounded-3xl p-12 bg-[#0a0e1a]">
+                <div class="inline-block float-animation mb-8">
+                    <div
+                        class="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl mx-auto">
+                        <span class="text-6xl">🎨</span>
+                    </div>
+                </div>
+
+                <div class="amount-display mb-8">Demo Mode</div>
+
+                <button class="premium-button px-12 py-5 rounded-2xl font-bold text-lg text-white shadow-2xl mb-8">
+                    Botão Premium
+                </button>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="counter p-6 rounded-2xl shimmer">
+                        <div class="text-3xl font-black text-cyan-400">Stats</div>
+                        <div class="text-sm text-gray-400">Shimmer Effect</div>
+                    </div>
+                    <div class="counter p-6 rounded-2xl shimmer">
+                        <div class="text-3xl font-black text-purple-400">Neon</div>
+                        <div class="text-sm text-gray-400">Glass Effect</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Particle Trail Effect
+        document.addEventListener('mousemove', (e) => {
+            if (Math.random() > 0.95) {
+                const particle = document.createElement('div');
+                particle.className = 'particle-trail';
+                particle.style.left = e.clientX + 'px';
+                particle.style.top = e.clientY + 'px';
+                document.body.appendChild(particle);
+                setTimeout(() => particle.remove(), 2000);
+            }
+        });
+
+        // Add confetti animation styles
+        const style = document.createElement('style');
+        style.textContent = `
+      @keyframes confetti-fall {
+        to {
+          transform: translateY(100vh);
+          opacity: 0;
+        }
+      }
+      @keyframes confetti-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    `;
+        document.head.appendChild(style);
+    </script>
+</body>
+
+</html>

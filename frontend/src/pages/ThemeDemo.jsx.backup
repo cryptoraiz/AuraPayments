@@ -1,0 +1,234 @@
+import { useState } from 'react'
+import PaymentForm from '../components/forms/PaymentForm'
+
+export default function ThemeDemo() {
+    const [activeTheme, setActiveTheme] = useState('modern') // 'modern' | 'classic' | 'light'
+    const [animationType, setAnimationType] = useState('cube') // 'cube' | 'curtain' | 'elastic' | 'crumple'
+    const [activeTrigger, setActiveTrigger] = useState('corner') // 'corner' | 'orb' | 'handle'
+    const [isAnimating, setIsAnimating] = useState(false)
+
+    // Cycle order: Modern <-> Classic (Dark)
+    const getNextTheme = (current) => {
+        return current === 'modern' ? 'classic' : 'modern'
+    }
+
+    const toggleTheme = () => {
+        if (isAnimating) return
+        setIsAnimating(true)
+
+        // Duration depends on animation type
+        const duration = 1200
+
+        setTimeout(() => {
+            setActiveTheme(prev => getNextTheme(prev))
+        }, duration / 2)
+
+        setTimeout(() => {
+            setIsAnimating(false)
+        }, duration)
+    }
+
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-8 gap-8 font-sans">
+
+            <div className="text-center space-y-2">
+                <h1 className="text-3xl font-bold text-white tracking-tight">Creative Theme Lab 🧪</h1>
+                <p className="text-gray-400">Experimental interaction models</p>
+            </div>
+
+            {/* Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+                {/* Animation Select */}
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/10 flex flex-col gap-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Animation Style</span>
+                    <div className="flex flex-wrap gap-2">
+                        {['cube', 'curtain', 'elastic', 'crumple'].map(type => (
+                            <button
+                                key={type}
+                                onClick={() => setAnimationType(type)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-bold capitalize transition-all ${animationType === type
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                    }`}
+                            >
+                                {type}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Trigger Select */}
+                <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/10 flex flex-col gap-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Trigger Mechanism</span>
+                    <div className="flex flex-wrap gap-2">
+                        {['corner', 'orb', 'handle'].map(type => (
+                            <button
+                                key={type}
+                                onClick={() => setActiveTrigger(type)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-bold capitalize transition-all ${activeTrigger === type
+                                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                    }`}
+                            >
+                                {type}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Stage */}
+            <div className="relative w-full max-w-xl perspective-1000 mt-8">
+
+                {/* --- TRIGGERS --- */}
+
+                {/* 1. Folded Corner Trigger (HomePage Style) */}
+                {activeTrigger === 'corner' && !isAnimating && (
+                    <div
+                        onClick={toggleTheme}
+                        className="absolute top-0 right-0 w-16 h-16 cursor-pointer group z-50 overflow-hidden rounded-tr-[2rem]"
+                        title="Fold to Change Theme"
+                    >
+                        {/* The Fold Triangle - Shows the OTHER theme color */}
+                        <div className={`absolute top-0 right-0 w-0 h-0 border-t-[60px] border-r-[60px] border-t-transparent transition-colors shadow-[-4px_4px_10px_rgba(0,0,0,0.3)]
+                            ${activeTheme === 'modern' ? 'border-r-slate-900 group-hover:border-r-slate-800' : ''}
+                            ${activeTheme === 'classic' ? 'border-r-slate-950/80 group-hover:brightness-125' : ''}
+                         `}></div>
+
+                        {/* The White Backing appearing under */}
+                        <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-white/10 to-transparent pointer-events-none"></div>
+                    </div>
+                )}
+
+                {/* 2. Floating Orb Trigger */}
+                {activeTrigger === 'orb' && (
+                    <button
+                        onClick={toggleTheme}
+                        disabled={isAnimating}
+                        className="absolute -right-16 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full z-50 flex items-center justify-center group"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full blur-md opacity-75 group-hover:opacity-100 group-hover:blur-lg transition-all animate-pulse"></div>
+                        <div className="relative w-8 h-8 bg-white rounded-full shadow-inner flex items-center justify-center">
+                            <span className="text-xs">🎨</span>
+                        </div>
+                        {/* Orbit rings */}
+                        <div className="absolute -inset-4 border border-white/10 rounded-full animate-spin-slow pointer-events-none"></div>
+                        <div className="absolute -inset-8 border border-white/5 rounded-full animate-reverse-spin pointer-events-none"></div>
+                    </button>
+                )}
+
+                {/* 3. Pull Handle Trigger */}
+                {activeTrigger === 'handle' && (
+                    <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center group cursor-pointer" onClick={toggleTheme}>
+                        <div className="w-1 h-8 bg-gradient-to-b from-white/20 to-white/50"></div>
+                        <div className="w-12 h-12 rounded-full bg-slate-800 border-2 border-white/20 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                            <span className="text-xl">👇</span>
+                        </div>
+                    </div>
+                )}
+
+
+                {/* --- ANIMATIONS --- */}
+
+                {/* CUBE ANIMATION */}
+                {animationType === 'cube' && (
+                    <div className={`relative transition-transform duration-1000 preserve-3d ${isAnimating ? 'rotate-cube' : ''}`}>
+                        {/* Modern Theme Glow (Blue/Purple) */}
+                        {activeTheme === 'modern' && (
+                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl opacity-50 pointer-events-none"></div>
+                        )}
+
+                        {/* Classic Theme Shadow (White) */}
+                        {activeTheme === 'classic' && (
+                            <div className="absolute -inset-4 bg-white/5 blur-2xl rounded-full opacity-20 -z-10 translate-y-10"></div>
+                        )}
+
+                        <PaymentForm theme={activeTheme} />
+                        {/* Fake sides for 3D effect would go here */}
+                    </div>
+                )}
+
+                {/* CURTAIN ANIMATION */}
+                {animationType === 'curtain' && (
+                    <div className="relative overflow-hidden rounded-[2rem]">
+                        {/* Modern Theme Glow */}
+                        {activeTheme === 'modern' && (
+                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl opacity-50 pointer-events-none"></div>
+                        )}
+
+                        {/* Classic Theme Shadow */}
+                        {activeTheme === 'classic' && (
+                            <div className="absolute -inset-4 bg-white/5 blur-2xl rounded-full opacity-20 -z-10 translate-y-10"></div>
+                        )}
+
+                        <PaymentForm theme={activeTheme} />
+
+                        {/* Curtain Overlay */}
+                        <div className={`absolute inset-0 bg-slate-950 flex items-center justify-center z-20 transition-transform duration-1000 ease-[cubic-bezier(0.85,0,0.15,1)] ${isAnimating ? 'translate-y-0' : '-translate-y-full'
+                            }`}>
+                            {/* Content inside curtain (The NEXT theme) could be pre-rendered here */}
+                            <div className="text-6xl animate-bounce">🎨</div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ELASTIC ANIMATION */}
+                {animationType === 'elastic' && (
+                    <div className={`transition-all duration-1000 ease-[cubic-bezier(0.68,-0.55,0.265,1.55)] ${isAnimating ? 'scale-75 translate-y-24 rotate-3 opacity-50' : 'scale-100 translate-y-0 rotate-0 opacity-100'
+                        }`}>
+                        {/* Modern Theme Glow */}
+                        {activeTheme === 'modern' && (
+                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl opacity-50 pointer-events-none"></div>
+                        )}
+
+                        {/* Classic Theme Shadow */}
+                        {activeTheme === 'classic' && (
+                            <div className="absolute -inset-4 bg-white/5 blur-2xl rounded-full opacity-20 -z-10 translate-y-10"></div>
+                        )}
+
+                        <PaymentForm theme={activeTheme} />
+                    </div>
+                )}
+
+                {/* CRUMPLE (Existing) */}
+                {animationType === 'crumple' && (
+                    <div className={`${isAnimating ? 'animate-crumple-trash' : ''}`}>
+                        {/* Modern Theme Glow */}
+                        {activeTheme === 'modern' && (
+                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl opacity-50 pointer-events-none"></div>
+                        )}
+
+                        {/* Classic Theme Shadow */}
+                        {activeTheme === 'classic' && (
+                            <div className="absolute -inset-4 bg-white/5 blur-2xl rounded-full opacity-20 -z-10 translate-y-10"></div>
+                        )}
+
+                        <PaymentForm theme={activeTheme} />
+                    </div>
+                )}
+
+            </div>
+
+            <style>{`
+                @keyframes rotate-cube {
+                    0% { transform: rotateY(0deg) scale(1); }
+                    50% { transform: rotateY(90deg) scale(0.8); }
+                    100% { transform: rotateY(0deg) scale(1); }
+                }
+                .rotate-cube { animation: rotate-cube 1.2s ease-in-out; }
+                
+                @keyframes crumple-trash {
+                    0% { transform: scale(1) rotate(0deg); opacity: 1; }
+                    40% { transform: scale(0.4) rotate(15deg) skewX(20deg); opacity: 0.7; }
+                    50% { transform: scale(0.1); opacity: 0; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+                .animate-crumple-trash { animation: crumple-trash 1.0s ease-in-out; }
+
+                .animate-spin-slow { animation: spin 8s linear infinite; }
+                .animate-reverse-spin { animation: spin 12s linear infinite reverse; }
+                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            `}</style>
+        </div>
+    )
+}
