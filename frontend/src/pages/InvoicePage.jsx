@@ -76,7 +76,7 @@ export default function InvoicePage() {
               >
                 <div className="w-full max-w-[540px] relative min-h-[540px] h-auto flex flex-col">
                   <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl blur-xl opacity-50 pointer-events-none"></div>
-                  <div className="flex-1 overflow-hidden [&>div]:h-full">
+                  <div className="flex-1 w-full">
                     <PaymentForm theme="modern" />
                   </div>
                 </div>
