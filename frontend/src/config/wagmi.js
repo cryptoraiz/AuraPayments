@@ -18,6 +18,11 @@ export const arcTestnet = {
   blockExplorers: {
     default: { name: 'ArcScan', url: 'https://testnet.arcscan.app' },
   },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+    },
+  },
   testnet: true,
 }
 
@@ -45,13 +50,17 @@ const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '3a8170812b53
 
 export const config = createConfig({
   chains: [arcTestnet, sonicTestnet, mainnet, arbitrum, polygon, optimism, base],
+  batch: {
+    multicall: { wait: 50, batchSize: 1024 },
+  },
   connectors: [
     injected(),
     walletConnect({ projectId, showQrModal: false }), // AppKit gerencia o modal
     coinbaseWallet({ appName: 'ARC Connect' }),
   ],
   transports: {
-    [arcTestnet.id]: http(),
+    // Use our Vercel proxy to avoid CORS — the proxy forwards to rpc.testnet.arc.network server-side
+    [arcTestnet.id]: http(import.meta.env.PROD ? '/api/rpc' : 'https://rpc.testnet.arc.network'),
     [sonicTestnet.id]: http(),
     [mainnet.id]: http(),
     [arbitrum.id]: http(),

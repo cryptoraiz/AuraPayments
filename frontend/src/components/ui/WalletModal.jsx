@@ -217,7 +217,7 @@ export default function WalletModal({ isOpen, onClose, connectors, onSelectWalle
                                             </div>
 
                                             <div className="mt-auto pt-4 border-t border-white/10 text-center">
-                                                <a href="#" className="text-xs text-blue-400/50 hover:text-blue-400 transition-colors">
+                                                <a href="https://ethereum.org/en/wallets/" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400/50 hover:text-blue-400 transition-colors">
                                                     Learn more about wallets
                                                 </a>
                                             </div>

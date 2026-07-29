@@ -1,0 +1,16 @@
+{
+  "name": "arcpay-appkit-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build && cd .. && rm -rf dist && cp -r frontend/dist dist"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "ethers": "^6.17.0",
+    "solc": "^0.8.20"
+  },
+  "dependencies": {
+    "aes-js": "^4.0.0-beta.5"
+  }
+}

@@ -31,7 +31,7 @@ export default function PaymentForm({ theme = 'modern' }) {
     container: "relative bg-dark-card border border-dark-border rounded-3xl p-6 md:p-8 shadow-2xl overflow-hidden",
     textPrimary: "text-white",
     textSecondary: "text-dark-muted",
-    inputBg: "bg-dark-input border border-dark-border/50 text-white placeholder:text-transparent hover:border-dark-border focus:border-blue-500/50 transition-all",
+    inputBg: "bg-dark-bg border border-dark-border/50 text-white placeholder:text-transparent hover:border-dark-border focus:border-blue-500/50 transition-all",
     label: "text-dark-muted",
     icon: "text-dark-muted",
     spotlight: "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl overflow-hidden"
@@ -181,15 +181,12 @@ export default function PaymentForm({ theme = 'modern' }) {
                 <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm ${styles.icon}`}>💼</span>
                 <input
                   type="text"
-                  className={`input-float pl-10 py-3 text-sm ${styles.inputBg} 
-                    ${!isConnected
-                      ? 'cursor-help'
-                      : 'cursor-not-allowed'
-                    }`}
+                  className={`input-float pl-10 py-3 text-sm ${styles.inputBg} cursor-not-allowed`}
                   placeholder={!isConnected ? "Connect wallet to auto-fill..." : " "}
                   id="wallet"
                   value={formData.wallet}
                   readOnly
+                  title={!isConnected ? "Connect wallet to auto-fill..." : "Your wallet address"}
                 />
                 {isConnected && (
                   <label htmlFor="wallet" className={`label-float top-1/2 -translate-y-1/2 text-xs ${styles.label}`} style={{ left: '40px' }}>
@@ -274,7 +271,7 @@ export default function PaymentForm({ theme = 'modern' }) {
               } : undefined}
               className={`relative overflow-hidden w-full px-6 py-4 rounded-2xl font-bold text-lg text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${isConnected
                 ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_20px_rgba(39,117,202,0.3)] hover:shadow-[0_0_25px_rgba(39,117,202,0.5)]'
-                : 'bg-dark-input hover:bg-dark-border border border-dark-border text-dark-muted hover:text-white shadow-lg'
+                : 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] shadow-lg'
                 }`}
             >
               {isConnected ? (

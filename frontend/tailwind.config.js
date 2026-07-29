@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Arc Connect Corporate Colors
+        // Aura Connect Corporate Colors
         dark: {
           bg: '#0b0e14',
           card: '#131722',

@@ -1,19 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
+import { useAccount, useConnect } from 'wagmi';
 import DeFiWidget from '../components/ui/DeFiWidget';
 import PaymentForm from '../components/forms/PaymentForm';
+import WalletModal from '../components/ui/WalletModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ArcAIPage() {
+  const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Olá! Eu sou o seu Agente Autônomo alimentado pela Circle. Posso executar swaps cross-chain, pontes (bridges) ou gerar faturas B2B. Qual é a sua missão de hoje?' }
+    { role: 'assistant', content: 'Hello! I am your Autonomous Agent powered by Circle. I can execute cross-chain swaps, bridges or generate B2B invoices. What is your mission today?' }
   ]);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
   const logsEndRef = useRef(null);
   const [logs, setLogs] = useState([
-    "[SYSTEM] Inicializando Circle Agent Stack...",
-    "[SYSTEM] Conectado à Arc Testnet.",
-    "[AGENT] Monitorando pools de liquidez USDC...",
+    "[SYSTEM] Initializing Circle Agent Stack...",
+    "[SYSTEM] Connected to Arc Testnet.",
+    "[AGENT] Monitoring USDC liquidity pools...",
     "[AGENT] Invoice 2.0 Module active."
   ]);
 
@@ -43,8 +48,8 @@ export default function ArcAIPage() {
     setMessages(newMessages);
     if (textOverride === null) setInput('');
     
-    addLog(`[USER] Recebeu: "${textToSend.substring(0, 20)}..."`);
-    addLog(`[AGENT] Processando NLP (Intenção e Entidades)...`);
+    addLog(`[USER] Received: "${textToSend.substring(0, 20)}..."`);
+    addLog(`[AGENT] Processing NLP (Intent and Entities)...`);
 
     setTimeout(() => {
       const lowerInput = textToSend.toLowerCase();
@@ -63,45 +68,45 @@ export default function ArcAIPage() {
           response = 'Let\'s generate this invoice. What is the name of your client and the invoice amount? (e.g., Alice Crypto, 500 USDC)';
           setConversationState('AWAITING_INVOICE_DETAILS');
           addLog(`[AGENT] State changed to AWAITING_INVOICE_DETAILS`);
-          addLog(`[AGENT] Estado alterado para AWAITING_INVOICE_DETAILS`);
+          addLog(`[AGENT] State changed to AWAITING_INVOICE_DETAILS`);
         } else {
-          response = 'Não entendi bem. Sou um agente focado em DeFi. Você gostaria que eu realizasse um Swap, uma Bridge ou gerasse uma Fatura?';
+          response = "I didn't quite catch that. I am a DeFi focused agent. Would you like me to perform a Swap, a Bridge or generate an Invoice?";
         }
       } 
       
       else if (conversationState === 'AWAITING_SWAP_PAIRS') {
         if (lowerInput.includes('usdc') && lowerInput.includes('eurc')) {
-          response = 'Perfeito, já mapeei a melhor rota nas pools. Qual o valor que você deseja trocar?';
+          response = "Perfect, I've mapped the best route in the pools. What amount do you want to swap?";
           setConversationState('AWAITING_SWAP_AMOUNT');
-          addLog(`[AGENT] Estado alterado para AWAITING_SWAP_AMOUNT`);
+          addLog(`[AGENT] State changed to AWAITING_SWAP_AMOUNT`);
         } else {
-          response = 'Atualmente só consigo trocar USDC por EURC na Arc Testnet. Por favor, confirme esse par.';
+          response = 'Currently I can only swap USDC for EURC on Arc Testnet. Please confirm this pair.';
         }
       } 
       
       else if (conversationState === 'AWAITING_SWAP_AMOUNT') {
-        response = 'Tudo certo! Assinando transação com a Agent Wallet e executando o Swap na blockchain... 🔄 Pronto! Swap realizado com sucesso.';
+        response = 'All set! Signing transaction with Agent Wallet and executing Swap on the blockchain... 🔄 Done! Swap completed successfully.';
         setConversationState('IDLE');
-        addLog(`[TX] Assinando Payload de Swap...`);
-        addLog(`[TX] Transação confirmada na Arc Testnet.`);
+        addLog(`[TX] Signing Swap Payload...`);
+        addLog(`[TX] Transaction confirmed on Arc Testnet.`);
       }
 
       else if (conversationState === 'AWAITING_BRIDGE_CHAIN') {
         if (lowerInput.includes('base') || lowerInput.includes('arbitrum')) {
-          response = 'Rede confirmada. Iniciando a queima (burn) de USDC na Arc e o mint na rede de destino via Circle CCTP... 🚀 Sucesso! Seus fundos chegaram ao destino.';
+          response = 'Network confirmed. Initiating USDC burn on Arc and mint on destination network via Circle CCTP... 🚀 Success! Your funds have reached their destination.';
           setConversationState('IDLE');
-          addLog(`[AGENT] Transferência Cross-Chain executada via CCTP`);
-          addLog(`[AGENT] Estado alterado para IDLE`);
+          addLog(`[AGENT] Cross-Chain transfer executed via CCTP`);
+          addLog(`[AGENT] State changed to IDLE`);
         } else {
-          response = 'Suporto apenas pontes para Base ou Arbitrum. Para qual delas?';
+          response = 'I only support bridges to Base or Arbitrum. To which one?';
         }
       }
 
       else if (conversationState === 'AWAITING_INVOICE_DETAILS') {
-        response = 'Fatura gerada e criptografada com sucesso! 🧾 O link de pagamento B2B é: https://arcpay.network/pay/inv-8842';
+        response = 'Invoice successfully generated and encrypted! 🧾 The B2B payment link is: https://arcpay.network/pay/inv-8842';
         setConversationState('IDLE');
-        addLog(`[AGENT] Smart Contract de Escrow criado.`);
-        addLog(`[AGENT] Fatura armazenada na blockchain.`);
+        addLog(`[AGENT] Escrow Smart Contract created.`);
+        addLog(`[AGENT] Invoice stored on the blockchain.`);
       }
 
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
@@ -109,9 +114,9 @@ export default function ArcAIPage() {
   };
 
   const suggestedPrompts = [
-    "Vamos fazer um Swap?",
-    "Quero fazer uma Bridge",
-    "Preciso criar uma Fatura"
+    "I want to swap",
+    "I want to make a bridge",
+    "I need to create an invoice"
   ];
 
   return (
@@ -131,7 +136,7 @@ export default function ArcAIPage() {
                 </svg>
               </div>
             </div>
-            <h2 className="text-xl font-bold text-white tracking-tight">Arc AI Core</h2>
+            <h2 className="text-xl font-bold text-white tracking-tight">Aura AI</h2>
             <div className="flex items-center gap-1.5 mt-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
               <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">Agent Online</span>
@@ -150,7 +155,7 @@ export default function ArcAIPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-dark-muted font-medium">Agent Wallet</span>
-                <span className="text-blue-400 font-mono bg-blue-500/10 px-2 py-0.5 rounded text-xs">0xAgent...9A</span>
+                <span className="text-blue-400 font-mono bg-blue-500/10 px-2 py-0.5 rounded text-xs">{address ? `${address.slice(0,6)}...${address.slice(-4)}` : 'Not Connected'}</span>
               </div>
             </div>
           </div>
@@ -195,7 +200,7 @@ export default function ArcAIPage() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white leading-none">Arc Terminal</h2>
+                <h2 className="text-lg font-bold text-white leading-none">Aura Terminal</h2>
                 <span className="text-[10px] font-bold text-dark-muted uppercase tracking-widest mt-1 block">
                   Interactive Assistant
                 </span>
@@ -226,22 +231,33 @@ export default function ArcAIPage() {
           {/* Input Area */}
           <div className="p-4 border-t border-dark-border bg-dark-bg/90">
             <div className="relative flex items-center w-full">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask the agent to swap, bridge, or create invoice..."
-                className="w-full bg-dark-input border border-dark-border rounded-2xl py-4 pl-5 pr-14 text-sm text-white placeholder-dark-muted focus:outline-none focus:border-blue-500/50 transition-all shadow-inner"
-              />
-              <button 
-                onClick={() => handleSend()}
-                className="absolute right-2 p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] active:scale-95"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
+              {!isConnected ? (
+                <button
+                  onClick={() => setIsWalletModalOpen(true)}
+                  className="w-full py-4 rounded-2xl transition-all active:scale-[0.98] bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold text-lg"
+                >
+                  Connect Wallet
+                </button>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                    placeholder="Ask the agent to swap, bridge, or create invoice..."
+                    className="w-full bg-dark-input border border-dark-border rounded-2xl py-4 pl-5 pr-14 text-sm text-white placeholder-dark-muted focus:outline-none focus:border-blue-500/50 transition-all shadow-inner"
+                  />
+                  <button 
+                    onClick={() => handleSend()}
+                    className="absolute right-2 p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] active:scale-95"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                  </button>
+                </>
+              )}
             </div>
             <div className="text-center mt-3">
               <span className="text-[9px] text-dark-muted font-bold uppercase tracking-[0.2em] opacity-50">Powered by Circle Agent Stack & OpenAI</span>
@@ -303,6 +319,16 @@ export default function ArcAIPage() {
         </div>
 
       </div>
+
+      <WalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        connectors={connectors}
+        onSelectWallet={(connector) => {
+            connect({ connector });
+            setIsWalletModalOpen(false);
+        }}
+      />
     </section>
   );
 }

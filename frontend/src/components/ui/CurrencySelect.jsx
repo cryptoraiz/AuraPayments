@@ -39,11 +39,11 @@ export default function CurrencySelect({ value, onChange, compact, isClassic, is
   return (
     <Listbox value={selected} onChange={handleChange}>
       <div className="relative">
-        <Listbox.Button className={`relative w-full rounded-2xl text-left focus:outline-none focus:ring-4 transition-all cursor-pointer ${compact ? 'h-[52px] px-3' : 'h-[60px] px-4'} ${styles.button}`}>
-          <span className={`flex items-center gap-2 font-bold ${compact ? 'text-base' : 'text-lg'} ${styles.textMain}`}>
-            {selected.emoji} {selected.name}
+        <Listbox.Button className={`relative w-full rounded-2xl text-left focus:outline-none focus:ring-4 transition-all cursor-pointer ${compact ? 'h-[52px] pl-3 pr-8' : 'h-[60px] pl-4 pr-10'} ${styles.button}`}>
+          <span className={`flex items-center gap-2 font-bold whitespace-nowrap truncate ${compact ? 'text-sm' : 'text-base'} ${styles.textMain}`}>
+            <span className="shrink-0">{selected.emoji}</span> <span className="truncate">{selected.name}</span>
           </span>
-          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4">
+          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
             <svg className={`h-5 w-5 ${styles.icon}`} viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
@@ -60,7 +60,7 @@ export default function CurrencySelect({ value, onChange, compact, isClassic, is
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <Listbox.Options className={`absolute z-10 mt-2 w-full overflow-hidden rounded-2xl focus:outline-none ${styles.optionsBg}`}>
+          <Listbox.Options className={`absolute z-10 mt-2 min-w-full overflow-hidden rounded-2xl focus:outline-none ${styles.optionsBg}`}>
             {currencies.map((currency) => (
               <Listbox.Option
                 key={currency.id}
@@ -77,10 +77,10 @@ export default function CurrencySelect({ value, onChange, compact, isClassic, is
                       : 'border-l-4 border-transparent'
                       }`}
                   >
-                    <span className={`flex items-center gap-2 ${compact ? 'text-base' : 'text-lg'} ${selected ? styles.checkmark : styles.optionText}`}>
-                      {currency.emoji} {currency.name}
+                    <span className={`flex items-center gap-2 whitespace-nowrap ${compact ? 'text-sm' : 'text-base'} ${selected ? styles.checkmark : styles.optionText}`}>
+                      <span className="shrink-0">{currency.emoji}</span> <span>{currency.name}</span>
                     </span>
-                    {selected && <span className={`${styles.checkmark} font-bold`}>✓</span>}
+                    {selected && <span className={`${styles.checkmark} font-bold ml-2 shrink-0`}>✓</span>}
                   </div>
                 )}
               </Listbox.Option>

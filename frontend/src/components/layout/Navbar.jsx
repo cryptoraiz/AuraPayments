@@ -198,7 +198,7 @@ export default function Navbar() {
                   </div>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xl font-bold tracking-tight leading-none text-dark-text">Arc Connect</span>
+                  <span className="text-xl font-bold tracking-tight leading-none text-dark-text">Aura Payments</span>
                   <span className="text-xs font-medium text-dark-muted tracking-wider uppercase">DeFi Pro Hub</span>
                 </div>
               </Link>
@@ -233,7 +233,7 @@ export default function Navbar() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  Arc AI
+                  Aura AI
                 </Link>
                 <Link
                   to="/faucet"

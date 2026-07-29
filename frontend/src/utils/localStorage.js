@@ -279,3 +279,40 @@ export const addToBlacklist = (ids) => {
         }
     } catch (e) { console.error('Error updating blacklist:', e); }
 };
+
+// ===== TRADE HISTORY MANAGEMENT =====
+
+const TRADE_HISTORY_KEY = 'arc_trade_history';
+
+export const getTradeHistory = () => {
+    try {
+        const trades = localStorage.getItem(TRADE_HISTORY_KEY);
+        return trades ? JSON.parse(trades) : [];
+    } catch (error) {
+        console.error('Error reading trade history:', error);
+        return [];
+    }
+};
+
+export const saveTrade = (tradeData) => {
+    try {
+        const trades = getTradeHistory();
+        trades.push({
+            id: Date.now().toString(),
+            createdAt: Date.now(),
+            ...tradeData
+        });
+        localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(trades));
+        return true;
+    } catch (error) {
+        console.error('Error saving trade:', error);
+        return false;
+    }
+};
+
+export const getTradeHistoryByWallet = (walletAddress) => {
+    const trades = getTradeHistory();
+    return trades.filter(
+        trade => trade.walletAddress?.toLowerCase() === walletAddress?.toLowerCase()
+    );
+};

@@ -17,7 +17,7 @@ export default function Footer() {
         
         {/* Left: Branding & Copyright */}
         <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#8a9bb2] hover:text-blue-400 transition-colors cursor-pointer">
-          <span>Arc Connect • Copyright 2026</span>
+          <span>Aura Connect • Copyright 2026</span>
         </div>
 
         {/* Right: Social Icons (Raw) */}

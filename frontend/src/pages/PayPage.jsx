@@ -649,11 +649,8 @@ export default function PayPage() {
                                     <div className="text-center p-4 rounded-xl bg-white/[0.02] border border-white/10">
                                         <button
                                             onClick={() => setIsWalletModalOpen(true)}
-                                            className="w-full py-3.5 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 group"
+                                            className="w-full py-4 rounded-2xl transition-all active:scale-[0.98] bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold text-lg flex items-center justify-center"
                                         >
-                                            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                            </svg>
                                             Connect Wallet to Pay
                                         </button>
                                         <p className="text-xs text-gray-500 mt-3">
