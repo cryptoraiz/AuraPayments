@@ -56,7 +56,7 @@ export default function ProfilePage() {
   }, [balances, prices]);
 
   const totalBalance = prices
-    ? `$${totalValueNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ? `$${totalValueNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : '...';
 
   const handleImageUpload = (e) => {
@@ -318,8 +318,10 @@ export default function ProfilePage() {
 
 // AssetRow — receives balance directly from parent (no independent RPC call)
 function AssetRow({ token, balance, prices }) {
-  const displayBalance = balance > 0 ? balance.toFixed(4) : '0';
-  const usdValue = formatUsdValue(token.symbol, displayBalance, prices);
+  const displayBalance = balance > 0 
+    ? balance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+    : '0,00';
+  const usdValue = formatUsdValue(token.symbol, balance > 0 ? balance : 0, prices);
 
   return (
     <div className="grid grid-cols-4 items-center px-6 py-4 border-b border-dark-border/30 hover:bg-dark-input/30 transition-colors cursor-pointer group">

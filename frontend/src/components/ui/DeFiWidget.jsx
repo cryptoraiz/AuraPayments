@@ -77,8 +77,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     chainId: ARC_CHAIN_ID,
     query: { enabled: !!address, refetchInterval: 10_000, staleTime: 8_000 }
   });
-  const fmtInSwap  = balInData  ? Number(balInData.formatted).toFixed(4)  : '0.00';
-  const fmtOutSwap = balOutData ? Number(balOutData.formatted).toFixed(4) : '0.00';
+  const fmtInSwap  = balInData  ? Number(balInData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })  : '0,00';
+  const fmtOutSwap = balOutData ? Number(balOutData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '0,00';
 
   // ── Bridge Balances ──
   const isBridgeNativeIn  = bridgeTokenIn?.address?.toLowerCase()  === '0x3600000000000000000000000000000000000000';
@@ -95,8 +95,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     chainId: bridgeChainOut?.id,
     query: { enabled: !!address, refetchInterval: 10_000, staleTime: 8_000 }
   });
-  const fmtInBridge  = bridgeBalInData  ? Number(bridgeBalInData.formatted).toFixed(4)  : '0.00';
-  const fmtOutBridge = bridgeBalOutData ? Number(bridgeBalOutData.formatted).toFixed(4) : '0.00';
+  const fmtInBridge  = bridgeBalInData  ? Number(bridgeBalInData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })  : '0,00';
+  const fmtOutBridge = bridgeBalOutData ? Number(bridgeBalOutData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '0,00';
 
   // ── Quote Logic (Swap only for now) ──
   const fetchQuote = useCallback(async () => {

@@ -159,7 +159,7 @@ function TokenRow({ token, chain, onSelect, isSelected, userAddress }) {
     chainId: chain.id, 
   });
 
-  const displayBalance = balanceData ? Number(balanceData.formatted).toFixed(4) : '0.0000';
+  const displayBalance = balanceData ? Number(balanceData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '0,00';
 
   return (
     <button

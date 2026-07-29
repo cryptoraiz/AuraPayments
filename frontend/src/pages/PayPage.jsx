@@ -699,7 +699,7 @@ export default function PayPage() {
                                                         </div>
                                                         <div className="flex-1">
                                                             <p className="text-sm text-white font-medium mb-0.5">
-                                                                You need {Number(formatUnits(requiredAmount - balance, 6)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} more {paymentData.currency}
+                                                                You need {Number(formatUnits(requiredAmount - balance, 6)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} more {paymentData.currency}
                                                             </p>
                                                             <p className="text-xs text-gray-400">
                                                                 to complete this payment

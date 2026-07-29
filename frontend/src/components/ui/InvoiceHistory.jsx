@@ -147,8 +147,8 @@ export default function InvoiceHistory({ onUpdateStats }) {
     const totalSent = sentPayments
         .reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
 
-    const formattedTotalReceived = totalReceived.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const formattedTotalSent = totalSent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedTotalReceived = totalReceived.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedTotalSent = totalSent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const pendingCount = receivedLinks.filter(i => i.status === 'pending').length;
     const completedCount = receivedLinks.filter(i => i.status === 'paid').length;

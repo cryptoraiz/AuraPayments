@@ -9,7 +9,7 @@ interface IERC20 {
 contract Faucet {
     IERC20 public token;
     address public owner;
-    uint256 public amountToDispense = 10 * 10**6; // 10 USDC (ajustável)
+    uint256 public amountToDispense = 100 * 10**6; // 100 USDC (adjustable)
     uint256 public cooldownTime = 24 hours;
 
     mapping(address => uint256) public nextRequestAt;
@@ -17,7 +17,7 @@ contract Faucet {
     event TokensDispensed(address indexed recipient, uint256 amount);
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Apenas o dono pode fazer isso");
+        require(msg.sender == owner, "Only owner can call this");
         _;
     }
 
@@ -35,19 +35,19 @@ contract Faucet {
     }
 
     function requestTokens() external {
-        require(msg.sender != address(0), "Endereco invalido");
-        require(block.timestamp >= nextRequestAt[msg.sender], "Aguarde o cooldown");
-        require(token.balanceOf(address(this)) >= amountToDispense, "Faucet vazio");
+        require(msg.sender != address(0), "Invalid address");
+        require(block.timestamp >= nextRequestAt[msg.sender], "Cooldown active");
+        require(token.balanceOf(address(this)) >= amountToDispense, "Faucet empty");
 
         nextRequestAt[msg.sender] = block.timestamp + cooldownTime;
         
-        require(token.transfer(msg.sender, amountToDispense), "Falha na transferencia");
+        require(token.transfer(msg.sender, amountToDispense), "Transfer failed");
         
         emit TokensDispensed(msg.sender, amountToDispense);
     }
 
-    // Sacar fundos de volta se precisar
+    // Withdraw funds back if needed
     function withdraw(uint256 amount) external onlyOwner {
-        require(token.transfer(msg.sender, amount), "Falha no saque");
+        require(token.transfer(msg.sender, amount), "Withdraw failed");
     }
 }

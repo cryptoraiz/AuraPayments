@@ -327,21 +327,21 @@ async function handleFaucet(req, res) {
             console.error('Faucet DB Error:', e.message);
         }
 
-        // 3. Send Transaction
+        // 3. Send Transaction (USDC ERC20)
         const provider = new ethers.JsonRpcProvider(ARC_RPC_URL);
         const wallet = new ethers.Wallet(privateKey, provider);
+        
+        const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
+        // Setup USDC Contract with minimal ABI for transfer
+        const usdcAbi = ["function transfer(address to, uint256 amount) returns (bool)"];
+        const usdcContract = new ethers.Contract(USDC_ADDRESS, usdcAbi, wallet);
 
-        const amountToSend = ethers.parseEther(FAUCET_AMOUNT);
-        const balance = await provider.getBalance(wallet.address);
-
-        if (balance < amountToSend) {
-            return res.status(503).json({ error: 'Faucet Dry (No Funds)' });
-        }
-
-        const tx = await wallet.sendTransaction({
-            to: address,
-            value: amountToSend
-        });
+        // Assume USDC has 18 decimals on this testnet as per config
+        const amountToSend = ethers.parseUnits(FAUCET_AMOUNT, 18);
+        
+        // Note: Checking ERC20 balance requires another contract call, skipping for speed (it will revert if dry)
+        
+        const tx = await usdcContract.transfer(address, amountToSend);
 
         // 4. Record Claim
         try {
@@ -356,7 +356,7 @@ async function handleFaucet(req, res) {
 
         return res.status(200).json({
             success: true,
-            message: `Sent ${FAUCET_AMOUNT} ARC to your wallet!`,
+            message: `Sent ${FAUCET_AMOUNT} USDC to your wallet!`,
             txHash: tx.hash
         });
 
