@@ -6,6 +6,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { generateBatchReceipts } from '../../utils/generateReceipt';
 import WalletModal from './WalletModal';
 
+const safeDate = (val) => {
+    if (!val) return new Date();
+    if (typeof val === 'number') return new Date(val);
+    if (typeof val === 'string' && /^\d+$/.test(val)) return new Date(parseInt(val, 10));
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? new Date() : d;
+};
+
 export default function InvoiceHistory({ onUpdateStats }) {
     const { address, isConnected } = useAccount();
     const { connect, connectors } = useConnect();
@@ -165,7 +173,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
     // Helper to check if expired (older than 24h)
     const isExpired = (item) => {
         if (item.status === 'paid') return false;
-        const created = new Date(Number(item.createdAt)).getTime();
+        const created = safeDate(item.createdAt).getTime();
         const now = Date.now();
         const expirationTime = 24 * 60 * 60 * 1000; // 24h Production expiration
         return (now - created) > expirationTime;
@@ -173,7 +181,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
 
     // Helper for countdown display
     const getTimeRemaining = (createdAt) => {
-        const created = new Date(Number(createdAt)).getTime();
+        const created = safeDate(createdAt).getTime();
         const now = Date.now();
         const expirationTime = 24 * 60 * 60 * 1000; // 24h Production expiration
         const diff = (created + expirationTime) - now;
@@ -213,7 +221,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
     displayedItems.sort((a, b) => {
         const dateA = a.paidAt || a.createdAt;
         const dateB = b.paidAt || b.createdAt;
-        return new Date(dateB) - new Date(dateA);
+        return safeDate(dateB) - safeDate(dateA);
     });
 
     // Apply Search
@@ -632,7 +640,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
                                                         </span>
                                                     )}
                                                     <p className="text-zinc-500 text-xs font-medium">
-                                                        {new Date(Number(item.paidAt || item.createdAt)).toLocaleDateString('en-US', {
+                                                        {safeDate(item.paidAt || item.createdAt).toLocaleDateString('en-US', {
                                                             day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                                                         })}
                                                     </p>
