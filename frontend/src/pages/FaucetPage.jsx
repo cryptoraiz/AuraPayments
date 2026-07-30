@@ -49,13 +49,13 @@ export default function FaucetPage() {
                   <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-white">Circle Official Faucet</h2>
-                  <span className="text-xs font-bold text-dark-muted uppercase tracking-widest group-hover:text-purple-400 transition-colors">External Network</span>
+                  <h2 className="text-2xl font-bold text-white">Circle Faucet</h2>
+                  <span className="text-xs font-bold text-dark-muted uppercase tracking-widest group-hover:text-purple-400 transition-colors">External</span>
                 </div>
               </div>
               
               <p className="text-sm text-dark-muted mb-8 relative z-10">
-                Need base testnet tokens or USDC/EURC from the official source? Head over to the official Circle Foundation faucet to claim native tokens.
+                Get test USDC directly from the official Circle Faucet to experiment with Arc Connect.
               </p>
 
               <div className="mt-auto relative z-10">
@@ -65,7 +65,7 @@ export default function FaucetPage() {
                   rel="noopener noreferrer"
                   className="w-full py-4 rounded-xl font-bold text-white bg-dark-input border border-dark-border hover:bg-dark-border transition-all flex items-center justify-center gap-2 group-hover:border-purple-500/50"
                 >
-                  Go to Circle Faucet
+                  Open Circle Faucet
                   <svg className="w-4 h-4 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                 </a>
               </div>
