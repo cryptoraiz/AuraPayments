@@ -38,7 +38,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
     doc.setTextColor(...COLORS.text.light);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(26);
-    doc.text('ARC Connect', 20, 25);
+    doc.text('Aura Payments', 20, 25);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
@@ -199,7 +199,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...COLORS.text.muted);
-    centerText('Generated via ARC Connect - The new era of payments.', pageHeight - 8);
+    centerText('Generated via Aura Payments - The new era of payments.', pageHeight - 8);
 };
 
 /**

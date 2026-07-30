@@ -37,7 +37,7 @@ export const config = createConfig({
   connectors: [
     injected(),
     walletConnect({ projectId, showQrModal: false }), // AppKit gerencia o modal
-    coinbaseWallet({ appName: 'ARC Connect' }),
+    coinbaseWallet({ appName: 'Aura Payments' }),
   ],
   transports: {
     // Use our Vercel proxy to avoid CORS — the proxy forwards to rpc.testnet.arc.network server-side

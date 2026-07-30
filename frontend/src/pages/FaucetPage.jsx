@@ -14,7 +14,7 @@ export default function FaucetPage() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-black text-white mb-3 tracking-tight">Testnet Faucets</h1>
           <p className="text-dark-muted max-w-lg mx-auto">
-            Get test tokens to experiment with Arc Connect. Acesse o faucet oficial da rede abaixo.
+            Get test tokens to experiment with Aura Payments. Acesse o faucet oficial da rede abaixo.
           </p>
           {isConnected && (
             <div className="mt-4 inline-flex items-center gap-2 bg-dark-card border border-dark-border px-4 py-2 rounded-full">
@@ -55,7 +55,7 @@ export default function FaucetPage() {
               </div>
               
               <p className="text-sm text-dark-muted mb-8 relative z-10">
-                Get test USDC directly from the official Circle Faucet to experiment with Arc Connect.
+                Get test USDC directly from the official Circle Faucet to experiment with Aura Payments.
               </p>
 
               <div className="mt-auto relative z-10">

@@ -11,7 +11,7 @@ export default function FAQPage() {
       answer: 'Stablecoins issued by Circle. 1 USDC = $1 USD and 1 EURC = €1 EUR. They maintain a stable 1:1 value with traditional currencies.'
     },
     {
-      question: 'How much does ARC Connect cost?',
+      question: 'How much does Aura Payments cost?',
       answer: 'Free to create links! You only pay the Arc network fee: ~$0.01 USDC (one tenth of a cent) per transaction. No monthly fees or hidden charges.'
     },
     {
@@ -40,7 +40,7 @@ export default function FAQPage() {
     },
     {
       question: 'Is there a value limit?',
-      answer: 'There is no minimum or maximum limit imposed by ARC Connect. Limits depend only on your wallet and client balance.'
+      answer: 'There is no minimum or maximum limit imposed by Aura Payments. Limits depend only on your wallet and client balance.'
     }
   ]
 
