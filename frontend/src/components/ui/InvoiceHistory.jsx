@@ -226,17 +226,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
     }
 
     // Apply Pagination
-    const totalPages = Math.ceil(displayedItems.length / ITEMS_PER_PAGE);
-    const paginatedItems = displayedItems.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    );
-
-    const handlePageChange = (newPage) => {
-        if (newPage >= 1 && newPage <= totalPages) {
-            setCurrentPage(newPage);
-        }
-    };
+    const paginatedItems = displayedItems.slice(0, 5);
 
 
     const [copiedId, setCopiedId] = useState(null);
@@ -717,31 +707,6 @@ export default function InvoiceHistory({ onUpdateStats }) {
                             ))}
                         </div>
                     )}
-
-                    {/* Pagination Controls */}
-
-                    {totalPages > 1 && (
-                        <div className="flex justify-center items-center gap-4 mt-8 pb-4">
-                            <button
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage === 1}
-                                className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors font-bold text-sm"
-                            >
-                                Previous
-                            </button>
-                            <span className="text-zinc-400 text-sm font-medium">
-                                Page {currentPage} of {totalPages}
-                            </span>
-                            <button
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                                className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors font-bold text-sm"
-                            >
-                                Next
-                            </button>
-                        </div>
-                    )}
-
 
                 </div>
             </div>

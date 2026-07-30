@@ -108,7 +108,7 @@ export default function Navbar() {
           setTimeout(pollForChainId, 500)
         } else {
           console.error('❌ chainId not detected after 5s - possible wallet issue')
-          toast.error('Error detecting network. Try disconnecting and reconnecting.')
+          // toast.error('Error detecting network. Try disconnecting and reconnecting.')
         }
         return
       }

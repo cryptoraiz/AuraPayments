@@ -115,7 +115,9 @@ function TokenRow({ token, onSelect, isSelected, userAddress }) {
     query: { refetchInterval: 3000 }
   });
 
-  const displayBalance = balanceData ? Number(balanceData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '0,00';
+  const displayBalance = balanceData 
+    ? Number(balanceData.formatted).toFixed(2)
+    : '0.00';
 
   return (
     <button

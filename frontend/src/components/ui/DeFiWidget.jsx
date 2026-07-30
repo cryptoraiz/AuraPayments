@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance, useChainId, useConnect } from 'wagmi';
-import { getTokenBySymbol } from '../../config/tokens';
+import { getTokenBySymbol, TOKENS } from '../../config/tokens';
 import { getChainById } from '../../config/chains';
 import TokenSelectorModal from './TokenSelectorModal';
 import NetworkTokenModal from './NetworkTokenModal';
@@ -9,6 +9,7 @@ import BridgeModal from './BridgeModal';
 import SwapModal from './SwapModal';
 import TradeHistoryModal from './TradeHistoryModal';
 import WalletModal from './WalletModal';
+import ReceivingWalletModal from './ReceivingWalletModal';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const SYNTHRA_API  = (import.meta.env.VITE_SYNTHRA_API_BASE || 'https://trading-api.synthra.org').replace(/\/+$/, '');
@@ -18,6 +19,7 @@ const ARC_CHAIN_ID = 5042002;
 const API_HEADERS  = { 'content-type': 'application/json', 'x-api-key': SYNTHRA_KEY };
 
 import { toRaw } from '../../utils/chainUtils';
+import { useTokenPrices, formatUsdValue } from '../../hooks/useTokenPrices';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function DeFiWidget({ defaultTab = 'swap' }) {
@@ -25,6 +27,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const { connect, connectors } = useConnect();
   const navigate = useNavigate();
   const connectedChainId = useChainId();
+  const { prices } = useTokenPrices();
 
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [amount,    setAmount]    = useState('');
@@ -45,9 +48,24 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isReceiverModalOpen, setIsReceiverModalOpen] = useState(false);
+  const [receiverAddress, setReceiverAddress] = useState('');
   const [selectingFor, setSelectingFor] = useState('in'); // 'in' or 'out'
   const [showSettings, setShowSettings] = useState(false);
   const [slippage, setSlippage] = useState('0.5');
+  const settingsRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target)) {
+        setShowSettings(false);
+      }
+    }
+    if (showSettings) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showSettings]);
 
   // ── Transaction State ──
   const [quote,            setQuote]            = useState(null);
@@ -69,34 +87,40 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     address,
     token: (tokenIn?.isNative || isNativeIn) ? undefined : tokenIn?.address,
     chainId: ARC_CHAIN_ID,
-    query: { enabled: !!address, refetchInterval: 10_000, staleTime: 8_000 }
+    query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
   });
   const { data: balOutData } = useBalance({
     address,
     token: (tokenOut?.isNative || isNativeOut) ? undefined : tokenOut?.address,
     chainId: ARC_CHAIN_ID,
-    query: { enabled: !!address, refetchInterval: 10_000, staleTime: 8_000 }
+    query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
   });
-  const fmtInSwap  = balInData  ? Number(balInData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })  : '0,00';
-  const fmtOutSwap = balOutData ? Number(balOutData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '0,00';
+  const fmtInSwap  = balInData  ? Number(balInData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })  : '0.00';
+  const fmtOutSwap = balOutData ? Number(balOutData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }) : '0.00';
 
   // ── Bridge Balances ──
-  const isBridgeNativeIn  = bridgeTokenIn?.address?.toLowerCase()  === '0x3600000000000000000000000000000000000000';
-  const isBridgeNativeOut = bridgeTokenOut?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000';
+  // Calculate correct token address based on the selected chain!
+  // If the user selected 'USDC', but bridgeChainOut is Base Sepolia, we MUST use the Base Sepolia USDC address.
+  const actualTokenIn = TOKENS.find(t => t.symbol === bridgeTokenIn?.symbol && t.chainId === bridgeChainIn?.id) || bridgeTokenIn;
+  const actualTokenOut = TOKENS.find(t => t.symbol === bridgeTokenOut?.symbol && t.chainId === bridgeChainOut?.id) || bridgeTokenOut;
+
+  const isBridgeNativeIn  = actualTokenIn?.address?.toLowerCase()  === '0x3600000000000000000000000000000000000000';
+  const isBridgeNativeOut = actualTokenOut?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000';
+
   const { data: bridgeBalInData } = useBalance({
     address,
-    token: (bridgeTokenIn?.isNative || isBridgeNativeIn) ? undefined : bridgeTokenIn?.address,
+    token: (actualTokenIn?.isNative || isBridgeNativeIn) ? undefined : actualTokenIn?.address,
     chainId: bridgeChainIn?.id,
-    query: { enabled: !!address, refetchInterval: 10_000, staleTime: 8_000 }
+    query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
   });
   const { data: bridgeBalOutData } = useBalance({
     address,
-    token: (bridgeTokenOut?.isNative || isBridgeNativeOut) ? undefined : bridgeTokenOut?.address,
+    token: (actualTokenOut?.isNative || isBridgeNativeOut) ? undefined : actualTokenOut?.address,
     chainId: bridgeChainOut?.id,
-    query: { enabled: !!address, refetchInterval: 10_000, staleTime: 8_000 }
+    query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
   });
-  const fmtInBridge  = bridgeBalInData  ? Number(bridgeBalInData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })  : '0,00';
-  const fmtOutBridge = bridgeBalOutData ? Number(bridgeBalOutData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '0,00';
+  const fmtInBridge  = bridgeBalInData  ? Number(bridgeBalInData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })  : '0.00';
+  const fmtOutBridge = bridgeBalOutData ? Number(bridgeBalOutData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }) : '0.00';
 
   // ── Quote Logic (Swap only for now) ──
   const fetchQuote = useCallback(async () => {
@@ -147,7 +171,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     } finally {
       setQuoteLoading(false);
     }
-  }, [amount, tokenIn, tokenOut, activeTab]);
+  }, [amount, tokenIn, tokenOut, activeTab, bridgeChainIn, bridgeChainOut, bridgeTokenIn, bridgeTokenOut]);
 
   useEffect(() => {
     const t = setTimeout(fetchQuote, 700);
@@ -209,6 +233,13 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
          alert('As redes de origem e destino não podem ser as mesmas.');
          return;
       }
+      
+      const supportedCCTPChains = [5042002, 11155111, 84532, 421614, 11155420];
+      if (!supportedCCTPChains.includes(bridgeChainOut.id)) {
+          alert(`A rede ${bridgeChainOut.name} não possui suporte oficial da Circle (CCTP) ainda. Para enviar para essa rede, precisamos usar a rota padrão da Synthra. Quer que eu ative isso?`);
+          return;
+      }
+
       setIsBridgeExecutionModalOpen(true);
       return;
     }
@@ -221,8 +252,40 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     setIsSwapExecutionModalOpen(true);
   };
 
+  const getEstimatedTime = (fromId, toId) => {
+    // 11155111 = Ethereum Sepolia | 1 = Ethereum Mainnet
+    if (fromId === 11155111 || fromId === 1) return '10-15 minutes'; 
+    // Redes rápidas (Arc, Solana, Avalanche, Linea, Base, Opt, etc)
+    return '1-3 minutes';
+  };
+
   // ── UI Helpers ─────────────────────────────────────────────────────────────
-  const outputAmount = quote ? parseFloat(Number(quote.amountOutDecimals).toFixed(6)).toString() : '';
+  const activeTokenIn = activeTab === 'bridge' ? bridgeTokenIn : tokenIn;
+  const activeTokenOut = activeTab === 'bridge' ? bridgeTokenOut : tokenOut;
+  const isStableOut = ['USDC', 'USDT', 'EURC', 'WUSDC'].includes(activeTokenOut.symbol);
+  
+  const outputAmount = quote ? Number(quote.amountOutDecimals).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: isStableOut ? 2 : 6, useGrouping: false }) : '';
+
+  let realPriceImpact = quote?.priceImpact;
+  let inputUsd = null;
+  let outputUsd = null;
+
+  if (amount && outputAmount && prices) {
+    
+    inputUsd = formatUsdValue(activeTokenIn.symbol, Number(amount), prices);
+    outputUsd = formatUsdValue(activeTokenOut.symbol, Number(outputAmount), prices);
+
+    const inPrice = prices[activeTokenIn.symbol];
+    const outPrice = prices[activeTokenOut.symbol];
+    
+    if (inPrice && outPrice) {
+      const usdIn = Number(amount) * inPrice;
+      const usdOut = Number(outputAmount) * outPrice;
+      if (usdIn > 0) {
+        realPriceImpact = (((usdOut - usdIn) / usdIn) * 100).toFixed(3);
+      }
+    }
+  }
 
   let btnLabel = activeTab === 'swap' ? 'Swap Tokens' : 'Bridge Assets';
   if (!address)                          btnLabel = 'Connect Wallet';
@@ -252,7 +315,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
               </button>
             ))}
           </div>
-          <div className="flex gap-2 relative">
+          <div className="flex gap-2 relative" ref={settingsRef}>
             <button onClick={() => setIsHistoryModalOpen(true)} title="Swap & Bridge History"
               className="w-9 h-9 flex items-center justify-center rounded-full bg-dark-bg text-dark-muted hover:text-white hover:bg-dark-border transition-all">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -280,7 +343,13 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                           {val}%
                         </button>
                       ))}
-                      <input type="text" placeholder="Custom" className="w-16 bg-dark-input border border-dark-border rounded-lg text-center text-xs text-white focus:border-blue-500 outline-none placeholder-dark-muted" />
+                      <input 
+                        type="number" 
+                        placeholder="Custom" 
+                        value={['0.1', '0.5', '1.0'].includes(slippage) ? '' : slippage}
+                        onChange={(e) => setSlippage(e.target.value)}
+                        className={`w-16 bg-dark-input border rounded-lg text-center text-xs text-white outline-none placeholder-dark-muted ${!['0.1', '0.5', '1.0'].includes(slippage) && slippage ? 'border-blue-500 bg-blue-600/20' : 'border-dark-border focus:border-blue-500'}`} 
+                      />
                     </div>
                   </div>
                   <p className="text-[10px] text-dark-muted pt-2 border-t border-dark-border/50">
@@ -296,24 +365,29 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {activeTab === 'swap' && (
           <div className="flex flex-col gap-1">
             {/* From */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 h-[124px] flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-7 flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>You pay</span>
-                <span className="flex items-center gap-1 text-xs">
-                  <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                  {fmtInSwap} {tokenIn.symbol}
-                </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <button onClick={() => { setSelectingFor('in'); setIsSwapModalOpen(true); }}
-                  className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg shrink-0 group">
-                  <TokenIcon token={tokenIn} size="sm" />
-                  <span className="font-bold text-white text-lg tracking-wide">{tokenIn.symbol}</span>
-                  <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-                <input type="number" placeholder="0" value={amount}
-                  onChange={(e) => { setAmount(e.target.value); setSwapStatus('idle'); setSwapError(''); }}
-                  className="w-full bg-transparent text-right text-4xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
+                <div className="flex flex-col items-start w-full">
+                  <input type="number" placeholder="0" value={amount}
+                    onChange={(e) => { setAmount(e.target.value); setSwapStatus('idle'); setSwapError(''); }}
+                    className="w-full bg-transparent text-left text-4xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
+                  {inputUsd && inputUsd !== '--' && <div className="text-xs font-medium text-dark-muted mt-1">~$ {inputUsd}</div>}
+                </div>
+                <div className="flex flex-col items-end shrink-0">
+                  <button onClick={() => { setSelectingFor('in'); setIsSwapModalOpen(true); }}
+                    className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg group">
+                    <TokenIcon token={tokenIn} size="sm" />
+                    <span className="font-bold text-white text-lg tracking-wide">{tokenIn.symbol}</span>
+                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  <span className="flex items-center gap-1.5 text-[11px] mt-2 text-dark-muted font-semibold cursor-pointer hover:text-white transition-colors"
+                    onClick={() => { if (balInData) setAmount(balInData.formatted); }}>
+                    Balance: {fmtInSwap} {tokenIn.symbol}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -329,27 +403,35 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* To */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 h-[124px] flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-7 flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>You receive</span>
-                <span className="flex items-center gap-1 text-xs">
-                  <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                  {fmtOutSwap} {tokenOut.symbol}
-                </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <button onClick={() => { setSelectingFor('out'); setIsSwapModalOpen(true); }}
-                  className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg shrink-0 group">
-                  <TokenIcon token={tokenOut} size="sm" />
-                  <span className="font-bold text-white text-lg tracking-wide">{tokenOut.symbol}</span>
-                  <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-                <div className="w-full text-right text-4xl font-black tracking-tight min-w-0">
-                  {quoteLoading
-                    ? <span className="text-dark-muted text-2xl animate-pulse">...</span>
-                    : outputAmount
-                      ? <span className="text-white">{outputAmount}</span>
-                      : <span className="text-dark-border">0</span>}
+                <div className="flex flex-col items-start w-full">
+                  <div className="w-full text-left text-4xl font-black tracking-tight min-w-0">
+                    {quoteLoading
+                      ? <span className="text-dark-muted text-2xl animate-pulse">...</span>
+                      : outputAmount
+                        ? <span className="text-white">{outputAmount}</span>
+                        : <span className="text-dark-border">0</span>}
+                  </div>
+                  {outputUsd && outputUsd !== '--' && (
+                    <div className="text-xs font-medium flex items-center gap-1.5 mt-1">
+                      <span className="text-dark-muted">~$ {outputUsd}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-end shrink-0">
+                  <button onClick={() => { setSelectingFor('out'); setIsSwapModalOpen(true); }}
+                    className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg group">
+                    <TokenIcon token={tokenOut} size="sm" />
+                    <span className="font-bold text-white text-lg tracking-wide">{tokenOut.symbol}</span>
+                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  <span className="flex items-center gap-1.5 text-[11px] mt-2 text-dark-muted font-semibold cursor-pointer hover:text-white transition-colors">
+                    Balance: {fmtOutSwap} {tokenOut.symbol}
+                  </span>
                 </div>
               </div>
             </div>
@@ -360,29 +442,34 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {activeTab === 'bridge' && (
           <div className="flex flex-col gap-1">
             {/* From */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 h-[124px] flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-7 flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>Bridge from</span>
-                <span className="flex items-center gap-1 text-xs">
-                  <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                  {fmtInBridge} {bridgeTokenIn.symbol}
-                </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <button onClick={() => { setSelectingFor('in'); setIsBridgeModalOpen(true); }}
-                  className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg shrink-0 group">
-                  <div className="relative flex shrink-0">
-                    <TokenIcon token={bridgeTokenIn} size="sm" />
-                    <div className="absolute -bottom-1 -right-1">
-                       <ChainBadge chain={bridgeChainIn} />
+                <div className="flex flex-col items-start w-full">
+                  <input type="number" placeholder="0" value={amount}
+                    onChange={(e) => { setAmount(e.target.value); setSwapStatus('idle'); setSwapError(''); }}
+                    className="w-full bg-transparent text-left text-4xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
+                  {inputUsd && inputUsd !== '--' && <div className="text-xs font-medium text-dark-muted mt-1">~$ {inputUsd}</div>}
+                </div>
+                <div className="flex flex-col items-end shrink-0">
+                  <button onClick={() => { setSelectingFor('in'); setIsBridgeModalOpen(true); }}
+                    className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg group">
+                    <div className="relative flex shrink-0">
+                      <TokenIcon token={bridgeTokenIn} size="sm" />
+                      <div className="absolute -bottom-1 -right-1">
+                         <ChainBadge chain={bridgeChainIn} />
+                      </div>
                     </div>
-                  </div>
-                  <span className="font-bold text-white text-lg tracking-wide">{bridgeTokenIn.symbol}</span>
-                  <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-                <input type="number" placeholder="0" value={amount}
-                  onChange={(e) => { setAmount(e.target.value); setSwapStatus('idle'); setSwapError(''); }}
-                  className="w-full bg-transparent text-right text-4xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
+                    <span className="font-bold text-white text-lg tracking-wide">{bridgeTokenIn.symbol}</span>
+                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  <span className="flex items-center gap-1.5 text-[11px] mt-2 text-dark-muted font-semibold cursor-pointer hover:text-white transition-colors"
+                    onClick={() => { if (bridgeBalInData) setAmount(bridgeBalInData.formatted); }}>
+                    Balance: {fmtInBridge} {bridgeTokenIn.symbol}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -399,64 +486,112 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* To */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 h-[124px] flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-7 flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>Bridge to</span>
-                <span className="flex items-center gap-1 text-xs">
-                  <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                  {fmtOutBridge} {bridgeTokenOut.symbol}
-                </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <button onClick={() => { setSelectingFor('out'); setIsBridgeModalOpen(true); }}
-                  className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg shrink-0 group">
-                  <div className="relative flex shrink-0">
-                    <TokenIcon token={bridgeTokenOut} size="sm" />
-                    <div className="absolute -bottom-1 -right-1">
-                       <ChainBadge chain={bridgeChainOut} />
-                    </div>
+                <div className="flex flex-col items-start w-full">
+                  <div className="w-full text-left text-4xl font-black tracking-tight min-w-0">
+                    {quoteLoading
+                      ? <span className="text-dark-muted text-2xl animate-pulse">...</span>
+                      : outputAmount
+                        ? <span className="text-white">{outputAmount}</span>
+                        : <span className="text-dark-border">0</span>}
                   </div>
-                  <span className="font-bold text-white text-lg tracking-wide">{bridgeTokenOut.symbol}</span>
-                  <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-                <div className="w-full text-right text-4xl font-black tracking-tight min-w-0">
-                  {quoteLoading
-                    ? <span className="text-dark-muted text-2xl animate-pulse">...</span>
-                    : outputAmount
-                      ? <span className="text-white">{outputAmount}</span>
-                      : <span className="text-dark-border">0</span>}
+                  {outputUsd && outputUsd !== '--' && (
+                    <div className="text-xs font-medium flex items-center gap-1.5 mt-1">
+                      <span className="text-dark-muted">~$ {outputUsd}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col items-end shrink-0">
+                  <button onClick={() => { setSelectingFor('out'); setIsBridgeModalOpen(true); }}
+                    className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg group">
+                    <div className="relative flex shrink-0">
+                      <TokenIcon token={bridgeTokenOut} size="sm" />
+                      <div className="absolute -bottom-1 -right-1">
+                         <ChainBadge chain={bridgeChainOut} />
+                      </div>
+                    </div>
+                    <span className="font-bold text-white text-lg tracking-wide">{bridgeTokenOut.symbol}</span>
+                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  </button>
+                  <span className="flex items-center gap-1.5 text-[11px] mt-2 text-dark-muted font-semibold cursor-pointer hover:text-white transition-colors">
+                    Balance: {fmtOutBridge} {bridgeTokenOut.symbol}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── Route info ── */}
-        <div className="mt-4 mb-2 px-4 py-3 bg-dark-bg/60 border border-dark-border/50 rounded-xl flex items-center justify-between shadow-inner">
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-dark-muted uppercase tracking-wider">Route</span>
-            <span className="text-sm font-black text-white flex items-center mt-0.5">
-              {quoteLoading
-                ? <span className="text-dark-muted animate-pulse">Searching routes...</span>
-                : quoteError
-                  ? <span className="text-red-400 text-xs">{quoteError}</span>
-                  : quote
-                    ? <>
-                        <span className="text-xs font-medium">{activeTab === 'bridge' ? 'CCTP Routing' : 'Synthra Router'}</span>
-                        <svg className="w-4 h-4 text-green-400 ml-1 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      </>
-                    : <span className="text-dark-muted">Enter an amount</span>}
-            </span>
-          </div>
-          {quote && (
-            <div className="text-right shrink-0 ml-2">
-              <div className="text-xs text-dark-muted">{activeTab === 'bridge' ? 'Bridge Fee' : 'Price Impact'}</div>
-              <div className="text-sm font-bold text-green-400">
-                {activeTab === 'bridge' ? '~$0.00' : (quote.priceImpact ? `${Number(quote.priceImpact).toFixed(2)}%` : '< 0.01%')}
-              </div>
+        {/* ── Swap Detailed Info ── */}
+        {activeTab === 'swap' && (quote || quoteLoading || quoteError) && (
+          <div className="mt-4 mb-2 p-4 bg-dark-bg/60 border border-dark-border/50 rounded-xl shadow-inner flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-white flex items-center gap-1.5 cursor-pointer hover:text-blue-400 transition-colors">
+                Route: Synthra
+              </span>
+              <span className="text-sm font-bold text-white flex items-center gap-2">
+                {quoteLoading ? (
+                  <span className="text-dark-muted animate-pulse">Calculating...</span>
+                ) : quoteError ? (
+                  <span className="text-red-400 text-xs">{quoteError}</span>
+                ) : (
+                  realPriceImpact !== undefined && realPriceImpact !== null ? (
+                    <span className={Number(realPriceImpact) < -0.5 ? 'text-yellow-500' : 'text-green-400'}>
+                      {Number(realPriceImpact) > 0 ? '+' : ''}{Number(realPriceImpact).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% Impact
+                    </span>
+                  ) : (
+                    <span className="text-green-400">0.00% Impact</span>
+                  )
+                )}
+              </span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* ── Bridge Detailed Info ── */}
+        {activeTab === 'bridge' && (
+          <div className="mt-5 mb-2 px-1 flex flex-col gap-6">
+            <div className="flex justify-start">
+               <button onClick={() => setIsReceiverModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-dark-bg/60 hover:bg-dark-border transition-colors border border-dark-border/50 rounded-full text-xs font-bold text-white shadow-sm">
+                 {receiverAddress ? (
+                   <>
+                     <div className="w-4 h-4 rounded-full bg-blue-500 shadow-inner flex-shrink-0" />
+                     {receiverAddress.slice(0, 6)}...{receiverAddress.slice(-4)}
+                   </>
+                 ) : (
+                   <>
+                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                     Add receiving wallet
+                   </>
+                 )}
+               </button>
+            </div>
+            {Number(amount) > 0 && (
+              <div className="flex flex-col gap-3 px-1">
+                 <div className="flex items-center justify-between text-sm">
+                   <span className="text-dark-muted font-medium">Bridge Fee</span>
+                   {quoteLoading ? (
+                      <span className="text-dark-muted animate-pulse">Calculating...</span>
+                   ) : (
+                      <span className="text-white font-bold">{quote ? `0.20 ${bridgeTokenIn.symbol}` : '--'}</span>
+                   )}
+                 </div>
+                 <div className="flex items-center justify-between text-sm">
+                   <span className="text-dark-muted font-medium">Estimated Time</span>
+                   {quoteLoading ? (
+                      <span className="text-dark-muted animate-pulse">Calculating...</span>
+                   ) : (
+                      <span className="text-white font-bold">{quote ? getEstimatedTime(bridgeChainIn.id, bridgeChainOut.id) : '--'}</span>
+                   )}
+                 </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Error ── */}
         {swapStatus === 'error' && swapError && (
@@ -511,10 +646,18 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         toChain={bridgeChainOut}
         token={bridgeTokenIn}
         userAddress={address}
+        receiverAddress={receiverAddress}
         onComplete={() => {
           setIsBridgeExecutionModalOpen(false);
           setAmount('');
         }}
+      />
+
+      <ReceivingWalletModal
+        isOpen={isReceiverModalOpen}
+        onClose={() => setIsReceiverModalOpen(false)}
+        onSave={(addr) => setReceiverAddress(addr)}
+        initialAddress={receiverAddress}
       />
 
       <SwapModal
@@ -528,6 +671,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         amountOut={outputAmount}
         rawAmountIn={toRaw(amount, tokenIn.decimals)}
         userAddress={address}
+        slippage={slippage}
       />
       <TradeHistoryModal 
         isOpen={isHistoryModalOpen} 

@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import PaymentForm from '../components/forms/PaymentForm';
 import InvoiceHistory from '../components/ui/InvoiceHistory';
 
 export default function InvoicePage() {
   const [activeTab, setActiveTab] = useState('create'); // 'create' | 'history'
   const [pendingCount, setPendingCount] = useState(0);
+
+  const handleUpdateStats = useCallback((stats) => {
+    setPendingCount(prev => prev === stats.pendingCount ? prev : stats.pendingCount);
+  }, []);
 
   return (
     <section className="flex-1 flex flex-col items-center justify-start pt-4 pb-0 w-full">
@@ -60,7 +64,7 @@ export default function InvoicePage() {
             className="w-full flex flex-col h-auto pt-0 transition-opacity duration-200"
             style={{ display: activeTab === 'history' ? 'flex' : 'none' }}
           >
-            <InvoiceHistory onUpdateStats={(stats) => setPendingCount(stats.pendingCount)} />
+            <InvoiceHistory onUpdateStats={handleUpdateStats} />
           </div>
         </div>
 

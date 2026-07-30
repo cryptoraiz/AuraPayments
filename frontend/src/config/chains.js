@@ -40,14 +40,7 @@ export const CHAINS = [
     color: 'bg-blue-400',
     isTestnet: true,
   },
-  {
-    id: 64165,
-    key: 'SONIC',
-    name: 'Sonic Testnet',
-    icon: 'https://cryptologos.cc/logos/fantom-ftm-logo.png?v=024',
-    color: 'bg-purple-500',
-    isTestnet: true,
-  },
+
 ];
 
 export function getChainById(id) {

@@ -14,6 +14,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
   const [currentStep, setCurrentStep] = useState(0); // 0: approve, 1: swap, 2: wait, 3: success
   const [status, setStatus] = useState('idle'); // idle, loading, error
   const [errorMsg, setErrorMsg] = useState('');
+  const [swapTxHash, setSwapTxHash] = useState('');
 
   // Helper component for timeline dots
   const StepIndicator = ({ stepIndex }) => {
@@ -91,6 +92,8 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
           gas:   arcGasHeadroom(tx.gasLimit),
         }],
       });
+      
+      setSwapTxHash(hash);
 
       // STEP 2: WAIT
       setCurrentStep(2);
@@ -132,6 +135,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
       setCurrentStep(0);
       setStatus('idle');
       setErrorMsg('');
+      setSwapTxHash('');
     }
   }, [isOpen]);
 
@@ -224,10 +228,20 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
              <div className="flex items-center gap-4 relative z-10">
                <StepIndicator stepIndex={3} />
                <div className="flex-1 flex justify-between items-center">
-                 <span className={`font-semibold text-[15px] ${currentStep >= 3 ? 'text-white' : 'text-dark-muted'}`}>Got {amountOut} {tokenOut.symbol} on Arc</span>
+                 <span className={`font-semibold text-[15px] ${currentStep >= 3 ? 'text-green-400' : 'text-dark-muted'}`}>Swap Successful!</span>
+                 {currentStep >= 3 && <span className="text-[13px] text-green-400">✓ Done</span>}
                </div>
              </div>
           </div>
+
+          {swapTxHash && currentStep >= 3 && (
+            <div className="mt-4 text-center text-xs text-dark-muted">
+              Transaction Hash:{' '}
+              <a href={`https://testnet.arcscan.app/tx/${swapTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                {swapTxHash.slice(0, 10)}...{swapTxHash.slice(-8)}
+              </a>
+            </div>
+          )}
 
           {errorMsg && (
             <div className="mt-4 p-3 bg-red-900/30 border border-red-500/50 rounded-xl text-xs text-red-400 text-center">

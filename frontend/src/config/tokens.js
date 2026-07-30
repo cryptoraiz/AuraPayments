@@ -85,16 +85,6 @@ export const TOKENS = [
     color:    'bg-blue-400',
     chainId:  11155420, // Optimism Sepolia
   },
-  {
-    // USDC do Sonic Testnet (Blaze)
-    symbol:   'USDC',
-    name:     'USD Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
-    address:  '0xA4879Fed32Ecbef99399e5cbC247E533421C4eC6',
-    decimals: 6,
-    color:    'bg-blue-400',
-    chainId:  64165, // Sonic Testnet
-  },
 ];
 
 export function getTokenBySymbol(symbol) {

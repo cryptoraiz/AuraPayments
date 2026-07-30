@@ -14,7 +14,7 @@ echo       ✅ Process cleanup complete.
 echo.
 
 echo [2/3] 🚀 Starting Backend Server (Port 5000)...
-start "Arc Connect Backend" /min cmd /k "cd backend && npm run dev"
+start "Arc Connect Backend" /min cmd /k "cd api && npm run dev"
 timeout /t 3 >nul
 
 echo [3/3] 🎨 Starting Frontend...

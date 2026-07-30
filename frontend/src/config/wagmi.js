@@ -1,5 +1,5 @@
 import { http, createConfig } from 'wagmi'
-import { mainnet, arbitrum, polygon, optimism, base } from 'wagmi/chains'
+import { mainnet, arbitrum, polygon, optimism, base, sepolia, baseSepolia, arbitrumSepolia, optimismSepolia } from 'wagmi/chains'
 import { walletConnect, injected, coinbaseWallet } from 'wagmi/connectors'
 
 // Arc Network Testnet Configuration
@@ -26,30 +26,11 @@ export const arcTestnet = {
   testnet: true,
 }
 
-// Sonic Testnet Configuration
-export const sonicTestnet = {
-  id: 64165,
-  name: 'Sonic Testnet',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'Sonic',
-    symbol: 'S',
-  },
-  rpcUrls: {
-    default: { http: ['https://rpc.testnet.soniclabs.com'] },
-    public: { http: ['https://rpc.testnet.soniclabs.com'] },
-  },
-  blockExplorers: {
-    default: { name: 'Sonic Explorer', url: 'https://testnet.soniclabs.com' },
-  },
-  testnet: true,
-}
-
 // WalletConnect Project ID (Load from Env or use Public Fallback for generic testing)
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '3a8170812b534d0ff9d794f19a901d64';
 
 export const config = createConfig({
-  chains: [arcTestnet, sonicTestnet, mainnet, arbitrum, polygon, optimism, base],
+  chains: [arcTestnet, mainnet, arbitrum, polygon, optimism, base, sepolia, baseSepolia, arbitrumSepolia, optimismSepolia],
   batch: {
     multicall: { wait: 50, batchSize: 1024 },
   },
@@ -61,11 +42,15 @@ export const config = createConfig({
   transports: {
     // Use our Vercel proxy to avoid CORS — the proxy forwards to rpc.testnet.arc.network server-side
     [arcTestnet.id]: http(import.meta.env.PROD ? '/api/rpc' : 'https://rpc.testnet.arc.network'),
-    [sonicTestnet.id]: http(),
+
     [mainnet.id]: http(),
     [arbitrum.id]: http(),
     [polygon.id]: http(),
     [optimism.id]: http(),
     [base.id]: http(),
+    [sepolia.id]: http(),
+    [baseSepolia.id]: http(),
+    [arbitrumSepolia.id]: http(),
+    [optimismSepolia.id]: http(),
   },
 })
