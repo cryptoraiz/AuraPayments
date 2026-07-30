@@ -8,6 +8,7 @@
   "devDependencies": {
     "dotenv": "^17.4.2",
     "ethers": "^6.17.0",
+    "playwright": "^1.62.1",
     "solc": "^0.8.20"
   },
   "dependencies": {

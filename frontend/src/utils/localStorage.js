@@ -62,7 +62,7 @@ export const updatePaymentLink = (linkId, updates) => {
 export const getPaymentLinksByWallet = (walletAddress) => {
     const links = getPaymentLinks();
     return links.filter(
-        link => link.creatorAddress?.toLowerCase() === walletAddress?.toLowerCase()
+        link => link && link.creatorAddress?.toLowerCase() === walletAddress?.toLowerCase()
     );
 };
 
@@ -198,7 +198,7 @@ export const saveSentPayment = (paymentData) => {
 export const getSentPaymentsByWallet = (walletAddress) => {
     const payments = getSentPayments();
     return payments.filter(
-        payment => payment.payer?.toLowerCase() === walletAddress?.toLowerCase()
+        payment => payment && payment.payer?.toLowerCase() === walletAddress?.toLowerCase()
     );
 };
 
@@ -313,6 +313,6 @@ export const saveTrade = (tradeData) => {
 export const getTradeHistoryByWallet = (walletAddress) => {
     const trades = getTradeHistory();
     return trades.filter(
-        trade => trade.walletAddress?.toLowerCase() === walletAddress?.toLowerCase()
+        trade => trade && trade.walletAddress?.toLowerCase() === walletAddress?.toLowerCase()
     );
 };

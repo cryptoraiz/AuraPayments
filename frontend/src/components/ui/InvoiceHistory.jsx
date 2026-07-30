@@ -85,7 +85,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
             }));
 
             // Merge Logic (Backend Priority)
-            const allReceived = [...receivedLocal, ...backendReceivedItems];
+            const allReceived = [...receivedLocal, ...backendReceivedItems].filter(Boolean);
             let uniqueReceived = Array.from(new Map(allReceived.map(item => [item.id, item])).values());
 
             // Filter out blacklisted (locally deleted) items
@@ -554,30 +554,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
                     </AnimatePresence>
 
                     <div className="space-y-3 flex-1 flex flex-col">
-                    {/* Top Pagination Controls */}
-                    {totalPages > 1 && (
-                        <div className="flex justify-end items-center gap-4 pb-2">
-                            <span className="text-zinc-400 text-xs font-medium">
-                                {currentPage} / {totalPages}
-                            </span>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => handlePageChange(currentPage - 1)}
-                                    disabled={currentPage === 1}
-                                    className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors font-bold text-xs"
-                                >
-                                    Prev
-                                </button>
-                                <button
-                                    onClick={() => handlePageChange(currentPage + 1)}
-                                    disabled={currentPage === totalPages}
-                                    className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors font-bold text-xs"
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    {/* Top Pagination Controls Removed */}
 
                     {isLoading && paginatedItems.length === 0 ? (
                         <div className="grid gap-3">
