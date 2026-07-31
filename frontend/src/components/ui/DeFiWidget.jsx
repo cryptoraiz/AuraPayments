@@ -185,7 +185,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   }, [amount, tokenIn, tokenOut, activeTab, bridgeChainIn, bridgeChainOut, bridgeTokenIn, bridgeTokenOut]);
 
   useEffect(() => {
-    const t = setTimeout(fetchQuote, 700);
+    const t = setTimeout(fetchQuote, 300);
     return () => clearTimeout(t);
   }, [fetchQuote]);
 
@@ -406,7 +406,12 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             <div className="relative h-2 flex items-center justify-center z-10 -my-3">
               <div onClick={() => { 
                   setTokenIn(tokenOut); setTokenOut(tokenIn); 
-                  setAmount(''); setQuote(null); setSwapStatus('idle'); 
+                  if (quote && quote.amountOutDecimals) {
+                    setAmount(Number(quote.amountOutDecimals).toString());
+                  } else {
+                    setAmount('');
+                  }
+                  setQuote(null); setSwapStatus('idle'); 
                 }}
                 className="absolute w-10 h-10 bg-dark-card border-4 border-dark-bg rounded-xl flex items-center justify-center text-dark-muted hover:text-white transition-all hover:bg-dark-border cursor-pointer shadow-lg hover:rotate-180 duration-500">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
@@ -489,7 +494,12 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
               <div onClick={() => { 
                   setBridgeChainIn(bridgeChainOut); setBridgeChainOut(bridgeChainIn); 
                   setBridgeTokenIn(bridgeTokenOut); setBridgeTokenOut(bridgeTokenIn);
-                  setAmount(''); setQuote(null); setSwapStatus('idle'); 
+                  if (quote && quote.amountOutDecimals) {
+                    setAmount(Number(quote.amountOutDecimals).toString());
+                  } else {
+                    setAmount('');
+                  }
+                  setQuote(null); setSwapStatus('idle'); 
                 }}
                 className="absolute w-10 h-10 bg-dark-card border-4 border-dark-bg rounded-xl flex items-center justify-center text-dark-muted hover:text-white transition-all hover:bg-dark-border cursor-pointer shadow-lg hover:rotate-180 duration-500">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
