@@ -16,29 +16,17 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
   const [errorMsg, setErrorMsg] = useState('');
   const [swapTxHash, setSwapTxHash] = useState('');
 
-  // Helper component for timeline dots
   const StepIndicator = ({ stepIndex }) => {
     const isActive = currentStep === stepIndex;
     const isDone = currentStep > stepIndex;
     const isLoading = isActive && status === 'loading';
-
-    if (isDone) {
-      return (
-        <div className="w-5 h-5 rounded-full bg-[#4A90E2] border-2 border-[#4A90E2] flex items-center justify-center shrink-0">
-           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-           </svg>
-        </div>
-      );
-    }
-    if (isLoading) {
-      return (
-        <div className="w-5 h-5 rounded-full border-2 border-[#4A90E2] border-t-transparent animate-spin shrink-0" />
-      );
-    }
-    return (
-      <div className={`w-5 h-5 rounded-full border-2 shrink-0 ${isActive ? 'border-[#4A90E2] bg-[#4A90E2]/20' : 'border-dark-border bg-dark-bg'}`} />
+    if (isDone) return (
+      <div className="w-5 h-5 rounded-full bg-[#4A90E2] border-2 border-[#4A90E2] flex items-center justify-center shrink-0">
+        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+      </div>
     );
+    if (isLoading) return <div className="w-5 h-5 rounded-full border-2 border-[#4A90E2] border-t-transparent animate-spin shrink-0 shadow-[0_0_12px_rgba(74,144,226,0.6)]" />;
+    return <div className={`w-5 h-5 rounded-full border-2 shrink-0 transition-all ${isActive ? 'border-[#4A90E2] bg-[#4A90E2]/20 shadow-[0_0_12px_rgba(74,144,226,0.4)]' : 'border-dark-border bg-transparent'}`} />;
   };
 
   const executeSwapFlow = async () => {
@@ -155,7 +143,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-[#1C1C1E] border border-dark-border rounded-[32px] w-full max-w-[420px] shadow-2xl overflow-hidden p-6 relative"
+          className="bg-[#1C1C1E] border border-white/10 rounded-[32px] w-full max-w-[420px] shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden p-6 relative"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}
@@ -194,52 +182,38 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
           </div>
 
           {/* Timeline Box */}
-          <div className="bg-transparent border border-dark-border/60 rounded-3xl p-5 relative">
+          <div className="bg-white/[0.02] border border-white/5 shadow-[0_0_20px_rgba(0,0,0,0.3)] backdrop-blur-xl rounded-3xl p-5 relative">
              <div className="absolute left-[29px] top-[38px] bottom-[48px] w-[2px] bg-dark-border/40 z-0" />
 
-             {/* Step 0: Approve */}
-             <div className="flex items-center gap-4 relative z-10 mb-6">
-               <StepIndicator stepIndex={0} />
-               <div className="flex-1 flex justify-between items-center">
-                 <span className={`font-semibold text-[15px] ${currentStep >= 0 ? 'text-white' : 'text-dark-muted'}`}>Approve {tokenIn.symbol}</span>
-                 {currentStep === 0 && status === 'loading' && <span className="text-[13px] text-dark-muted">Approving in your wallet</span>}
+             {[
+               { label: `Approve ${tokenIn.symbol}`, hint: 'Approving in your wallet' },
+               { label: 'Confirm Swap', hint: 'Confirming in wallet' },
+               { label: 'Wait ~2 sec', hint: 'Processing on Arc' },
+               { label: 'Swap Successful!', hint: '' },
+             ].map((step, i) => (
+               <div key={i} className={`flex items-center gap-4 relative z-10 ${i < 3 ? 'mb-6' : ''}`}>
+                 <StepIndicator stepIndex={i} />
+                 <div className="flex-1 flex justify-between items-center">
+                   <span className={`font-semibold text-[15px] transition-colors ${currentStep >= i ? (i === 3 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]') : 'text-white/40'}`}>
+                     {step.label}
+                   </span>
+                   {currentStep === i && status === 'loading' && step.hint && (
+                     <span className="text-[13px] text-[#4A90E2] drop-shadow-[0_0_5px_rgba(74,144,226,0.5)] animate-pulse">{step.hint}</span>
+                   )}
+                   {i === 3 && currentStep >= 3 && <span className="text-[13px] text-green-400">✓ Done</span>}
+                 </div>
                </div>
-             </div>
-
-             {/* Step 1: Swap */}
-             <div className="flex items-center gap-4 relative z-10 mb-6">
-               <StepIndicator stepIndex={1} />
-               <div className="flex-1 flex justify-between items-center">
-                 <span className={`font-semibold text-[15px] ${currentStep >= 1 ? 'text-white' : 'text-dark-muted'}`}>Confirm Swap</span>
-                 {currentStep === 1 && status === 'loading' && <span className="text-[13px] text-[#4A90E2]">Confirming in wallet</span>}
-               </div>
-             </div>
-
-             {/* Step 2: Wait */}
-             <div className="flex items-center gap-4 relative z-10 mb-6">
-               <StepIndicator stepIndex={2} />
-               <div className="flex-1 flex justify-between items-center">
-                 <span className={`font-semibold text-[15px] ${currentStep >= 2 ? 'text-white' : 'text-dark-muted'}`}>Wait ~2 sec</span>
-                 {currentStep === 2 && status === 'loading' && <span className="text-[13px] text-[#4A90E2]">Processing on Arc</span>}
-               </div>
-             </div>
-
-             {/* Step 3: Success */}
-             <div className="flex items-center gap-4 relative z-10">
-               <StepIndicator stepIndex={3} />
-               <div className="flex-1 flex justify-between items-center">
-                 <span className={`font-semibold text-[15px] ${currentStep >= 3 ? 'text-green-400' : 'text-dark-muted'}`}>Swap Successful!</span>
-                 {currentStep >= 3 && <span className="text-[13px] text-green-400">✓ Done</span>}
-               </div>
-             </div>
+             ))}
           </div>
 
-          {swapTxHash && currentStep >= 3 && (
-            <div className="mt-4 text-center text-xs text-dark-muted">
-              Transaction Hash:{' '}
-              <a href={`https://testnet.arcscan.app/tx/${swapTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-                {swapTxHash.slice(0, 10)}...{swapTxHash.slice(-8)}
-              </a>
+          {swapTxHash && currentStep >= 4 && (
+            <div className="mt-4 flex flex-col gap-2 items-center text-xs text-dark-muted bg-dark-bg/50 p-3 rounded-xl border border-dark-border/50">
+              <div>
+                Tx:{' '}
+                <a href={`https://testnet.arcscan.app/tx/${swapTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                  {swapTxHash.slice(0, 10)}...{swapTxHash.slice(-8)}
+                </a>
+              </div>
             </div>
           )}
 
