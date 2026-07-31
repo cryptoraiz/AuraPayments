@@ -40,7 +40,7 @@ export const TOKENS = [
   {
     symbol:   'cirBTC',
     name:     'Circle Bitcoin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png',
+    iconImg:  '/cirbtc.svg',
     address:  '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF',
     decimals: 8,
     color:    'bg-orange-500',

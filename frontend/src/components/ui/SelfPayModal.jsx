@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 
 export default function SelfPayModal({ isOpen, onClose, walletAddress }) {
-    // Fecha com ESC
+    // Close with ESC
     useEffect(() => {
         const handler = (e) => { if (e.key === 'Escape') onClose() }
         if (isOpen) window.addEventListener('keydown', handler)
@@ -64,7 +64,7 @@ export default function SelfPayModal({ isOpen, onClose, walletAddress }) {
                                 </div>
                                 <div>
                                     <p className="text-xs text-gray-300 leading-relaxed">
-                                        Your connected wallet is <strong className="text-amber-400 font-mono">{shortAddr}</strong> — the same address that <strong className="text-white">created this payment link</strong>.
+                                        Your connected wallet is <strong className="text-amber-400 font-mono">{shortAddr}</strong> - the same address that <strong className="text-white">created this payment link</strong>.
                                     </p>
                                 </div>
                             </div>

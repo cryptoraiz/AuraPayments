@@ -27,8 +27,8 @@ export default function HistoryPage() {
             setTrades([]);
         }
         
-        // Simular um loading bem rapido para ficar elegante
-        setTimeout(() => setIsLoading(false), 800);
+        // Remove artificial loading delay
+        setIsLoading(false);
     }, [address, isConnected]);
 
     const HistorySkeleton = () => (

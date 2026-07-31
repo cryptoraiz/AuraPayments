@@ -48,7 +48,7 @@ export default function InvoicePage() {
         </div>
         
         <div className="flex w-full flex-col items-center min-h-[550px]">
-          {/* Both panels stay mounted — CSS visibility swap eliminates re-mount jank */}
+          {/* Both panels stay mounted - CSS visibility swap eliminates re-mount jank */}
           <div
             className="w-full flex justify-center transition-opacity duration-200"
             style={{ display: activeTab === 'create' ? 'flex' : 'none' }}

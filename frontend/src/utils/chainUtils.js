@@ -30,5 +30,5 @@ export async function waitForReceipt(hash) {
     }
     await new Promise(r => setTimeout(r, 2000));
   }
-  throw new Error('Receipt timeout — transaction not confirmed in 2 minutes');
+  throw new Error('Receipt timeout - transaction not confirmed in 2 minutes');
 }

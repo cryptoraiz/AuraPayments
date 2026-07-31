@@ -103,7 +103,7 @@ export default function ArcAIPage() {
       }
 
       else if (conversationState === 'AWAITING_INVOICE_DETAILS') {
-        response = 'Invoice successfully generated and encrypted! 🧾 The B2B payment link is: https://arcpay.network/pay/inv-8842';
+        response = 'Invoice successfully generated and encrypted! 🔒 The B2B payment link is: https://aurapayments.xyz/pay/inv-8842';
         setConversationState('IDLE');
         addLog(`[AGENT] Escrow Smart Contract created.`);
         addLog(`[AGENT] Invoice stored on the blockchain.`);
@@ -265,7 +265,7 @@ export default function ArcAIPage() {
           </div>
         </div>
 
-        {/* COLUNA DIREITA: Prompts e Logs */}
+        {/* RIGHT COLUMN: Prompts and Logs */}
         <div className="hidden xl:flex w-[300px] flex-col gap-6 h-full">
           {/* Suggested Actions */}
           <div className="bg-dark-card border border-dark-border rounded-3xl p-6 shadow-2xl">

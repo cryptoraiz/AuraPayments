@@ -30,11 +30,11 @@ const drawReceiptOnDoc = (doc, paymentData) => {
         doc.text(text, xParam - textWidth, y);
     };
 
-    // === HEADER BACKGROUND ===
+    // HEADER BACKGROUND 
     doc.setFillColor(...COLORS.primary);
     doc.rect(0, 0, 210, 60, 'F'); // Taller header for premium feel
 
-    // === LOGO & BRANDING ===
+    // LOGO & BRANDING 
     doc.setTextColor(...COLORS.text.light);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(26);
@@ -45,7 +45,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
     doc.setTextColor(148, 163, 184); // Slate-400
     doc.text('Professional Payment Protocol', 20, 32);
 
-    // === RECEIPT LABEL (Top Right) ===
+    // RECEIPT LABEL (Top Right) 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(...COLORS.text.light);
@@ -57,7 +57,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
     const receiptId = paymentData.id ? `#${paymentData.id.slice(0, 8).toUpperCase()}` : `#${Date.now()}`;
     rightAlignText(receiptId, 32);
 
-    // === STATUS PILL ===
+    // STATUS PILL 
     // Center the pill in the header area or below logo? Let's put it on the right side under ID
     const statusText = paymentData.status === 'paid' ? 'CONFIRMED' : 'PENDING';
     const pillColor = paymentData.status === 'paid' ? COLORS.success : [234, 179, 8]; // Green or Yellow
@@ -70,7 +70,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
     // Manual centering for fixed width pill is tricky, simplified alignment:
     doc.text(statusText, 177.5, 42.5, { align: 'center' });
 
-    // === MAIN AMOUNT CARD ===
+    // MAIN AMOUNT CARD 
     // Floating card effect overlapping the header
     doc.setFillColor(...COLORS.text.light);
     doc.setDrawColor(...COLORS.bg.border);
@@ -99,7 +99,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
     const dateStr = new Date(paymentData.paidAt || Date.now()).toLocaleString('en-US');
     rightAlignText(dateStr, 73, 180);
 
-    // === DETAILS SECTION ===
+    // DETAILS SECTION 
     let y = 105;
 
     // Helper to draw a "field row"
@@ -187,7 +187,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
         });
     }
 
-    // === FOOTER BRANDING ===
+    // FOOTER BRANDING 
     const pageHeight = doc.internal.pageSize.height;
 
     // Background Footer
@@ -208,7 +208,7 @@ const drawReceiptOnDoc = (doc, paymentData) => {
 export const generatePaymentReceipt = (paymentData) => {
     const doc = new jsPDF();
     drawReceiptOnDoc(doc, paymentData);
-    const filename = `ArcConnect_Receipt_${paymentData.id ? paymentData.id.slice(0, 8) : 'New'}.pdf`;
+    const filename = `AuraPayments_Receipt_${paymentData.id ? paymentData.id.slice(0, 8) : 'New'}.pdf`;
     doc.save(filename);
 };
 
@@ -244,6 +244,6 @@ export const generateBatchReceipts = (paymentsArray, walletAddress) => {
         drawReceiptOnDoc(doc, item);
     });
 
-    const filename = `ArcConnect_Backup_${Date.now()}.pdf`;
+    const filename = `AuraPayments_Backup_${Date.now()}.pdf`;
     doc.save(filename);
 };

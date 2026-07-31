@@ -1,4 +1,4 @@
-# 🌐 ARC Connect - The Ultimate Web3 Gateway
+# 🌐 Aura Payments - The Ultimate Web3 Gateway
 
 > Professional asset management, swaps, and bridging on the Arc Network.
 
@@ -18,7 +18,7 @@ Managing digital assets across multiple networks is currently a fragmented and f
 
 ## 💡 The Solution
 
-**ARC Connect** solves this by providing a unified, premium gateway tailored for the modern Web3 user:
+**Aura Payments** solves this by providing a unified, premium gateway tailored for the modern Web3 user:
 - ✅ **All-in-One Dashboard:** Track assets, view historical activity, and monitor your portfolio value in one unified interface.
 - ✅ **Seamless Swaps & Bridging:** Execute DeFi operations with zero friction, directly from your wallet.
 - ✅ **Smart Invoicing:** Create, share, and track professional crypto payment links.

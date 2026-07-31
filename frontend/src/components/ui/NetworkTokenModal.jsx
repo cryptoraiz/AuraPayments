@@ -15,7 +15,7 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
   const tokens = getAllTokens().filter(t => {
     if (t.symbol !== 'USDC') return false;
     if (t.chainId) return t.chainId === activeChain.id;
-    return activeChain.id === 5042002; // tokens sem chainId são da Arc
+    return activeChain.id === 5042002; // tokens without chainId belong to Arc
   });
 
   if (!isOpen) return null;
@@ -37,7 +37,7 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
           className="bg-dark-card border border-dark-border rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[550px]"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* ── Left Sidebar (Networks) ── */}
+          {/* Left Sidebar (Networks) */}
           <div className="w-full md:w-[280px] bg-dark-bg border-r border-dark-border/50 flex flex-col flex-shrink-0">
             <div className="p-4 border-b border-dark-border/50">
               <div className="relative">
@@ -71,7 +71,7 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
             </div>
           </div>
 
-          {/* ── Right Panel (Tokens) ── */}
+          {/* Right Panel (Tokens) */}
           <div className="flex-1 flex flex-col bg-dark-card">
             <div className="flex items-center justify-between p-5 border-b border-dark-border/50">
               <h3 className="text-xl font-bold text-white">Exchange from</h3>
@@ -98,7 +98,7 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
 
             <div className="flex-1 overflow-y-auto hide-scrollbar p-2">
               {tokens.length === 0 ? (
-                <div className="text-center py-8 text-dark-muted text-sm">Nenhum token encontrado nesta rede.</div>
+                <div className="text-center py-8 text-dark-muted text-sm">No tokens found on this network.</div>
               ) : tokens.map((token) => (
                 <TokenRow
                   key={token.symbol}
@@ -159,7 +159,11 @@ function TokenRow({ token, chain, onSelect, isSelected, userAddress }) {
     chainId: chain.id, 
   });
 
-  const displayBalance = balanceData ? Number(balanceData.formatted).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '0,00';
+  const displayBalance = balanceData 
+    ? Number(balanceData.formatted) < 0.01
+      ? Number(balanceData.formatted).toLocaleString('en-US', { maximumFractionDigits: 8 })
+      : Number(balanceData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+    : '0,00';
 
   return (
     <button

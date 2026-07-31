@@ -116,7 +116,9 @@ function TokenRow({ token, onSelect, isSelected, userAddress }) {
   });
 
   const displayBalance = balanceData 
-    ? Number(balanceData.formatted).toFixed(2)
+    ? Number(balanceData.formatted) < 0.01 
+      ? Number(balanceData.formatted).toLocaleString('en-US', { maximumFractionDigits: 8 })
+      : Number(balanceData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
     : '0.00';
 
   return (
@@ -131,7 +133,7 @@ function TokenRow({ token, onSelect, isSelected, userAddress }) {
             <span className="font-bold text-white text-base tracking-wide">{token.symbol}</span>
             {token.noSwap && (
               <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full font-medium">
-                Só saldo
+                Balance only
               </span>
             )}
           </div>

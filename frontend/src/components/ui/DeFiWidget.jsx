@@ -11,7 +11,7 @@ import TradeHistoryModal from './TradeHistoryModal';
 import WalletModal from './WalletModal';
 import ReceivingWalletModal from './ReceivingWalletModal';
 
-// ── Config ────────────────────────────────────────────────────────────────────
+// Config 
 const SYNTHRA_API  = (import.meta.env.VITE_SYNTHRA_API_BASE || 'https://trading-api.synthra.org').replace(/\/+$/, '');
 const SYNTHRA_KEY  = import.meta.env.VITE_SYNTHRA_API_KEY  || '';
 const ARC_CHAIN_ID = 5042002;
@@ -21,7 +21,7 @@ const API_HEADERS  = { 'content-type': 'application/json', 'x-api-key': SYNTHRA_
 import { toRaw } from '../../utils/chainUtils';
 import { useTokenPrices, formatUsdValue } from '../../hooks/useTokenPrices';
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// Component 
 export default function DeFiWidget({ defaultTab = 'swap' }) {
   const { address }   = useAccount();
   const { connect, connectors } = useConnect();
@@ -32,18 +32,18 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [amount,    setAmount]    = useState('');
   
-  // ── Swap State ──
+  // Swap State 
   const [tokenIn,  setTokenIn]  = useState(getTokenBySymbol('USDC'));
   const [tokenOut, setTokenOut] = useState(getTokenBySymbol('USDT'));
   
-  // ── Bridge State ──
+  // Bridge State 
   // Use USDC for both sides initially, but on different mock chains
   const [bridgeChainIn,   setBridgeChainIn]   = useState(getChainById(ARC_CHAIN_ID));
   const [bridgeTokenIn,   setBridgeTokenIn]   = useState(getTokenBySymbol('USDC'));
   const [bridgeChainOut,  setBridgeChainOut]  = useState(getChainById(84532)); // Base Sepolia
   const [bridgeTokenOut,  setBridgeTokenOut]  = useState(getTokenBySymbol('USDC'));
 
-  // ── Modals State ──
+  // Modals State 
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
   const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -67,7 +67,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showSettings]);
 
-  // ── Transaction State ──
+  // Transaction State 
   const [quote,            setQuote]            = useState(null);
   const [quoteLoading,     setQuoteLoading]     = useState(false);
   const [quoteError,       setQuoteError]       = useState(null);
@@ -78,7 +78,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
   const isWrongChain = address && connectedChainId !== ARC_CHAIN_ID;
 
-  // ── Swap Balances ──
+  // Swap Balances 
   // USDC on Arc is the NATIVE currency (precompile 0x3600...). When token is USDC,
   // we pass token: undefined so wagmi reads native balance instead of calling balanceOf.
   const isNativeIn  = tokenIn?.address?.toLowerCase()  === '0x3600000000000000000000000000000000000000';
@@ -95,10 +95,20 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     chainId: ARC_CHAIN_ID,
     query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
   });
-  const fmtInSwap  = balInData  ? Number(balInData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })  : '0.00';
-  const fmtOutSwap = balOutData ? Number(balOutData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }) : '0.00';
+  const formatBalance = (balData) => {
+    if (!balData) return '0.00';
+    const num = Number(balData.formatted);
+    if (num === 0) return '0.00';
+    if (num < 0.01) {
+      return num.toLocaleString('en-US', { maximumFractionDigits: 8, useGrouping: false });
+    }
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4, useGrouping: false });
+  };
 
-  // ── Bridge Balances ──
+  const fmtInSwap  = formatBalance(balInData);
+  const fmtOutSwap = formatBalance(balOutData);
+
+  // Bridge Balances 
   // Calculate correct token address based on the selected chain!
   // If the user selected 'USDC', but bridgeChainOut is Base Sepolia, we MUST use the Base Sepolia USDC address.
   const actualTokenIn = TOKENS.find(t => t.symbol === bridgeTokenIn?.symbol && t.chainId === bridgeChainIn?.id) || bridgeTokenIn;
@@ -119,10 +129,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     chainId: bridgeChainOut?.id,
     query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
   });
-  const fmtInBridge  = bridgeBalInData  ? Number(bridgeBalInData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false })  : '0.00';
-  const fmtOutBridge = bridgeBalOutData ? Number(bridgeBalOutData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false }) : '0.00';
+  const fmtInBridge  = formatBalance(bridgeBalInData);
+  const fmtOutBridge = formatBalance(bridgeBalOutData);
 
-  // ── Quote Logic (Swap only for now) ──
+  // Quote Logic (Swap only for now) 
   const fetchQuote = useCallback(async () => {
     if (activeTab === 'bridge') {
       // Bridge mockup: 1:1 quote for visual purposes
@@ -142,7 +152,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       return;
     }
     if (tokenIn.noSwap || tokenOut.noSwap) {
-      setQuoteError('Este token não tem rota de swap disponível na Synthra');
+      setQuoteError('This token does not have an available swap route on Synthra');
       setQuote(null); return;
     }
     setQuoteLoading(true);
@@ -159,14 +169,15 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           tradeType: 'EXACT_INPUT',
         }),
       });
-      if (res.status === 401) throw new Error('API Key inválida (401)');
-      if (!res.ok)            throw new Error(`Erro da API: ${res.status}`);
+      if (res.status === 401) throw new Error('Invalid API Key (401)');
+      if (!res.ok)            throw new Error(`API Error: ${res.status}`);
       const data = await res.json();
-      if (data.state === 'Not found') throw new Error('Sem liquidez para este par');
-      if (data.state !== 'Success')   throw new Error(`Sem rota: ${data.state}`);
+
+      if (data.state === 'Not found') throw new Error('No liquidity for this pair');
+      if (data.state !== 'Success')   throw new Error(`No route: ${data.state}`);
       setQuote(data);
     } catch (err) {
-      setQuoteError(err.message || 'Falha ao buscar cotação');
+      setQuoteError(err.message || 'Failed to fetch quote');
       setQuote(null);
     } finally {
       setQuoteLoading(false);
@@ -182,7 +193,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     setQuote(null); setQuoteError(null); setSwapStatus('idle'); setAmount('');
   }, [activeTab]);
 
-  // ── Smart Selection Handlers ──
+  // Smart Selection Handlers 
   const handleSwapTokenSelect = (token) => {
     if (selectingFor === 'in') {
       if (token.symbol === tokenOut.symbol) {
@@ -222,7 +233,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [isBridgeExecutionModalOpen, setIsBridgeExecutionModalOpen] = useState(false);
   const [isSwapExecutionModalOpen, setIsSwapExecutionModalOpen] = useState(false);
 
-  // ── Swap Execution ─────────────────────────────────────────────────────────
+  // Swap Execution 
   const handleSwap = async () => {
     if (!address) { 
         setIsWalletModalOpen(true);
@@ -230,13 +241,13 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     }
     if (activeTab === 'bridge') {
       if (bridgeChainIn.id === bridgeChainOut.id) {
-         alert('As redes de origem e destino não podem ser as mesmas.');
+         alert('Source and destination networks cannot be the same.');
          return;
       }
       
       const supportedCCTPChains = [5042002, 11155111, 84532, 421614, 11155420];
       if (!supportedCCTPChains.includes(bridgeChainOut.id)) {
-          alert(`A rede ${bridgeChainOut.name} não possui suporte oficial da Circle (CCTP) ainda. Para enviar para essa rede, precisamos usar a rota padrão da Synthra. Quer que eu ative isso?`);
+          alert(`Network ${bridgeChainOut.name} is not officially supported by Circle (CCTP) yet. We will need to use Synthra's standard route. Proceed?`);
           return;
       }
 
@@ -244,8 +255,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       return;
     }
     
-    if (isWrongChain)                         { alert('Mude a rede para Arc Testnet (5042002) na sua carteira.'); return; }
-    if (!quote)                               { alert('Aguarde a cotação carregar.'); return; }
+    if (isWrongChain)                         { alert('Please switch to Arc Testnet (5042002) in your wallet.'); return; }
+    if (!quote)                               { alert('Please wait for the quote to load.'); return; }
     const rawAmount = toRaw(amount, tokenIn.decimals);
     if (!rawAmount) return;
 
@@ -259,7 +270,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     return '1-3 minutes';
   };
 
-  // ── UI Helpers ─────────────────────────────────────────────────────────────
+  // UI Helpers 
   const activeTokenIn = activeTab === 'bridge' ? bridgeTokenIn : tokenIn;
   const activeTokenOut = activeTab === 'bridge' ? bridgeTokenOut : tokenOut;
   const isStableOut = ['USDC', 'USDT', 'EURC', 'WUSDC'].includes(activeTokenOut.symbol);
@@ -289,14 +300,14 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
   let btnLabel = activeTab === 'swap' ? 'Swap Tokens' : 'Bridge Assets';
   if (!address)                          btnLabel = 'Connect Wallet';
-  else if (isWrongChain && activeTab === 'swap') btnLabel = '⚠️ Mude para Arc Testnet';
-  else if (swapStatus === 'approving')   btnLabel = '⏳ Aprovando Token...';
-  else if (swapStatus === 'swapping')    btnLabel = '⏳ Enviando Transaction...';
-  else if (swapStatus === 'success')     btnLabel = '✅ Concluído!';
-  else if (swapStatus === 'error')       btnLabel = '❌ Falhou — Tentar Novamente';
+  else if (isWrongChain && activeTab === 'swap') btnLabel = '⚠️ Switch to Arc Testnet';
+  else if (swapStatus === 'approving')   btnLabel = '⏳ Approving Token...';
+  else if (swapStatus === 'swapping')    btnLabel = '⏳ Sending Transaction...';
+  else if (swapStatus === 'success')     btnLabel = '✅ Completed!';
+  else if (swapStatus === 'error')       btnLabel = '❌ Failed - Try Again';
   else if (!amount || Number(amount) <= 0) btnLabel = 'Enter an Amount';
-  else if (quoteLoading)                 btnLabel = 'Buscando rota...';
-  else if (quoteError)                   btnLabel = 'Sem Rota Disponível';
+  else if (quoteLoading)                 btnLabel = 'Fetching route...';
+  else if (quoteError)                   btnLabel = 'No Route Available';
 
   // Only disable the button if connected AND missing info/wrong chain
   const btnDisabled = address && ((isWrongChain && activeTab === 'swap') || swapLoading || quoteLoading || !quote || !amount || swapStatus === 'success');
@@ -305,7 +316,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     <div className="w-full max-w-[480px] mx-auto">
       <div className="bg-dark-card border border-dark-border rounded-3xl p-5 shadow-2xl">
 
-        {/* ── Tabs ── */}
+        {/* Tabs */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex gap-1 bg-dark-bg rounded-xl p-1">
             {['swap', 'bridge'].map(tab => (
@@ -361,7 +372,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           </div>
         </div>
 
-        {/* ── Swap Interface ── */}
+        {/* Swap Interface */}
         {activeTab === 'swap' && (
           <div className="flex flex-col gap-1">
             {/* From */}
@@ -438,7 +449,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           </div>
         )}
 
-        {/* ── Bridge Interface ── */}
+        {/* Bridge Interface */}
         {activeTab === 'bridge' && (
           <div className="flex flex-col gap-1">
             {/* From */}
@@ -526,7 +537,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           </div>
         )}
 
-        {/* ── Swap Detailed Info ── */}
+        {/* Swap Detailed Info */}
         {activeTab === 'swap' && (quote || quoteLoading || quoteError) && (
           <div className="mt-4 mb-2 p-4 bg-dark-bg/60 border border-dark-border/50 rounded-xl shadow-inner flex flex-col gap-4">
             <div className="flex items-center justify-between">
@@ -541,7 +552,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                 ) : (
                   realPriceImpact !== undefined && realPriceImpact !== null ? (
                     <span className={Number(realPriceImpact) < -0.5 ? 'text-yellow-500' : 'text-green-400'}>
-                      {Number(realPriceImpact) > 0 ? '+' : ''}{Number(realPriceImpact).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% Impact
+                      {Number(realPriceImpact) > 0 ? '+' : ''}{Number(realPriceImpact).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% Impact
                     </span>
                   ) : (
                     <span className="text-green-400">0.00% Impact</span>
@@ -552,7 +563,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           </div>
         )}
 
-        {/* ── Bridge Detailed Info ── */}
+        {/* Bridge Detailed Info */}
         {activeTab === 'bridge' && (
           <div className="mt-5 mb-2 px-1 flex flex-col gap-6">
             <div className="flex justify-start">
@@ -593,14 +604,14 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           </div>
         )}
 
-        {/* ── Error ── */}
+        {/* Error */}
         {swapStatus === 'error' && swapError && (
           <div className="mt-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded-xl text-xs text-red-300 break-all">
             ⚠️ {swapError}
           </div>
         )}
 
-        {/* ── Action Button ── */}
+        {/* Action Button */}
         <button onClick={handleSwap} disabled={btnDisabled}
           className={`w-full mt-4 py-4 rounded-2xl transition-all active:scale-[0.98] ${
             !address 
@@ -612,7 +623,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           {btnLabel}
         </button>
 
-        {/* ── Tx hash ── */}
+        {/* Tx hash */}
         {txHash && (
           <div className="mt-3 text-center text-xs text-dark-muted">
             Tx: <a href={`https://testnet.arcscan.app/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
@@ -691,7 +702,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   );
 }
 
-// ── Icons ────────────────────────────────────────────────────────────────────
+// Icons 
 function TokenIcon({ token, size = 'sm' }) {
   const [imgError, setImgError] = useState(false);
   const dim = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';

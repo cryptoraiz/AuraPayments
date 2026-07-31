@@ -166,11 +166,11 @@ export default function ProfilePage() {
     : 'linear-gradient(135deg, #2563eb, #9333ea)';
 
   return (
-    <section className="flex-1 flex flex-col items-center justify-start pt-4 pb-4 w-full">
-      <div className="w-full max-w-7xl mx-auto px-6 space-y-4 relative z-20">
+    <section className="flex-1 flex flex-col items-center justify-start py-4 w-full min-h-0">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex flex-col h-full min-h-0 gap-4 relative z-20">
         
         {/* Profile Header (Total Balance Card) */}
-        <div className="bg-dark-card border border-dark-border rounded-3xl p-4 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="bg-dark-card border border-dark-border rounded-3xl p-4 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
           {/* Ambient Glow inside card */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
           
@@ -222,7 +222,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Content Tabs */}
-        <div className="flex items-center gap-1 bg-dark-input p-1 rounded-2xl border border-dark-border/50 w-full max-w-sm">
+        <div className="flex items-center gap-1 bg-dark-input p-1 rounded-2xl border border-dark-border/50 w-full max-w-sm shrink-0">
           <button
             onClick={() => setActiveTab('assets')}
             className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all duration-300 ${
@@ -246,7 +246,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab Content */}
-        <div className="grid w-full place-items-start">
+        <div className="grid w-full flex-1 min-h-0 relative">
           <>
             {/* Tab: Assets */}
             <div

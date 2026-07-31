@@ -145,7 +145,7 @@ export const clearPaymentLinksByScope = (scope = 'all', walletAddress) => {
     }
 };
 
-// ===== SENT PAYMENTS MANAGEMENT =====
+// SENT PAYMENTS MANAGEMENT 
 
 const SENT_PAYMENTS_KEY = 'arc_invoice_sent_payments';
 
@@ -233,7 +233,7 @@ export const clearSentPaymentsByScope = (scope = 'all', walletAddress) => {
     }
 };
 
-// ===== BLACKLIST MANAGEMENT (Hide persistent backend items) =====
+// BLACKLIST MANAGEMENT (Hide persistent backend items) 
 const BLACKLIST_KEY = 'arc_invoice_blacklist';
 
 export const syncLocalLinks = (latestItems) => {
@@ -280,7 +280,7 @@ export const addToBlacklist = (ids) => {
     } catch (e) { console.error('Error updating blacklist:', e); }
 };
 
-// ===== TRADE HISTORY MANAGEMENT =====
+// TRADE HISTORY MANAGEMENT 
 
 const TRADE_HISTORY_KEY = 'arc_trade_history';
 

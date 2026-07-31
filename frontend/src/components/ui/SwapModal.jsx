@@ -63,7 +63,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
           slippageBps:  50,
         }),
       });
-      if (!res.ok) throw new Error(`Falha ao montar swap: ${res.status}`);
+      if (!res.ok) throw new Error(`Failed to build swap: ${res.status}`);
       const swapData = await res.json();
 
       // STEP 0: APPROVE
@@ -80,7 +80,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
       // STEP 1: SWAP
       setCurrentStep(1);
       const tx = swapData.transaction;
-      if (!tx) throw new Error('API não retornou transaction object');
+      if (!tx) throw new Error('API did not return a transaction object');
 
       const hash = await window.ethereum.request({
         method: 'eth_sendTransaction',
@@ -99,7 +99,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
       setCurrentStep(2);
       await waitForReceipt(hash);
       
-      // Delay extra para dar o "Wait ~2 sec" experience real
+      // Extra delay to provide realistic ~2 sec experience
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // STEP 3: SUCCESS
@@ -118,9 +118,9 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
     } catch (err) {
       console.error('[SwapModal]', err);
       if (err.code === 4001 || err.message?.includes('user rejected')) {
-        setErrorMsg('Transação rejeitada pelo usuário.');
+        setErrorMsg('Transaction rejected by user.');
       } else {
-        setErrorMsg(err.message || 'Erro desconhecido');
+        setErrorMsg(err.message || 'Unknown error');
       }
       setStatus('error');
     }
@@ -166,15 +166,15 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
           {/* Tokens Header */}
           <div className="flex flex-col items-center mt-2 mb-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full p-[2px] bg-[#2C2C2E] relative shrink-0">
-                 <img src={tokenIn.iconImg} alt={tokenIn.symbol} className="w-full h-full rounded-full" />
+              <div className="w-12 h-12 rounded-full relative shrink-0">
+                 <img src={tokenIn.iconImg} alt={tokenIn.symbol} className="w-full h-full rounded-full object-contain" />
                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-black rounded-full p-[2px]">
                    <img src="https://cdn.prod.website-files.com/685311a976e7c248b5dfde95/68926aad995d4eae931403a4_arc-favicon-256x256.png" className="w-full h-full rounded-full" />
                  </div>
               </div>
               <svg className="w-5 h-5 text-dark-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-              <div className="w-12 h-12 rounded-full p-[2px] bg-[#2C2C2E] relative shrink-0">
-                 <img src={tokenOut.iconImg} alt={tokenOut.symbol} className="w-full h-full rounded-full" />
+              <div className="w-12 h-12 rounded-full relative shrink-0">
+                 <img src={tokenOut.iconImg} alt={tokenOut.symbol} className="w-full h-full rounded-full object-contain" />
                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-black rounded-full p-[2px]">
                    <img src="https://cdn.prod.website-files.com/685311a976e7c248b5dfde95/68926aad995d4eae931403a4_arc-favicon-256x256.png" className="w-full h-full rounded-full" />
                  </div>

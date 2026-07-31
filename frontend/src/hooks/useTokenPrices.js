@@ -90,5 +90,5 @@ export function formatUsdValue(symbol, balance, prices) {
   const price = prices[symbol];
   if (price == null) return '--';
   const value = Number(balance) * price;
-  return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }

@@ -4,11 +4,11 @@ import { saveTrade } from '../../utils/localStorage';
 import { ERC20_ABI } from '../../utils/abis';
 import { encodeFunctionData, encodeAbiParameters, parseAbiParameters, getAddress } from 'viem';
 import { useSwitchChain } from 'wagmi';
-// ─── CCTP v2 Arc Testnet Contracts ────────────────────────────────────────────
+// CCTP v2 Arc Testnet Contracts 
 const TOKEN_MESSENGER_V2    = '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA';
 const MESSAGE_TRANSMITTER_V2 = '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275';
 const ARC_DOMAIN_ID          = 26; // Circle CCTP domain for Arc Testnet
-// Use sandbox for testnet — mainnet URL causes 404 on testnet transactions
+// Use sandbox for testnet - mainnet URL causes 404 on testnet transactions
 const IRIS_API               = 'https://iris-api-sandbox.circle.com/v2/messages/26';
 
 // depositForBurn(uint256 amount, uint32 destinationDomain, bytes32 mintRecipient, address burnToken, bytes32 destinationCaller, uint256 maxFee, uint32 finalityThreshold)
@@ -106,12 +106,12 @@ function encodeReceiveMessage(messageHex, attestationHex) {
   });
 }
 
-// ─── Helper: convert wallet address to bytes32 ────────────────────────────────
+// Helper: convert wallet address to bytes32 
 function addressToBytes32(address) {
   return '0x' + address.replace('0x', '').toLowerCase().padStart(64, '0');
 }
 
-// ─── Helper: poll Iris API for attestation ────────────────────────────────────
+// Helper: poll Iris API for attestation 
 async function pollAttestation(txHash, maxAttempts = 60) {
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise(r => setTimeout(r, 3000)); // wait 3s per attempt
@@ -125,10 +125,10 @@ async function pollAttestation(txHash, maxAttempts = 60) {
       }
     } catch (_) { /* keep polling */ }
   }
-  throw new Error('Attestation timeout — tente novamente em alguns minutos.');
+  throw new Error('Attestation timeout - tente novamente em alguns minutos.');
 }
 
-// ─── CCTP Domain map ──────────────────────────────────────────────────────────
+// CCTP Domain map 
 // Source: https://developers.circle.com/stablecoins/supported-domains
 const CHAIN_DOMAIN_MAP = {
   5042002: 26,  // Arc Testnet
@@ -181,8 +181,8 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
         <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
       </div>
     );
-    if (isLoading) return <div className="w-5 h-5 rounded-full border-2 border-[#4A90E2] border-t-transparent animate-spin shrink-0" />;
-    return <div className={`w-5 h-5 rounded-full border-2 shrink-0 ${isActive ? 'border-[#4A90E2] bg-[#4A90E2]/20' : 'border-dark-border bg-dark-bg'}`} />;
+    if (isLoading) return <div className="w-5 h-5 rounded-full border-2 border-[#4A90E2] border-t-transparent animate-spin shrink-0 shadow-[0_0_12px_rgba(74,144,226,0.6)]" />;
+    return <div className={`w-5 h-5 rounded-full border-2 shrink-0 transition-all ${isActive ? 'border-[#4A90E2] bg-[#4A90E2]/20 shadow-[0_0_12px_rgba(74,144,226,0.4)]' : 'border-dark-border bg-transparent'}`} />;
   };
 
   const executeBridge = async () => {
@@ -212,7 +212,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
 
       if (destinationDomain === undefined) throw new Error(`Rede de destino não suportada (chainId ${toChainId})`);
 
-      // ── STEP 0: APPROVE ────────────────────────────────────────────────────
+      // STEP 0: APPROVE 
       setCurrentStep(0);
       
       // Ensure we're on the source chain
@@ -229,7 +229,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
       });
       await waitForTxReceipt(approveHash);
 
-      // ── STEP 1: BURN (depositForBurn) ──────────────────────────────────────
+      // STEP 1: BURN (depositForBurn) 
       setCurrentStep(1);
       const mintRecipient = addressToBytes32(receiverAddress || userAddress);
       const burnData = encodeDepositForBurn(rawAmount, destinationDomain, mintRecipient, token.address);
@@ -242,11 +242,11 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
       setBurnTxHash(burnHash);
       await waitForTxReceipt(burnHash);
 
-      // ── STEP 2: FETCH ATTESTATION (Iris API) ───────────────────────────────
+      // STEP 2: FETCH ATTESTATION (Iris API) 
       setCurrentStep(2);
       const { attestation, message } = await pollAttestation(burnHash);
 
-      // ── STEP 3: SAQUE MÁGICO VIA RELAYER ───────────────────────────────────
+      // STEP 3: SAQUE MÁGICO VIA RELAYER 
       setCurrentStep(3);
 
       try {
@@ -304,7 +304,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
         }
       }
 
-      // ── STEP 4: SUCCESS — restore back to Arc Testnet ──────────────────────
+      // STEP 4: SUCCESS — restore back to Arc Testnet 
       setCurrentStep(4);
       setStatus('idle');
 
@@ -372,7 +372,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-[#1C1C1E] border border-dark-border rounded-[32px] w-full max-w-[420px] shadow-2xl overflow-hidden p-6 relative"
+          className="bg-[#111214]/85 backdrop-blur-3xl border border-white/10 rounded-[32px] w-full max-w-[420px] shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden p-6 relative"
           onClick={(e) => e.stopPropagation()}
         >
           <button onClick={handleClose} className="absolute top-5 right-5 text-dark-muted hover:text-white transition-colors">
@@ -395,17 +395,17 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
             <span className="text-sm text-dark-muted font-medium">via Circle CCTP v2</span>
           </div>
 
-          <div className="bg-transparent border border-dark-border/60 rounded-3xl p-5 relative">
+          <div className="bg-white/[0.02] border border-white/5 shadow-[0_0_20px_rgba(0,0,0,0.3)] backdrop-blur-xl rounded-3xl p-5 relative">
             <div className="absolute left-[29px] top-[38px] bottom-[48px] w-[2px] bg-dark-border/40 z-0" />
             {steps.map((step, i) => (
               <div key={i} className={`flex items-center gap-4 relative z-10 ${i < steps.length - 1 ? 'mb-6' : ''}`}>
                 <StepIndicator stepIndex={i} />
                 <div className="flex-1 flex justify-between items-center">
-                  <span className={`font-semibold text-[15px] ${currentStep >= i ? (i === 4 ? 'text-green-400' : 'text-white') : 'text-dark-muted'}`}>
+                  <span className={`font-semibold text-[15px] transition-colors ${currentStep >= i ? (i === 4 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]') : 'text-white/40'}`}>
                     {i === 4 && currentStep >= 4 ? 'Bridge Successful!' : step.label}
                   </span>
                   {currentStep === i && status === 'loading' && step.hint && (
-                    <span className="text-[13px] text-[#4A90E2]">{step.hint}</span>
+                    <span className="text-[13px] text-[#4A90E2] drop-shadow-[0_0_5px_rgba(74,144,226,0.5)] animate-pulse">{step.hint}</span>
                   )}
                   {i === 4 && currentStep >= 4 && <span className="text-[13px] text-green-400">✓ Done</span>}
                 </div>
@@ -454,7 +454,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
   );
 }
 
-// ─── Helper: wait for receipt ──────────────────────────────────────────────────
+// Helper: wait for receipt 
 // Use the wallet's injected provider to avoid CORS issues with direct RPC calls
 async function waitForTxReceipt(hash, attempts = 90) {
   for (let i = 0; i < attempts; i++) {

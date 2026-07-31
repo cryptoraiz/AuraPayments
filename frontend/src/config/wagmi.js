@@ -40,7 +40,7 @@ export const config = createConfig({
     coinbaseWallet({ appName: 'Aura Payments' }),
   ],
   transports: {
-    // Use our Vercel proxy to avoid CORS — the proxy forwards to rpc.testnet.arc.network server-side
+    // Use our Vercel proxy to avoid CORS - the proxy forwards to rpc.testnet.arc.network server-side
     [arcTestnet.id]: http(import.meta.env.PROD ? '/api/rpc' : 'https://rpc.testnet.arc.network'),
 
     [mainnet.id]: http(),

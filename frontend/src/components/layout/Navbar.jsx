@@ -51,7 +51,7 @@ export default function Navbar() {
               chainName: 'Arc Network Testnet',
               nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
               rpcUrls: ['https://rpc.testnet.arc.network'],
-              blockExplorerUrls: ['https://explorer.testnet.arc.network']
+              blockExplorerUrls: ['https://testnet.arcscan.app']
             }]
           })
         } else {

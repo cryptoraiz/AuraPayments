@@ -14,23 +14,9 @@ export default function FaucetPage() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-black text-white mb-3 tracking-tight">Testnet Faucets</h1>
           <p className="text-dark-muted max-w-lg mx-auto">
-            Get test tokens to experiment with Aura Payments. Acesse o faucet oficial da rede abaixo.
+            Get test tokens to experiment with Aura Payments. Access the official network faucet below.
           </p>
-          {isConnected && (
-            <div className="mt-4 inline-flex items-center gap-2 bg-dark-card border border-dark-border px-4 py-2 rounded-full">
-              <span className="text-xs text-dark-muted font-mono">Sua carteira:</span>
-              <span className="text-xs font-bold text-white font-mono">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
-              <button
-                onClick={() => navigator.clipboard.writeText(address)}
-                title="Copiar endereço"
-                className="text-dark-muted hover:text-white transition-colors"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </button>
-            </div>
-          )}
+
         </div>
 
         <div className="flex justify-center w-full">

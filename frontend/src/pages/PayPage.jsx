@@ -233,13 +233,13 @@ export default function PayPage() {
             const confirmedHash = result?.txHash || result?.hash || ''
             await handlePaymentSuccess(confirmedHash, address)
         } catch (err) {
-            console.error('[AppKit] kit.send() erro:', err)
+            console.error('[AppKit] kit.send() error:', err)
             setIsPaying(false)
             const msg = (err.message || '').toLowerCase()
             const code = String(err.code || err.name || '').toLowerCase()
 
             if (msg.includes('rejected') || msg.includes('denied') || msg.includes('cancel') || msg.includes('user rejected')) {
-                toast.info('Transação cancelada')
+                toast.info('Transaction cancelled')
             } else if (msg.includes('different address than the sender') || msg.includes('invalid_address') || code.includes('invalid_address')) {
                 setShowSelfPayModal(true)
             } else if (msg.includes('insufficient') || msg.includes('balance')) {
@@ -296,7 +296,7 @@ export default function PayPage() {
     // ERROR STATE UI
     if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="flex-1 flex items-center justify-center p-4 h-full min-h-0 w-full">
                 <div className="relative group max-w-sm w-full">
                     {/* Background Glow */}
                     <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity animate-pulse"></div>
@@ -353,7 +353,7 @@ export default function PayPage() {
     // SAFETY CHECK - LOADING STATE
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center h-full min-h-0 w-full">
                 <div className="text-center">
                     <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                     <p className="text-gray-400">Verifying status...</p>
@@ -366,7 +366,7 @@ export default function PayPage() {
     // If we are NOT loading, and have NO Error (handled above), but also NO Data
     if (!paymentData || !paymentData.recipientWallet) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="flex-1 flex items-center justify-center p-4 h-full min-h-0 w-full">
                 <div className="max-w-md w-full bg-red-500/10 border border-red-500/20 rounded-2xl p-8 text-center space-y-4">
                     <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto text-red-500 text-3xl">
                         ?
@@ -543,7 +543,7 @@ export default function PayPage() {
 
     // MAIN FORM STATE
     return (
-        <section className="flex-1 flex flex-col items-center justify-start py-10 w-full min-h-screen overflow-y-auto">
+        <section className="flex-1 flex flex-col items-center justify-start py-4 w-full h-full min-h-0 overflow-y-auto">
             <div className="max-w-4xl w-full">
                 <div className="relative group" onMouseMove={handleMouseMove}>
                     {/* Spotlight Effect - Follows cursor */}
@@ -699,7 +699,7 @@ export default function PayPage() {
                                                         </div>
                                                         <div className="flex-1">
                                                             <p className="text-sm text-white font-medium mb-0.5">
-                                                                You need {Number(formatUnits(requiredAmount - balance, 6)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} more {paymentData.currency}
+                                                                You need {Number(formatUnits(requiredAmount - balance, 6)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} more {paymentData.currency}
                                                             </p>
                                                             <p className="text-xs text-gray-400">
                                                                 to complete this payment
