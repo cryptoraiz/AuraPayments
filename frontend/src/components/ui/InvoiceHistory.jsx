@@ -697,7 +697,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
             </div>
 
             {/* Notification Toast Container */}
-            <div className="fixed bottom-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none">
+            <div className="fixed bottom-8 right-6 z-[99999] flex flex-col gap-2 pointer-events-none">
                 <AnimatePresence>
                     {toasts.map(toast => (
                         <motion.div
