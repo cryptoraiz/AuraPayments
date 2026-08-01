@@ -48,14 +48,14 @@ Managing digital assets across multiple networks is currently a fragmented and f
 
 ## 🚀 Getting Started
 
-To run the ARC Connect gateway locally for development:
+To run the Aura Payments gateway locally for development:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/cryptoraiz/arc-connect.git
+git clone https://github.com/cryptoraiz/AuraPayments.git
 
 # 2. Navigate to the project directory
-cd arc-connect
+cd AuraPayments
 
 # 3. Install dependencies
 npm install
