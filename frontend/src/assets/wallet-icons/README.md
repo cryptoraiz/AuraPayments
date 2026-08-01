@@ -1,14 +1,14 @@
 # Wallet Icons
 
-Este diretório contém os ícones offline das carteiras Web3.
+This directory contains offline icons for Web3 wallets.
 
-## Como adicionar um novo ícone:
+## How to add a new icon:
 
-1. Baixe o logo oficial da carteira (PNG ou SVG, idealmente 128x128 ou maior)
-2. Salve com o nome em lowercase sem espaços (ex: `metamask.svg`)
-3. Adicione o import no `WalletModal.jsx`
+1. Download the official wallet logo (PNG or SVG, ideally 128x128 or larger)
+2. Save with a lowercase filename without spaces (e.g., `metamask.svg`)
+3. Add the import in `WalletModal.jsx`
 
-## Ícones atuais:
+## Current icons:
 
 - `metamask.svg` - MetaMask
 - `rabby.png` - Rabby Wallet
@@ -23,4 +23,4 @@ Este diretório contém os ícones offline das carteiras Web3.
 - `keplr.png` - Keplr
 - `safe.png` - Safe
 - `bitget.png` - Bitget Wallet
-- `ethereum.svg` - Fallback genérico
+- `ethereum.svg` - Generic Fallback

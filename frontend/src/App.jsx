@@ -6,7 +6,7 @@ import BridgePage from './pages/BridgePage'
 import InvoicePage from './pages/InvoicePage'
 import ArcAIPage from './pages/ArcAIPage'
 import ProfilePage from './pages/ProfilePage'
-import ComoFuncionaPage from './pages/ComoFuncionaPage'
+import HowItWorksPage from './pages/HowItWorksPage'
 import FAQPage from './pages/FAQPage'
 import PayPage from './pages/PayPage'
 import HistoryPage from './pages/HistoryPage'
@@ -22,7 +22,7 @@ function App() {
         <Route path="/invoice" element={<InvoicePage />} />
         <Route path="/arc-ai" element={<ArcAIPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/how-it-works" element={<ComoFuncionaPage />} />
+        <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/faq" element={<FAQPage />} />
         <Route path="/activity" element={<HistoryPage />} />
         <Route path="/faucet" element={<FaucetPage />} />

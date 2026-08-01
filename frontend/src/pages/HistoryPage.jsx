@@ -150,8 +150,8 @@ export default function HistoryPage() {
                                             <div className="flex flex-col gap-1 mb-2">
                                                 <p className="text-zinc-400 text-sm font-medium">
                                                     {item.type === 'Swap' 
-                                                        ? `${item.amountIn} ${item.tokenIn} → ${item.amountOut} ${item.tokenOut}`
-                                                        : `${item.amountIn} ${item.tokenIn} (${item.fromChain} → ${item.toChain})`
+                                                        ? `${Number(item.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${item.tokenIn} → ${Number(item.amountOut || 0).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${item.tokenOut}`
+                                                        : `${Number(item.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} ${item.tokenIn} (${item.fromChain} → ${item.toChain})${item.amountOut ? ` | Net: ${Number(item.amountOut).toLocaleString('en-US', { maximumFractionDigits: 6 })}` : ''}`
                                                     }
                                                 </p>
                                                 <p className="text-zinc-500 text-xs">

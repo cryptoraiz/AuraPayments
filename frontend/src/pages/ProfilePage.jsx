@@ -3,6 +3,18 @@ import { useAccount, useBalance } from 'wagmi';
 import { getAllTokens } from '../config/tokens';
 import { motion } from 'framer-motion';
 import { useTokenPrices, formatUsdValue } from '../hooks/useTokenPrices';
+import { getTradeHistoryByWallet } from '../utils/localStorage';
+
+const getExplorerUrl = (txHash, chain) => {
+  if (!txHash || txHash === 'undefined' || txHash === 'null') return null;
+  const c = (chain || '').toLowerCase();
+  if (c.includes('base')) return `https://sepolia.basescan.org/tx/${txHash}`;
+  if (c.includes('polygon')) return `https://amoy.polygonscan.com/tx/${txHash}`;
+  if (c.includes('optimism')) return `https://sepolia-optimism.etherscan.io/tx/${txHash}`;
+  if (c.includes('arbitrum')) return `https://sepolia.arbiscan.io/tx/${txHash}`;
+  if (c.includes('ethereum')) return `https://sepolia.etherscan.io/tx/${txHash}`;
+  return `https://testnet.arcscan.app/tx/${txHash}`;
+};
 
 const ARC_CHAIN_ID = 5042002;
 
@@ -12,7 +24,7 @@ const PORTFOLIO_TOKENS = [
   { symbol: 'USDT',   name: 'Tether USD',       address: '0x175CdB1D338945f0D851A741ccF787D343E57952',       decimals: 18, color: 'bg-green-500',  iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png' },
   { symbol: 'EURC',   name: 'Euro Coin',        address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',       decimals: 6,  color: 'bg-indigo-500', iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c/logo.png' },
   { symbol: 'WUSDC',  name: 'Wrapped USDC',     address: '0x911b4000D3422F482F4062a913885f7b035382Df',       decimals: 18, color: 'bg-blue-500',   iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png' },
-  { symbol: 'cirBTC', name: 'Circle Bitcoin',   address: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF',       decimals: 8,  color: 'bg-orange-500', iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png' },
+  { symbol: 'cirBTC', name: 'Circle Bitcoin',   address: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF',       decimals: 8,  color: 'bg-orange-500', iconImg: '/cirbtc.svg' },
 ];
 
 const NetworkBadge = ({ chain }) => {
@@ -28,24 +40,24 @@ const NetworkBadge = ({ chain }) => {
       <svg className="w-2 h-2 text-[#8247E5]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6L4.2 7.1v9L12 20.6l7.8-4.5v-9L12 2.6zm5.8 11.2l-5.8 3.4-5.8-3.4V7.1l5.8-3.4 5.8 3.4v6.7z"/></svg>
     </div>
   );
-  if (c.includes('eth')) return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-white flex items-center justify-center">
-      <svg className="w-2.5 h-2.5 text-[#3c3c3d]" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
+  if (c.includes('base')) return (
+    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#0052FF] flex items-center justify-center">
+      <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-3-12a3 3 0 100 6 3 3 0 000-6zm6 0a3 3 0 100 6 3 3 0 000-6z"/></svg>
     </div>
   );
   if (c.includes('optimism')) return (
     <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#FF0420] flex items-center justify-center">
-      <span className="text-[6px] font-bold text-white tracking-tighter">OP</span>
+      <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm1 14H9v-2h4v2zm0-4H9V8h4v4z"/></svg>
     </div>
   );
-  if (c.includes('base')) return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#0052FF] flex items-center justify-center">
-      <div className="w-1.5 h-1.5 rounded-full border-[1.5px] border-white"></div>
+  if (c.includes('arbitrum')) return (
+    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#28A0F0] flex items-center justify-center">
+      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 20h20L12 2zm0 4.2l5.5 10H6.5L12 6.2z"/></svg>
     </div>
   );
-  if (c.includes('sonic')) return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-black flex items-center justify-center">
-      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+  if (c.includes('ethereum')) return (
+    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#627EEA] flex items-center justify-center">
+      <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
     </div>
   );
   if (c.includes('invoice')) return (
@@ -53,9 +65,9 @@ const NetworkBadge = ({ chain }) => {
       <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>
     </div>
   );
-
+  
   return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-gray-600 flex items-center justify-center">
+    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-zinc-600 flex items-center justify-center">
       <span className="text-[6px] font-bold text-white uppercase">{c.charAt(0)}</span>
     </div>
   );
@@ -116,7 +128,16 @@ export default function ProfilePage() {
     if (file) setAvatarUrl(URL.createObjectURL(file));
   };
 
-  const activities = JSON.parse(localStorage.getItem('arc_activities') || '[]').filter(a => a.wallet === address);
+  const activities = getTradeHistoryByWallet(address).map(t => {
+    const d = new Date(t.createdAt);
+    return {
+      ...t,
+      dateFormatted: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+      timeFormatted: d.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      time: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
+      status: 'Completed'
+    };
+  }).sort((a, b) => b.createdAt - a.createdAt);
 
   // Pagination Logic
   const activitiesPerPage = 4;
@@ -317,7 +338,7 @@ export default function ProfilePage() {
                   {/* Source */}
                   <div className="md:col-span-3 flex items-center gap-3">
                     <div className="relative">
-                      <img src={getTokenIcon(act.tokenIn || act.currency)} alt="token" className="w-8 h-8 rounded-full border border-dark-border/50 bg-dark-bg" />
+                      <img src={getTokenIcon(act.tokenIn || act.currency)} alt="token" className="w-8 h-8 rounded-full" />
                       <NetworkBadge chain={act.type === 'Receive' ? 'Invoice' : 'Arc Testnet'} />
                     </div>
                     <div className="flex flex-col">
@@ -331,7 +352,7 @@ export default function ProfilePage() {
                     {act.type === 'Swap' || act.type === 'Bridge' ? (
                       <>
                         <div className="relative">
-                          <img src={getTokenIcon(act.tokenOut || act.tokenIn)} alt="token" className="w-8 h-8 rounded-full border border-dark-border/50 bg-dark-bg" />
+                          <img src={getTokenIcon(act.tokenOut || act.tokenIn)} alt="token" className="w-8 h-8 rounded-full" />
                           <NetworkBadge chain={act.toChain || 'Arc Testnet'} />
                         </div>
                         <div className="flex flex-col">
@@ -369,15 +390,31 @@ export default function ProfilePage() {
 
                   {/* Desktop Date */}
                   <div className="hidden md:flex md:col-span-2 flex-col items-center justify-center">
-                    <div className="font-bold text-white text-sm text-center">{act.time.split(' ')[0]}</div>
-                    <div className="text-[11px] text-dark-muted font-medium text-center">{act.time.split(' ')[1]}</div>
+                    <div className="font-bold text-white text-sm text-center">{act.dateFormatted}</div>
+                    <div className="text-[11px] text-dark-muted font-medium text-center">{act.timeFormatted}</div>
                   </div>
 
                   {/* Action */}
                   <div className="md:col-span-1 flex justify-end items-center mt-2 md:mt-0">
-                    <button className="px-4 py-1.5 rounded-full border border-dark-border bg-white text-black hover:bg-zinc-200 text-xs font-bold transition-all shadow-md active:scale-95 whitespace-nowrap w-full md:w-auto">
-                      View Details
-                    </button>
+                    {(() => {
+                      const hash = act.txHash || act.hash;
+                      const chain = act.type === 'Bridge' ? (act.fromChain || 'Arc Testnet') : 'Arc Testnet';
+                      const url = getExplorerUrl(hash, chain);
+                      return url ? (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-1.5 rounded-full border border-dark-border bg-white text-black hover:bg-zinc-200 text-xs font-bold transition-all shadow-md active:scale-95 whitespace-nowrap w-full md:w-auto text-center"
+                        >
+                          View Details
+                        </a>
+                      ) : (
+                        <span className="px-4 py-1.5 rounded-full border border-dark-border bg-dark-input text-dark-muted text-xs font-bold whitespace-nowrap w-full md:w-auto text-center opacity-50 cursor-not-allowed">
+                          No Hash
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
@@ -425,11 +462,13 @@ function AssetRow({ token, balance, prices }) {
   return (
     <div className="grid grid-cols-4 items-center px-6 py-4 border-b border-dark-border/30 hover:bg-dark-input/30 transition-colors cursor-pointer group">
       <div className="col-span-2 flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-full ${token.color || 'bg-gray-700'} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform overflow-hidden p-[2px] bg-dark-bg/20`}>
+        <div className="w-10 h-10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
           {token.iconImg ? (
             <img src={token.iconImg} alt={token.symbol} className="w-full h-full object-contain rounded-full" />
           ) : (
-            <span className="text-xs font-bold">{token.symbol.slice(0, 2)}</span>
+            <div className={`w-full h-full rounded-full ${token.color || 'bg-gray-700'} flex items-center justify-center text-white font-bold text-xs`}>
+              {token.symbol.slice(0, 2)}
+            </div>
           )}
         </div>
         <div>

@@ -28,19 +28,19 @@ export default function SelfPayModal({ isOpen, onClose, walletAddress }) {
                 onClick={(e) => e.stopPropagation()}
                 style={{ animation: 'modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
             >
-                {/* Glow de fundo */}
+                {/* Background glow */}
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 rounded-3xl blur-xl opacity-70" />
 
                 <div className="relative bg-gradient-to-br from-[#1a1a2e]/95 via-[#16213e]/95 to-[#0f3460]/95 backdrop-blur-xl border border-amber-500/20 rounded-2xl shadow-2xl overflow-hidden">
 
-                    {/* Linha decorativa topo */}
+                    {/* Decorative top line */}
                     <div className="h-0.5 w-full bg-gradient-to-r from-amber-500 via-orange-400 to-red-500" />
 
                     <div className="p-6">
-                        {/* Ícone central */}
+                        {/* Center icon */}
                         <div className="flex flex-col items-center text-center mb-6">
                             <div className="relative mb-4">
-                                {/* Anel pulsante */}
+                                {/* Pulsing ring */}
                                 <div className="absolute inset-0 rounded-full bg-amber-500/20 animate-ping scale-110" />
                                 <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/10 border border-amber-500/30 flex items-center justify-center">
                                     <svg className="w-8 h-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -54,7 +54,7 @@ export default function SelfPayModal({ isOpen, onClose, walletAddress }) {
                             <p className="text-sm text-gray-400">You cannot pay to yourself</p>
                         </div>
 
-                        {/* Explicação */}
+                        {/* Explanation */}
                         <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 mb-4 space-y-3">
                             <div className="flex items-start gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -85,7 +85,7 @@ export default function SelfPayModal({ isOpen, onClose, walletAddress }) {
                             </div>
                         </div>
 
-                        {/* Fluxo visual */}
+                        {/* Visual flow */}
                         <div className="flex items-center justify-center gap-2 mb-5 p-3 rounded-xl bg-white/[0.02] border border-white/5">
                             <div className="flex flex-col items-center">
                                 <div className="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
@@ -118,7 +118,7 @@ export default function SelfPayModal({ isOpen, onClose, walletAddress }) {
                             </div>
                         </div>
 
-                        {/* Botão */}
+                        {/* Button */}
                         <button
                             onClick={onClose}
                             className="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98]"

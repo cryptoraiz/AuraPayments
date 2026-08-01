@@ -54,6 +54,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [showSettings, setShowSettings] = useState(false);
   const [slippage, setSlippage] = useState('0.5');
   const settingsRef = useRef(null);
+  const fetchIdRef = useRef(0);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -134,12 +135,16 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
   // Quote Logic (Swap only for now) 
   const fetchQuote = useCallback(async () => {
+    const currentFetchId = ++fetchIdRef.current;
+
     if (activeTab === 'bridge') {
       // Bridge mockup: 1:1 quote for visual purposes
       if (amount && Number(amount) > 0) {
+        if (currentFetchId !== fetchIdRef.current) return;
         setQuote({ amountOutDecimals: amount, routeString: 'CCTP Routing', priceImpact: '0.00' });
         setQuoteError(null);
       } else {
+        if (currentFetchId !== fetchIdRef.current) return;
         setQuote(null);
       }
       return;
@@ -147,11 +152,13 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
     const rawAmount = toRaw(amount, tokenIn.decimals);
     if (!rawAmount || !tokenIn || !tokenOut || tokenIn.address === tokenOut.address) {
+      if (currentFetchId !== fetchIdRef.current) return;
       setQuote(null);
       setQuoteError(null);
       return;
     }
     if (tokenIn.noSwap || tokenOut.noSwap) {
+      if (currentFetchId !== fetchIdRef.current) return;
       setQuoteError('This token does not have an available swap route on Synthra');
       setQuote(null); return;
     }
@@ -175,17 +182,22 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
       if (data.state === 'Not found') throw new Error('No liquidity for this pair');
       if (data.state !== 'Success')   throw new Error(`No route: ${data.state}`);
+      
+      if (currentFetchId !== fetchIdRef.current) return;
       setQuote(data);
     } catch (err) {
+      if (currentFetchId !== fetchIdRef.current) return;
       setQuoteError(err.message || 'Failed to fetch quote');
       setQuote(null);
     } finally {
-      setQuoteLoading(false);
+      if (currentFetchId === fetchIdRef.current) {
+        setQuoteLoading(false);
+      }
     }
   }, [amount, tokenIn, tokenOut, activeTab, bridgeChainIn, bridgeChainOut, bridgeTokenIn, bridgeTokenOut]);
 
   useEffect(() => {
-    const t = setTimeout(fetchQuote, 300);
+    const t = setTimeout(fetchQuote, 600);
     return () => clearTimeout(t);
   }, [fetchQuote]);
 
@@ -266,7 +278,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const getEstimatedTime = (fromId, toId) => {
     // 11155111 = Ethereum Sepolia | 1 = Ethereum Mainnet
     if (fromId === 11155111 || fromId === 1) return '10-15 minutes'; 
-    // Redes rápidas (Arc, Solana, Avalanche, Linea, Base, Opt, etc)
+    // Fast networks (Arc, Solana, Avalanche, Linea, Base, Opt, etc)
     return '1-3 minutes';
   };
 
@@ -432,7 +444,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                         ? <span className="text-white">{outputAmount}</span>
                         : <span className="text-dark-border">0</span>}
                   </div>
-                  {outputUsd && outputUsd !== '--' && (
+                  {quoteLoading && amount && amount > 0 ? (
+                    <div className="text-xs font-medium flex items-center gap-1.5 mt-1">
+                      <span className="text-dark-muted animate-pulse">~$ ...</span>
+                    </div>
+                  ) : outputUsd && outputUsd !== '--' && (
                     <div className="text-xs font-medium flex items-center gap-1.5 mt-1">
                       <span className="text-dark-muted">~$ {outputUsd}</span>
                     </div>

@@ -87,7 +87,7 @@ export default function Navbar() {
 
         const hexChainId = await provider.request({ method: 'eth_chainId' })
         const realChainId = parseInt(hexChainId, 16)
-        // console.log('🔍 Real chainId do provider:', { hexChainId, realChainId, wagmiChainId: chainId })
+        // console.log('🔍 Real chainId from provider:', { hexChainId, realChainId, wagmiChainId: chainId })
         return realChainId
       } catch (err) {
         console.error('⚠️ Error getting chainId from provider:', err)
@@ -149,7 +149,7 @@ export default function Navbar() {
 
         // Fallback to Raw Switch on last attempt
         if (retryCount >= maxRetries) {
-          // console.log("🔧 Tentando Fallback Raw Switch...")
+          // console.log("🔧 Trying Fallback Raw Switch...")
           const success = await attemptRawSwitch()
           if (!success) {
             toast.error('Could not switch to Arc Testnet. Please switch manually.', { duration: 5000 })

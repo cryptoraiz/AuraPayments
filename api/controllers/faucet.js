@@ -77,7 +77,7 @@ export const faucetHandler = async (req, res) => {
         // Check Faucet Balance
         const balance = await provider.getBalance(wallet.address);
         const amountToSend = ethers.parseEther(FAUCET_AMOUNT); // Native token uses 18 decimals usually? Wait.
-        // Arc documentation says "USDC é o token de gás nativo".
+        // Arc documentation says "USDC is the native gas token".
         // USDC usually has 6 decimals.
         // However, if it's the NATIVE GAS token, EVM chains usually treat native currency as 18 decimals (Wei).
         // Let's check the user's previous code or assumptions.
@@ -101,7 +101,7 @@ export const faucetHandler = async (req, res) => {
         // Actually, I'll stick to 18 (ether) because foundry `cast send--value` usually expects wei.
 
         // Let's double check User provided info:
-        // "USDC é o token de gás nativo da Arc"
+        // "USDC is Arc's native gas token"
         // Usually modifying the native decimal count is rare/hard in EVM config. They likely kept 18.
         // To be safe, I will use: 
         // `ethers.parseEther(FAUCET_AMOUNT)` -> 10^18.
@@ -129,7 +129,7 @@ export const faucetHandler = async (req, res) => {
 
         res.json({
             success: true,
-            message: `Enviado ${FAUCET_AMOUNT} USDC para sua carteira!`,
+            message: `Sent ${FAUCET_AMOUNT} USDC to your wallet!`,
             txHash: tx.hash
         });
 

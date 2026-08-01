@@ -122,10 +122,10 @@ export default function ArcAIPage() {
   return (
     <section className="w-full pt-8 pb-6 overflow-hidden flex flex-col h-[calc(100vh-128px)]">
       
-      {/* Grid Principal do Command Center */}
+      {/* Command Center Main Grid */}
       <div className="w-full max-w-7xl mx-auto px-6 h-full flex gap-6 items-stretch">
         
-        {/* COLUNA ESQUERDA: Status do Agente */}
+        {/* LEFT COLUMN: Agent Status */}
         <div className="hidden lg:flex w-[280px] flex-col gap-6 h-full">
           {/* Agent Identity Card */}
           <div className="bg-dark-card border border-dark-border rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center">
@@ -189,7 +189,7 @@ export default function ArcAIPage() {
           </div>
         </div>
         
-        {/* COLUNA CENTRAL: O Chat Card */}
+        {/* CENTER COLUMN: Chat Card */}
         <div className="flex-1 bg-dark-card/90 backdrop-blur-xl border border-dark-border rounded-3xl flex flex-col shadow-2xl overflow-hidden relative h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-5 border-b border-dark-border bg-dark-bg/80">

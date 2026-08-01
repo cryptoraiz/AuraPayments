@@ -227,7 +227,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                                                 </div>
                                                                 <div>
                                                                     <h3 className="text-white font-semibold text-[15px]">
-                                                                        {item.type} {item.amountIn} {item.tokenIn}
+                                                                        {item.type} {Number(item.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} {item.tokenIn}
                                                                     </h3>
                                                                     <p className="text-white/40 text-[11px] font-medium tracking-wide uppercase">
                                                                         {item.type === 'Bridge' ? 'Cross-Chain (CCTP)' : 'Synthra AMM'}
@@ -296,7 +296,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                     </div>
 
                                     <h2 className="text-[26px] font-extrabold text-white tracking-tight mb-1 text-center">
-                                        {selectedTrade.type} {selectedTrade.amountIn} {selectedTrade.tokenIn}
+                                        {selectedTrade.type} {Number(selectedTrade.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} {selectedTrade.tokenIn}
                                     </h2>
                                     <span className="text-sm font-medium text-white/50 bg-white/5 px-3 py-1 rounded-full mt-2">
                                         via {selectedTrade.type === 'Bridge' ? 'CCTP' : 'Synthra AMM'}
@@ -313,7 +313,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                            <span className="text-[14px] font-medium">From {selectedTrade.fromChain || 'Arc Testnet'}</span>
                                        </div>
                                        <div className="text-[14px] font-bold text-white flex items-center gap-1.5">
-                                           {selectedTrade.amountIn} {selectedTrade.tokenIn}
+                                           {Number(selectedTrade.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} {selectedTrade.tokenIn}
                                            <img src={getTokenIcon(selectedTrade.tokenIn)} className="w-4 h-4 rounded-full" alt="token" />
                                        </div>
                                    </div>
@@ -327,7 +327,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                            <span className="text-[14px] font-medium">To {selectedTrade.toChain || 'Arc Testnet'}</span>
                                        </div>
                                        <div className="text-[14px] font-bold text-white flex items-center gap-1.5">
-                                           {selectedTrade.amountOut || selectedTrade.amountIn} {selectedTrade.tokenOut || selectedTrade.tokenIn}
+                                           {selectedTrade.amountOut ? Number(selectedTrade.amountOut).toLocaleString('en-US', { maximumFractionDigits: 6 }) : Number(selectedTrade.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} {selectedTrade.tokenOut || selectedTrade.tokenIn}
                                            <img src={getTokenIcon(selectedTrade.tokenOut || selectedTrade.tokenIn)} className="w-4 h-4 rounded-full" alt="token" />
                                        </div>
                                    </div>
@@ -349,13 +349,27 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                    <div className="h-px bg-white/5 w-full"></div>
 
                                    {/* Hash */}
-                                   <div className="flex justify-between items-center">
-                                       <div className="text-white/60 text-[14px] font-medium">Transaction Hash</div>
-                                       <a href={`https://testnet.arcscan.app/tx/${selectedTrade.hash}`} target="_blank" rel="noopener noreferrer" className="text-[14px] font-bold text-white hover:text-blue-400 flex items-center gap-1.5 transition-colors underline decoration-white/20 underline-offset-2">
-                                           View Transaction
-                                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                       </a>
-                                   </div>
+                                    <div className="flex justify-between items-center">
+                                        <div className="text-white/60 text-[14px] font-medium">Transaction Hash</div>
+                                        {(() => {
+                                          const h = selectedTrade.txHash || selectedTrade.hash;
+                                          const chain = (selectedTrade.fromChain || '').toLowerCase();
+                                          let explorerBase = 'https://testnet.arcscan.app';
+                                          if (chain.includes('base')) explorerBase = 'https://sepolia.basescan.org';
+                                          else if (chain.includes('polygon')) explorerBase = 'https://amoy.polygonscan.com';
+                                          else if (chain.includes('optimism')) explorerBase = 'https://sepolia-optimism.etherscan.io';
+                                          else if (chain.includes('arbitrum')) explorerBase = 'https://sepolia.arbiscan.io';
+                                          const validHash = h && h !== 'undefined' && h !== 'null';
+                                          return validHash ? (
+                                            <a href={`${explorerBase}/tx/${h}`} target="_blank" rel="noopener noreferrer" className="text-[14px] font-bold text-white hover:text-blue-400 flex items-center gap-1.5 transition-colors underline decoration-white/20 underline-offset-2">
+                                              View Transaction
+                                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                            </a>
+                                          ) : (
+                                            <span className="text-[14px] text-white/30 font-medium">Not available</span>
+                                          );
+                                        })()}
+                                    </div>
                                 </div>
 
                                 {/* Action Buttons */}

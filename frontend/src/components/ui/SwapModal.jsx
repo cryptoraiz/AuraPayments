@@ -101,7 +101,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
         tokenOut: tokenOut.symbol,
         amountIn,
         amountOut,
-        hash
+        txHash: hash
       });
     } catch (err) {
       console.error('[SwapModal]', err);

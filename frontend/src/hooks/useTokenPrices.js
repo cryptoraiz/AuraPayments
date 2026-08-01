@@ -1,19 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const COINGECKO_IDS = {
-  USDC:   'usd-coin',
-  WUSDC:  'usd-coin',
-  USDT:   'tether',
-  EURC:   'euro-coin',
-  cirBTC: 'bitcoin',
+const PYTH_IDS = {
+  USDC:   'eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a', // USDC/USD
+  WUSDC:  'eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a', // USDC/USD
+  USDT:   '2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b', // USDT/USD
+  EURC:   'a995d00bb36a63cef7fd2c287dc105fc8f3d93779f062f09551b0af3e81ec30b', // EUR/USD
+  cirBTC: 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43', // BTC/USD
 };
 
 /**
  * Returns { prices: { USDC: 1.00, USDT: 1.00, EURC: 1.12, cirBTC: 60000 }, loading, error }
- * Caches for 60 seconds to respect CoinGecko free-tier limits.
+ * Caches for 30 seconds for Pyth Network to be responsive but not spammy.
  */
 const cache = { data: null, ts: 0 };
-const CACHE_TTL = 60_000; // 60 seconds
+const CACHE_TTL = 30_000; // 30 seconds
 
 export function useTokenPrices() {
   const [prices, setPrices] = useState(null);
@@ -30,19 +30,33 @@ export function useTokenPrices() {
     }
 
     try {
-      const ids = [...new Set(Object.values(COINGECKO_IDS))].join(',');
-      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`;
+      // Build Hermes API request (e.g. ?ids[]=id1&ids[]=id2)
+      const uniqueIds = [...new Set(Object.values(PYTH_IDS))];
+      const params = uniqueIds.map(id => `ids[]=${id}`).join('&');
+      const url = `https://hermes.pyth.network/v2/updates/price/latest?${params}`;
+      
       const res  = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!res.ok) throw new Error(`CoinGecko ${res.status}`);
+      if (!res.ok) throw new Error(`Pyth Network ${res.status}`);
       const data = await res.json();
 
-      // Map symbol → price in USD
-      const mapped = {};
-      for (const [symbol, geckoId] of Object.entries(COINGECKO_IDS)) {
-        mapped[symbol] = data[geckoId]?.usd ?? null;
+      // Map Pyth ID → price in USD
+      const pythPrices = {};
+      if (data && data.parsed) {
+        data.parsed.forEach(feed => {
+          // Pyth prices are represented as an integer (price) and an exponent (expo)
+          const price = Number(feed.price.price);
+          const expo = Number(feed.price.expo);
+          pythPrices[feed.id] = price * Math.pow(10, expo);
+        });
       }
 
-      // Stablecoins fallback (always $1.00 or €1.12 estimate)
+      // Map symbol → Pyth price
+      const mapped = {};
+      for (const [symbol, pythId] of Object.entries(PYTH_IDS)) {
+        mapped[symbol] = pythPrices[pythId] ?? null;
+      }
+
+      // Stablecoins fallback (always $1.00 or €1.12 estimate) if Pyth fails to return a specific ID
       if (!mapped.USDC)   mapped.USDC  = 1.00;
       if (!mapped.WUSDC)  mapped.WUSDC = 1.00;
       if (!mapped.USDT)   mapped.USDT  = 1.00;
@@ -56,7 +70,7 @@ export function useTokenPrices() {
         setError(null);
       }
     } catch (err) {
-      console.warn('[useTokenPrices] CoinGecko error, using fallbacks:', err.message);
+      console.warn('[useTokenPrices] Pyth Network error, using fallbacks:', err.message);
       // Fallback: stablecoins = $1, BTC = null
       const fallback = { USDC: 1.00, WUSDC: 1.00, USDT: 1.00, EURC: null, cirBTC: null };
       if (mounted.current) {
