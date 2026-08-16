@@ -444,15 +444,78 @@ SYSTEM RULES:
    - Tokens available on Arc Testnet: USDC, EURC, USDT, cirBTC.
    - Note: USDC is the native gas asset on Arc Network.
    - ETH, WETH, or BTC do NOT exist on Arc Testnet (only cirBTC exists). NEVER suggest ETH in examples or swap parameters. Always use USDC, EURC, USDT, or cirBTC.
-5. CORE CAPABILITIES:
-   - Token Swaps on Arc Testnet (USDC, EURC, USDT, cirBTC)
-   - CCTP Cross-chain Bridge (Arc, Base, Arbitrum, Sepolia)
-   - Invoice 2.0 (Instant B2B decentralized on-chain billing in USDC/EURC)
+5. FUNCTION CALLING RULE (CRITICAL):
+   - When the user asks to swap, bridge, or create an invoice, or confirms an action with "sim", "yes", "confirm", "proceed", YOU MUST CALL the corresponding function (\`prepare_swap\`, \`prepare_bridge\`, \`generate_invoice\`).
+   - Do NOT just write out the parameters in text; invoke the tool call!
 6. YIELD & LIQUIDITY DEPOSITS MAINTENANCE RULE:
    - If user asks about yield opportunities or to deposit into pools/Aura DEX, explain clearly:
      "⚠️ We apologize, but the Aura DEX Yield Vaults & Staking module is currently undergoing scheduled maintenance and smart contract upgrades for the upcoming phase. Swaps, CCTP Bridges, and B2B Invoices are 100% active!"
 7. You NEVER execute transactions autonomously. You only prepare the transaction parameters for MetaMask confirmation.
 8. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks (\\n\\n).`;
+
+    const openAITools = [
+        {
+            type: "function",
+            function: {
+                name: "prepare_swap",
+                description: "Prepares a token swap/trade transaction on Arc Testnet. Trigger whenever the user wants to swap, trade, or exchange tokens (trocar moedas, fazer swap, comprar token) or confirms an ongoing swap request.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        amount: { type: "number", description: "Amount to swap" },
+                        fromToken: { type: "string", description: "Source token symbol (USDC, EURC, USDT, cirBTC)" },
+                        toToken: { type: "string", description: "Target token symbol (EURC, USDC, USDT, cirBTC)" }
+                    },
+                    required: ["amount", "fromToken", "toToken"]
+                }
+            }
+        },
+        {
+            type: "function",
+            function: {
+                name: "generate_invoice",
+                description: "Generates a B2B payment invoice link on Arc Testnet. Trigger for requests about creating invoices, bills, or payment links (gerar cobrança, criar fatura).",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        amount: { type: "number", description: "Invoice amount in USDC" },
+                        clientName: { type: "string", description: "Client or company name" },
+                        description: { type: "string", description: "Optional description" }
+                    },
+                    required: ["amount", "clientName"]
+                }
+            }
+        },
+        {
+            type: "function",
+            function: {
+                name: "prepare_bridge",
+                description: "Prepares a CCTP cross-chain bridge transaction from Arc Testnet to other networks.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        amount: { type: "number", description: "USDC amount to send" },
+                        destinationNetwork: { type: "string", description: "Destination network name (e.g. Base, Arbitrum)" }
+                    },
+                    required: ["amount", "destinationNetwork"]
+                }
+            }
+        },
+        {
+            type: "function",
+            function: {
+                name: "find_yields",
+                description: "Searches top DeFi yield pools and APY opportunities.",
+                parameters: {
+                    type: "object",
+                    properties: {
+                        token: { type: "string", description: "Token to check yields for (USDC, EURC, USDT, cirBTC). Default USDC." }
+                    },
+                    required: ["token"]
+                }
+            }
+        }
+    ];
 
     const openAIMessages = [
         { role: "system", content: systemPrompt },
@@ -471,7 +534,9 @@ SYSTEM RULES:
         body: JSON.stringify({
             model: "gpt-4o-mini",
             messages: openAIMessages,
-            temperature: 0.5,
+            tools: openAITools,
+            tool_choice: "auto",
+            temperature: 0.3,
             max_tokens: 1024
         })
     });
@@ -482,14 +547,75 @@ SYSTEM RULES:
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "Desculpe, não consegui processar a resposta.";
-
-    // Intent extractor
+    const choice = data.choices?.[0]?.message;
     const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || "";
+    const isPt = /[ãáàâéêíóôõúç]/i.test(lastUserMsg) || /\b(rendimento|rendimentos|fatura|faturas|troca|trocar|ponte|ajuda|quero|preciso|mostrar|carteira|quanto|como|por|para|sim)\b/i.test(lastUserMsg);
+
+    // 1. Check Tool Calls
+    if (choice?.tool_calls && choice.tool_calls.length > 0) {
+        const toolCall = choice.tool_calls[0];
+        const fnName = toolCall.function.name;
+        let args = {};
+        try {
+            args = JSON.parse(toolCall.function.arguments);
+        } catch (e) {
+            args = {};
+        }
+
+        if (fnName === "prepare_swap") {
+            const amount = args.amount || 20;
+            const from = (args.fromToken || "USDC").toUpperCase();
+            const to = (args.toToken || "USDT").toUpperCase();
+            return {
+                content: isPt 
+                    ? `🔄 **Transação de Swap Preparada:**\n\n• **Trocar:** ${amount} ${from}\n• **Receber:** ${to}\n• **Rede:** Arc Testnet\n\nPor favor, confirme na MetaMask abaixo para concluir a troca com segurança.`
+                    : `🔄 **Swap Transaction Prepared:**\n\n• **Swap:** ${amount} ${from}\n• **Receive:** ${to}\n• **Network:** Arc Testnet\n\nPlease confirm in MetaMask below to complete the swap securely.`,
+                action: {
+                    action: "UI_PREPARE_SWAP",
+                    payload: { amount, from, to }
+                }
+            };
+        } else if (fnName === "generate_invoice") {
+            const shortId = Math.random().toString(36).substring(2, 6).toUpperCase();
+            return {
+                content: isPt 
+                    ? `✅ **Fatura B2B Gerada com Sucesso!**\n\n• **Valor:** ${args.amount || 100} USDC\n• **Cliente:** ${args.clientName || 'Cliente Web3'}\n• **Código:** INV-${shortId}\n\nO link de pagamento seguro já foi preparado para você compartilhar!`
+                    : `✅ **B2B Invoice Successfully Generated!**\n\n• **Amount:** ${args.amount || 100} USDC\n• **Client:** ${args.clientName || 'Web3 Client'}\n• **Invoice ID:** INV-${shortId}\n\nThe secure payment link is ready to share below!`,
+                action: {
+                    action: "UI_GENERATE_INVOICE",
+                    payload: {
+                        amount: args.amount || 100,
+                        clientName: args.clientName || "Web3 Client",
+                        description: args.description || "B2B Invoice",
+                        invoiceId: `INV-${shortId}`
+                    }
+                }
+            };
+        } else if (fnName === "prepare_bridge") {
+            return {
+                content: isPt 
+                    ? `🌉 **Ponte Cross-Chain (CCTP) Preparada:**\n\n• **Valor:** ${args.amount || 50} USDC\n• **Destino:** Rede ${args.destinationNetwork || 'Base Sepolia'}\n\nPor favor, aprove a transação abaixo para iniciar a transferência de liquidez.`
+                    : `🌉 **Cross-Chain Bridge (CCTP) Prepared:**\n\n• **Amount:** ${args.amount || 50} USDC\n• **Destination:** ${args.destinationNetwork || 'Base Sepolia'} Network\n\nPlease approve the transaction below to initiate liquidity transfer.`,
+                action: {
+                    action: "UI_PREPARE_BRIDGE",
+                    payload: {
+                        amount: args.amount || 50,
+                        destination: args.destinationNetwork || 'Base Sepolia'
+                    }
+                }
+            };
+        }
+    }
+
+    // 2. Text response fallback with smart regex matching across whole chat context
+    const content = choice?.content || "Desculpe, não consegui processar a resposta.";
     let action = null;
 
-    const swapMatch = lastUserMsg.match(/(\d+(?:\.\d+)?)\s*(usdc|eurc|usdt|cirbtc)?\s*(?:para|por|to|for|in)\s*(usdc|eurc|usdt|cirbtc)/i);
-    if (swapMatch) {
+    // Search for swap parameters in current prompt or recent message history
+    const allRecentText = messages.slice(-3).map(m => m.content).join("\n") + "\n" + content;
+    const swapMatch = allRecentText.match(/(\d+(?:\.\d+)?)\s*(usdc|eurc|usdt|cirbtc)?\s*(?:para|por|to|for|in|swap of)\s*(usdc|eurc|usdt|cirbtc)/i);
+    
+    if (swapMatch && (lastUserMsg.toLowerCase().includes("sim") || lastUserMsg.toLowerCase().includes("yes") || lastUserMsg.toLowerCase().includes("confirm") || content.toLowerCase().includes("metamask"))) {
         action = {
             action: "UI_PREPARE_SWAP",
             payload: {

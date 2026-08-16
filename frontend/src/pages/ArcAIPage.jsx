@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAccount, useConnect, useSendTransaction } from 'wagmi';
 import { parseEther } from 'viem';
+import confetti from 'canvas-confetti';
 import DeFiWidget from '../components/ui/DeFiWidget';
 import PaymentForm from '../components/forms/PaymentForm';
 import WalletModal from '../components/ui/WalletModal';
@@ -11,6 +12,8 @@ export default function ArcAIPage() {
   const { connect, connectors } = useConnect();
   const { sendTransaction, isPending, isSuccess } = useSendTransaction();
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [copiedHash, setCopiedHash] = useState(null);
+  const [executedActions, setExecutedActions] = useState(new Set());
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Welcome to Aura Terminal! ⚡ I can prepare cross-chain swaps, bridge tokens across networks via CCTP, or generate instant B2B on-chain invoices. How can I assist you today?' }
   ]);
@@ -95,7 +98,7 @@ export default function ArcAIPage() {
     }
   };
 
-  const executeAIAction = (actionDetails) => {
+  const executeAIAction = (actionDetails, msgIdx) => {
     if (!isConnected || !address) {
       setIsWalletModalOpen(true);
       return;
@@ -107,9 +110,22 @@ export default function ArcAIPage() {
       value: parseEther('0.0001'),
     }, {
       onSuccess: (hash) => {
+        if (msgIdx !== undefined) {
+          setExecutedActions(prev => new Set([...prev, msgIdx]));
+        }
+
+        try {
+          confetti({
+            particleCount: 60,
+            spread: 60,
+            origin: { y: 0.7 }
+          });
+        } catch (e) {}
+
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: `✅ **Transaction Successfully Submitted!**\n\n**Tx Hash:** \`${hash}\`\n\nThe operation is now confirmed on the Arc Testnet.`
+          content: `✅ **Transaction Successfully Submitted!**\n\nThe operation is now confirmed on **Arc Testnet**. You can view the live on-chain receipt below:`,
+          txHash: hash
         }]);
         addLog(`[SYSTEM] Transaction confirmed: ${hash}`);
       },
@@ -248,25 +264,76 @@ export default function ArcAIPage() {
                   {/* Action Execution Button */}
                   {msg.action && msg.action.action !== 'SHOW_STATS' && (
                     <div className="mt-4 pt-4 border-t border-dark-border/50">
-                      <button 
-                        onClick={() => executeAIAction(msg.action)}
-                        disabled={isPending}
-                        className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] disabled:opacity-50 flex items-center justify-center gap-2"
+                      {executedActions.has(idx) ? (
+                        <div className="w-full py-2.5 px-4 bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-bold rounded-xl flex items-center justify-center gap-2">
+                          <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>Transaction Signed & Submitted</span>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => executeAIAction(msg.action, idx)}
+                          disabled={isPending}
+                          className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.98]"
+                        >
+                          {isPending ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Confirming in Wallet...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              Sign Transaction
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Transaction Explorer & Copy Buttons */}
+                  {msg.txHash && (
+                    <div className="mt-4 pt-3.5 border-t border-dark-border/60 flex flex-wrap gap-2.5">
+                      <a
+                        href={`https://testnet.arcscan.app/tx/${msg.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 min-w-[140px] py-2.5 px-3 bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 group active:scale-[0.98]"
                       >
-                        {isPending ? (
+                        <span>View on ArcScan</span>
+                        <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                      
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(msg.txHash);
+                          setCopiedHash(msg.txHash);
+                          setTimeout(() => setCopiedHash(null), 2000);
+                        }}
+                        className="py-2.5 px-3.5 bg-dark-bg hover:bg-dark-border/50 text-gray-300 hover:text-white border border-dark-border text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                      >
+                        {copiedHash === msg.txHash ? (
                           <>
-                            <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
-                            Confirming in Wallet...
+                            <span className="text-green-400">Copied!</span>
                           </>
                         ) : (
                           <>
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
-                            Sign Transaction
+                            <span>Copy Hash</span>
                           </>
                         )}
                       </button>
