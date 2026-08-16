@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAccount, useConnect } from 'wagmi';
+import { useAccount, useConnect, useSendTransaction } from 'wagmi';
+import { parseEther } from 'viem';
 import DeFiWidget from '../components/ui/DeFiWidget';
 import PaymentForm from '../components/forms/PaymentForm';
 import WalletModal from '../components/ui/WalletModal';
@@ -8,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function ArcAIPage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
+  const { sendTransaction, isPending, isSuccess } = useSendTransaction();
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Welcome to Aura Terminal! ⚡ I can prepare cross-chain swaps, bridge tokens across networks via CCTP, or generate instant B2B on-chain invoices. How can I assist you today?' }
@@ -72,7 +74,12 @@ export default function ArcAIPage() {
       const data = await res.json();
       
       if (data.message) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.message.content }]);
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: data.message.content, 
+          action: data.action || null 
+        }]);
+        
         if (data.action) {
            addLog(`[AGENT] Executed action: ${data.action.action}`);
         } else {
@@ -86,6 +93,20 @@ export default function ArcAIPage() {
       addLog(`[ERROR] Connection failed.`);
       setMessages(prev => [...prev, { role: 'assistant', content: "Connection error to the agent server." }]);
     }
+  };
+
+  const executeAIAction = (actionDetails) => {
+    if (!isConnected || !address) {
+      setIsWalletModalOpen(true);
+      return;
+    }
+    
+    // Fire a generic test transaction to simulate the prepared execution
+    sendTransaction({
+      to: address, 
+      value: parseEther('0.0001'),
+    });
+    addLog(`[USER] Signed action: ${actionDetails.action} via Wallet`);
   };
 
   const suggestedPrompts = [
@@ -212,6 +233,34 @@ export default function ArcAIPage() {
                       </span>
                     ))}
                   </div>
+                  
+                  {/* Action Execution Button */}
+                  {msg.action && msg.action.action !== 'SHOW_STATS' && (
+                    <div className="mt-4 pt-4 border-t border-dark-border/50">
+                      <button 
+                        onClick={() => executeAIAction(msg.action)}
+                        disabled={isPending}
+                        className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isPending ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Confirming in Wallet...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Sign Transaction
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
