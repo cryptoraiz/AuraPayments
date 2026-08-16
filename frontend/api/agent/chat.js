@@ -98,10 +98,7 @@ export default async function handler(req, res) {
         ];
 
         // 2. Configurar o Modelo e o System Instruction
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-3.6-flash",
-            tools: [{ functionDeclarations: tools }],
-            systemInstruction: `You are Aura AI, the official financial co-pilot of Aura Payments.
+        const systemInstructionText = `You are Aura AI, the official financial co-pilot of Aura Payments.
 User connected wallet address: ${userAddress || 'Not connected'}.
 Your goal is to help users execute swaps, cross-chain CCTP bridges, and create instant B2B on-chain invoices on Arc Testnet.
 
@@ -119,7 +116,7 @@ SYSTEM RULES:
    - Invoice 2.0 (Instant B2B decentralized on-chain billing)
 5. TOOL MAPPING:
    - "invoice", "bill", "payment link", "fatura", "cobrança" -> Call \`generate_invoice\`.
-   - "swap", "trade", "exchange", "trocar", "comprar" -> Call \`prepare_swap\`.
+   - "swap", "trade", "exchange", "trocar", "comprar", "por" -> Call \`prepare_swap\`.
    - "bridge", "cross-chain", "transfer network", "ponte" -> Call \`prepare_bridge\`.
    - "portfolio", "history", "stats", "desempenho", "estatísticas" -> Call \`get_portfolio_stats\`.
 6. You NEVER execute transactions autonomously. You only prepare the transaction parameters for MetaMask confirmation.
@@ -127,8 +124,7 @@ SYSTEM RULES:
    - If the user asks to deposit, stake, or invest funds into Aura DEX, Vaults, or any yield pool, apologize and state clearly that the Yield Vaults & Staking module is currently under scheduled maintenance / testnet upgrades for the next phase.
    - Example in PT: "Pedimos desculpas, mas o módulo de depósitos e cofres de rendimento (Aura DEX Vaults) está temporariamente em manutenção para atualizações de contratos. No momento, você pode utilizar normalmente os módulos de Swap, Ponte CCTP e Faturas B2B!"
    - Example in EN: "We apologize, but the Aura DEX Yield Vaults & Staking module is currently undergoing scheduled maintenance for smart contract upgrades. You can freely use Swaps, CCTP Bridges, and B2B Invoices!"
-8. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks (\n\n).`,
-        });
+8. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks (\\n\\n).`;
 
         // 3. Formatar o Histórico de Mensagens para o Formato do Gemini
         let formattedHistory = messages.map(msg => {
@@ -140,7 +136,6 @@ SYSTEM RULES:
         });
 
         // Gemini exige que os papéis se alternem estritamente (user, model, user, model).
-        // Vamos agrupar mensagens consecutivas do mesmo papel para evitar o erro 400 da API.
         let mergedHistory = [];
         for (let msg of formattedHistory) {
             if (mergedHistory.length > 0 && mergedHistory[mergedHistory.length - 1].role === msg.role) {
@@ -148,11 +143,6 @@ SYSTEM RULES:
             } else {
                 mergedHistory.push(msg);
             }
-        }
-
-        // Gemini exige que a primeira mensagem do histórico seja SEMPRE do 'user'.
-        while (mergedHistory.length > 0 && mergedHistory[0].role === 'model') {
-            mergedHistory.shift();
         }
 
         const lastMessageIndex = mergedHistory.findLastIndex(m => m.role === 'user');
@@ -167,15 +157,46 @@ SYSTEM RULES:
              return res.status(400).json({ error: "Nenhuma mensagem do usuário encontrada." });
         }
 
-        const isPt = /[ãáàâéêíóôõúç]/i.test(promptText) || /\b(rendimento|rendimentos|fatura|faturas|troca|trocar|ponte|ajuda|quero|preciso|mostrar|carteira|quanto|como)\b/i.test(promptText);
+        // Sanitização estrita do chatHistory: deve começar com 'user' e terminar com 'model'
+        while (chatHistory.length > 0 && chatHistory[0].role !== 'user') {
+            chatHistory.shift();
+        }
+        while (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role !== 'model') {
+            chatHistory.pop();
+        }
 
-        const chat = model.startChat({
-            history: chatHistory,
-        });
+        const isPt = /[ãáàâéêíóôõúç]/i.test(promptText) || /\b(rendimento|rendimentos|fatura|faturas|troca|trocar|ponte|ajuda|quero|preciso|mostrar|carteira|quanto|como|por)\b/i.test(promptText);
 
-        const result = await chat.sendMessage(promptText);
+        const candidateModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
+        let result = null;
+        let lastErr = null;
+
+        for (const candidate of candidateModels) {
+            try {
+                const model = genAI.getGenerativeModel({ 
+                    model: candidate,
+                    tools: [{ functionDeclarations: tools }],
+                    systemInstruction: systemInstructionText,
+                });
+
+                const chat = model.startChat({
+                    history: chatHistory,
+                });
+
+                result = await chat.sendMessage(promptText);
+                if (result && result.response) break;
+            } catch (err) {
+                console.warn(`[Gemini model ${candidate} failed]:`, err.message);
+                lastErr = err;
+            }
+        }
+
+        if (!result || !result.response) {
+            throw lastErr || new Error("Failed to get response from Gemini models.");
+        }
+
         const response = result.response;
-        const functionCalls = response.functionCalls();
+        const functionCalls = response.functionCalls ? response.functionCalls() : null;
 
         // 4. Lidar com Function Calling
         if (functionCalls && functionCalls.length > 0) {
@@ -339,13 +360,15 @@ SYSTEM RULES:
 
         if (process.env.GROQ_API_KEY) {
             try {
-                const groqText = await callGroqFallback(messages, userAddress);
+                const groqResult = await callGroqFallback(messages, userAddress);
                 return res.status(200).json({
                     success: true,
                     message: {
                         role: "assistant",
-                        content: groqText
-                    }
+                        content: groqResult.content,
+                        action: groqResult.action
+                    },
+                    action: groqResult.action
                 });
             } catch (groqError) {
                 console.error("[Groq Fallback Error]:", groqError.message);
@@ -413,5 +436,23 @@ SYSTEM RULES:
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content || "Desculpe, não consegui processar a resposta.";
+    const content = data.choices?.[0]?.message?.content || "Desculpe, não consegui processar a resposta.";
+
+    // Simple intent extractor fallback for Groq
+    const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || "";
+    let action = null;
+
+    const swapMatch = lastUserMsg.match(/(\d+(?:\.\d+)?)\s*(usdc|eurc|usdt|eth|btc|cirbtc)?\s*(?:para|por|to|for|in)\s*(usdc|eurc|usdt|eth|btc|cirbtc)/i);
+    if (swapMatch) {
+        action = {
+            action: "UI_PREPARE_SWAP",
+            payload: {
+                amount: parseFloat(swapMatch[1]),
+                from: (swapMatch[2] || "USDC").toUpperCase(),
+                to: swapMatch[3].toUpperCase()
+            }
+        };
+    }
+
+    return { content, action };
 }

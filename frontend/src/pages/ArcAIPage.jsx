@@ -105,6 +105,17 @@ export default function ArcAIPage() {
     sendTransaction({
       to: address, 
       value: parseEther('0.0001'),
+    }, {
+      onSuccess: (hash) => {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `✅ **Transaction Successfully Submitted!**\n\n**Tx Hash:** \`${hash}\`\n\nThe operation is now confirmed on the Arc Testnet.`
+        }]);
+        addLog(`[SYSTEM] Transaction confirmed: ${hash}`);
+      },
+      onError: (error) => {
+        addLog(`[ERROR] Transaction rejected or failed.`);
+      }
     });
     addLog(`[USER] Signed action: ${actionDetails.action} via Wallet`);
   };
