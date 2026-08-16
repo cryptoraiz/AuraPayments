@@ -334,11 +334,84 @@ SYSTEM RULES:
             });
         }
 
-    } catch (error) {
-        console.error("[Agent Chat Error]:", error);
+    } catch (geminiError) {
+        console.warn("[Gemini Primary Notice - Activating Groq Fallback]:", geminiError.message);
+
+        if (process.env.GROQ_API_KEY) {
+            try {
+                const groqText = await callGroqFallback(messages, userAddress);
+                return res.status(200).json({
+                    success: true,
+                    message: {
+                        role: "assistant",
+                        content: groqText
+                    }
+                });
+            } catch (groqError) {
+                console.error("[Groq Fallback Error]:", groqError.message);
+            }
+        }
+
         return res.status(500).json({ 
             error: "Erro no processamento da Inteligência Artificial.", 
-            details: error.message 
+            details: geminiError.message 
         });
     }
+}
+
+async function callGroqFallback(messages, userAddress) {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error("Groq API key not configured on server.");
+
+    const groqSystemPrompt = `You are Aura AI, the official financial co-pilot of Aura Payments.
+User connected wallet address: ${userAddress || 'Not connected'}.
+Your goal is to help users execute swaps, cross-chain CCTP bridges, and create instant B2B on-chain invoices on Arc Testnet.
+
+SYSTEM RULES:
+1. Always be concise, helpful, objective, and professional.
+2. LANGUAGE RULE: Default is ENGLISH. If the user writes in Portuguese (or any other language), match their language immediately with 100% natural fluency.
+3. OFFICIAL KNOWLEDGE & LINKS (NEVER INVENT FAKE URLS):
+   - Official Website: https://www.aurapayments.xyz
+   - Official X / Twitter: https://x.com/danilo_schrute
+   - Telegram & Discord: Currently under maintenance / coming soon. If asked for Discord or Telegram, inform the user: "Our Discord and Telegram channels are currently being prepared and will be opened soon. Stay tuned on our X (@danilo_schrute)!"
+   - NEVER invent domains like aurapayments.io or fake discord links.
+4. CORE CAPABILITIES:
+   - Token Swaps on Arc Testnet (USDC, EURC, USDT, etc.)
+   - CCTP Cross-chain Bridge (Arc, Base, Arbitrum, Sepolia)
+   - Invoice 2.0 (Instant B2B decentralized on-chain billing)
+5. YIELD & LIQUIDITY DEPOSITS MAINTENANCE RULE:
+   - If user asks about yield opportunities or to deposit into pools/Aura DEX, explain clearly:
+     "⚠️ We apologize, but the Aura DEX Yield Vaults & Staking module is currently undergoing scheduled maintenance and smart contract upgrades for the upcoming phase. Swaps, CCTP Bridges, and B2B Invoices are 100% active!"
+6. You NEVER execute transactions autonomously. You only prepare the transaction parameters for MetaMask confirmation.
+7. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks (\\n\\n).`;
+
+    const groqMessages = [
+        { role: "system", content: groqSystemPrompt },
+        ...messages.map(m => ({
+            role: m.role === 'model' ? 'assistant' : m.role,
+            content: m.content || " "
+        }))
+    ];
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
+            messages: groqMessages,
+            temperature: 0.5,
+            max_tokens: 1024
+        })
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Groq API error (${response.status}): ${errText}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || "Desculpe, não consegui processar a resposta.";
 }
