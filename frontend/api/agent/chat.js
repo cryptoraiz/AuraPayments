@@ -365,8 +365,27 @@ SYSTEM RULES:
         }
 
     } catch (geminiError) {
-        console.warn("[Gemini Primary Notice - Activating Groq Fallback]:", geminiError.message);
+        console.warn("[Gemini Primary Notice - Activating OpenAI/Groq Fallback]:", geminiError.message);
 
+        // Tier 2: OpenAI API (gpt-4o-mini)
+        if (process.env.OPENAI_API_KEY) {
+            try {
+                const openaiResult = await callOpenAIEngine(messages, userAddress);
+                return res.status(200).json({
+                    success: true,
+                    message: {
+                        role: "assistant",
+                        content: openaiResult.content,
+                        action: openaiResult.action
+                    },
+                    action: openaiResult.action
+                });
+            } catch (openaiError) {
+                console.error("[OpenAI Fallback Error]:", openaiError.message);
+            }
+        }
+
+        // Tier 3: Groq API (llama-3.3-70b-versatile)
         if (process.env.GROQ_API_KEY) {
             try {
                 const groqResult = await callGroqFallback(messages, userAddress);
@@ -384,7 +403,7 @@ SYSTEM RULES:
             }
         }
 
-        // Tier 3: Deterministic Intent Engine Fallback (Guarantees 100% uptime even if API keys fail)
+        // Tier 4: Deterministic Intent Engine Fallback (Guarantees 100% uptime even if API keys fail)
         try {
             const deterministicResult = handleDeterministicIntent(messages, userAddress);
             return res.status(200).json({
@@ -403,6 +422,85 @@ SYSTEM RULES:
             });
         }
     }
+}
+
+async function callOpenAIEngine(messages, userAddress) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error("OpenAI API key not configured on server.");
+
+    const systemPrompt = `You are Aura AI, the official financial co-pilot of Aura Payments.
+User connected wallet address: ${userAddress || 'Not connected'}.
+Your goal is to help users execute swaps, cross-chain CCTP bridges, and create instant B2B on-chain invoices on Arc Testnet.
+
+SYSTEM RULES:
+1. Always be concise, helpful, objective, and professional.
+2. LANGUAGE RULE: Default is ENGLISH. If the user writes in Portuguese (or any other language), match their language immediately with 100% natural fluency.
+3. OFFICIAL KNOWLEDGE & LINKS (NEVER INVENT FAKE URLS):
+   - Official Website: https://www.aurapayments.xyz
+   - Official X / Twitter: https://x.com/danilo_schrute
+   - Telegram & Discord: Currently under maintenance / coming soon. If asked for Discord or Telegram, inform the user: "Our Discord and Telegram channels are currently being prepared and will be opened soon. Stay tuned on our X (@danilo_schrute)!"
+   - NEVER invent domains like aurapayments.io or fake discord links.
+4. SUPPORTED TOKENS & NETWORK CONSTRAINTS (STRICT):
+   - Tokens available on Arc Testnet: USDC, EURC, USDT, cirBTC.
+   - Note: USDC is the native gas asset on Arc Network.
+   - ETH, WETH, or BTC do NOT exist on Arc Testnet (only cirBTC exists). NEVER suggest ETH in examples or swap parameters. Always use USDC, EURC, USDT, or cirBTC.
+5. CORE CAPABILITIES:
+   - Token Swaps on Arc Testnet (USDC, EURC, USDT, cirBTC)
+   - CCTP Cross-chain Bridge (Arc, Base, Arbitrum, Sepolia)
+   - Invoice 2.0 (Instant B2B decentralized on-chain billing in USDC/EURC)
+6. YIELD & LIQUIDITY DEPOSITS MAINTENANCE RULE:
+   - If user asks about yield opportunities or to deposit into pools/Aura DEX, explain clearly:
+     "⚠️ We apologize, but the Aura DEX Yield Vaults & Staking module is currently undergoing scheduled maintenance and smart contract upgrades for the upcoming phase. Swaps, CCTP Bridges, and B2B Invoices are 100% active!"
+7. You NEVER execute transactions autonomously. You only prepare the transaction parameters for MetaMask confirmation.
+8. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks (\\n\\n).`;
+
+    const openAIMessages = [
+        { role: "system", content: systemPrompt },
+        ...messages.map(m => ({
+            role: m.role === 'model' ? 'assistant' : m.role,
+            content: m.content || " "
+        }))
+    ];
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: openAIMessages,
+            temperature: 0.5,
+            max_tokens: 1024
+        })
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`OpenAI API error (${response.status}): ${errText}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "Desculpe, não consegui processar a resposta.";
+
+    // Intent extractor
+    const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || "";
+    let action = null;
+
+    const swapMatch = lastUserMsg.match(/(\d+(?:\.\d+)?)\s*(usdc|eurc|usdt|cirbtc)?\s*(?:para|por|to|for|in)\s*(usdc|eurc|usdt|cirbtc)/i);
+    if (swapMatch) {
+        action = {
+            action: "UI_PREPARE_SWAP",
+            payload: {
+                amount: parseFloat(swapMatch[1]),
+                from: (swapMatch[2] || "USDC").toUpperCase(),
+                to: swapMatch[3].toUpperCase()
+            }
+        };
+    }
+
+    return { content, action };
 }
 
 function handleDeterministicIntent(messages, userAddress) {
