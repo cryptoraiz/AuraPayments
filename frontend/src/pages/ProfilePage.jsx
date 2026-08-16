@@ -18,7 +18,7 @@ const getExplorerUrl = (txHash, chain) => {
 
 const ARC_CHAIN_ID = 5042002;
 
-// ── Tokens shown on the Portfolio page (Arc Testnet only) ─────────────────────
+// Portfolio tokens on Arc Testnet
 const PORTFOLIO_TOKENS = [
   { symbol: 'USDC',   name: 'USD Coin (Arc)',   address: null,                                               decimals: 18, color: 'bg-blue-400',   iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png', isNative: true },
   { symbol: 'USDT',   name: 'Tether USD',       address: '0x175CdB1D338945f0D851A741ccF787D343E57952',       decimals: 18, color: 'bg-green-500',  iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png' },
@@ -79,7 +79,7 @@ const getTokenIcon = (symbol) => {
   return token ? token.iconImg : 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png';
 };
 
-// ── Balance Hook — one useBalance per token, wagmi batches via multicall3 ─────
+// Balance Hook using Wagmi multicall
 function usePortfolioBalances(address) {
   // USDC = native currency on Arc, so we call useBalance WITHOUT a token address
   const usdc   = useBalance({ address, chainId: ARC_CHAIN_ID, query: { enabled: !!address, refetchInterval: 15_000, staleTime: 10_000 } });

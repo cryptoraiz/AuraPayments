@@ -82,15 +82,21 @@ export default function Navbar() {
     // Get REAL chainId from provider (bypass wagmi cache)
     const getRealChainId = async () => {
       try {
-        const provider = await connector?.getProvider()
-        if (!provider) return null
+        let provider = null
+        if (typeof connector?.getProvider === 'function') {
+          provider = await connector.getProvider()
+        } else if (connector?.provider) {
+          provider = connector.provider
+        } else if (typeof window !== 'undefined' && window.ethereum) {
+          provider = window.ethereum
+        }
+
+        if (!provider || typeof provider.request !== 'function') return null
 
         const hexChainId = await provider.request({ method: 'eth_chainId' })
         const realChainId = parseInt(hexChainId, 16)
-        // console.log('🔍 Real chainId from provider:', { hexChainId, realChainId, wagmiChainId: chainId })
         return realChainId
       } catch (err) {
-        console.error('⚠️ Error getting chainId from provider:', err)
         return null
       }
     }
@@ -226,8 +232,8 @@ export default function Navbar() {
                   Invoice 2.0
                 </Link>
                 <Link
-                  to="/arc-ai"
-                  className={`text-sm font-medium transition flex items-center gap-1 ${isActive('/arc-ai') ? 'text-blue-400' : 'text-blue-500 hover:text-blue-400'
+                  to="/aura-ai"
+                  className={`text-sm font-medium transition flex items-center gap-1 ${isActive('/aura-ai') ? 'text-blue-400' : 'text-blue-500 hover:text-blue-400'
                     } `}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

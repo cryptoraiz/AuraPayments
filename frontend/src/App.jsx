@@ -20,6 +20,7 @@ function App() {
         <Route path="/swap" element={<SwapPage />} />
         <Route path="/bridge" element={<BridgePage />} />
         <Route path="/invoice" element={<InvoicePage />} />
+        <Route path="/aura-ai" element={<ArcAIPage />} />
         <Route path="/arc-ai" element={<ArcAIPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />

@@ -57,6 +57,12 @@ export default async function handler(req, res) {
             return await handleDiagnose(req, res);
         }
 
+        // POST /api/agent/chat
+        if (req.method === 'POST' && pathname === '/api/agent/chat') {
+            const { handleAgentChat } = await import('./controllers/agent.js');
+            return await handleAgentChat(req, res);
+        }
+
         // POST /api/relayer/bridge
         if (req.method === 'POST' && pathname === '/api/relayer/bridge') {
             const { handleRelayerBridge } = await import('./controllers/relayer.js');

@@ -6,7 +6,7 @@ import { Toaster } from 'sonner'
 export default function Layout({ children }) {
   return (
     <div className="bg-dark-bg text-dark-text flex flex-col relative w-full h-[100dvh] overflow-hidden">
-      <Toaster position="top-right" theme="dark" richColors />
+      <Toaster position="top-center" theme="dark" richColors />
       <div className="flex-none z-50">
         <Navbar />
       </div>

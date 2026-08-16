@@ -10,16 +10,16 @@ export default function ArcAIPage() {
   const { connect, connectors } = useConnect();
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hello! I am your Autonomous Agent powered by Circle. I can execute cross-chain swaps, bridges or generate B2B invoices. What is your mission today?' }
+    { role: 'assistant', content: 'Welcome to Aura Terminal! ⚡ I can prepare cross-chain swaps, bridge tokens across networks via CCTP, or generate instant B2B on-chain invoices. How can I assist you today?' }
   ]);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
   const logsEndRef = useRef(null);
   const [logs, setLogs] = useState([
-    "[SYSTEM] Initializing Circle Agent Stack...",
+    "[SYSTEM] Initializing Aura Agent Stack...",
     "[SYSTEM] Connected to Arc Testnet.",
-    "[AGENT] Monitoring USDC liquidity pools...",
-    "[AGENT] Invoice 2.0 Module active."
+    "[AGENT] Monitoring cross-chain routes & gas...",
+    "[AGENT] Aura Core Engine active."
   ]);
 
   const scrollToBottom = () => {
@@ -38,9 +38,21 @@ export default function ArcAIPage() {
     setLogs(prev => [...prev, text]);
   };
 
-  const [conversationState, setConversationState] = useState('IDLE');
+  const handleResetChat = () => {
+    setMessages([
+      { role: 'assistant', content: 'Welcome to Aura Terminal! ⚡ I can prepare cross-chain swaps, bridge tokens across networks via CCTP, or generate instant B2B on-chain invoices. How can I assist you today?' }
+    ]);
+    setInput('');
+    setLogs([
+      "[SYSTEM] Initializing Aura Agent Stack...",
+      "[SYSTEM] Connected to Arc Testnet.",
+      "[AGENT] Monitoring cross-chain routes & gas...",
+      "[AGENT] Aura Core Engine active.",
+      "[SYSTEM] Chat session restarted."
+    ]);
+  };
 
-  const handleSend = (textOverride = null) => {
+  const handleSend = async (textOverride = null) => {
     const textToSend = textOverride !== null ? textOverride : input;
     if (!textToSend.trim()) return;
 
@@ -49,68 +61,31 @@ export default function ArcAIPage() {
     if (textOverride === null) setInput('');
     
     addLog(`[USER] Received: "${textToSend.substring(0, 20)}..."`);
-    addLog(`[AGENT] Processing NLP (Intent and Entities)...`);
+    addLog(`[AGENT] Processing NLP (Aura Engine)...`);
 
-    setTimeout(() => {
-      const lowerInput = textToSend.toLowerCase();
-      let response = '';
-
-      if (conversationState === 'IDLE') {
-        if (lowerInput.includes('swap') || lowerInput.includes('trade')) {
-          response = 'Excellent choice! To get started, which asset do you want to swap to which asset? (e.g., USDC to EURC)';
-          setConversationState('AWAITING_SWAP_PAIRS');
-          addLog(`[AGENT] State changed to AWAITING_SWAP_PAIRS`);
-        } else if (lowerInput.includes('bridge') || lowerInput.includes('transfer')) {
-          response = 'Great. The CCTP protocol is ready. To which destination network do you want to send your tokens? (e.g., Base, Arbitrum)';
-          setConversationState('AWAITING_BRIDGE_CHAIN');
-          addLog(`[AGENT] State changed to AWAITING_BRIDGE_CHAIN`);
-        } else if (lowerInput.includes('invoice') || lowerInput.includes('bill')) {
-          response = 'Let\'s generate this invoice. What is the name of your client and the invoice amount? (e.g., Alice Crypto, 500 USDC)';
-          setConversationState('AWAITING_INVOICE_DETAILS');
-          addLog(`[AGENT] State changed to AWAITING_INVOICE_DETAILS`);
-          addLog(`[AGENT] State changed to AWAITING_INVOICE_DETAILS`);
-        } else {
-          response = "I didn't quite catch that. I am a DeFi focused agent. Would you like me to perform a Swap, a Bridge or generate an Invoice?";
-        }
-      } 
+    try {
+      const res = await fetch('/api/agent/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: newMessages, userAddress: address })
+      });
+      const data = await res.json();
       
-      else if (conversationState === 'AWAITING_SWAP_PAIRS') {
-        if (lowerInput.includes('usdc') && lowerInput.includes('eurc')) {
-          response = "Perfect, I've mapped the best route in the pools. What amount do you want to swap?";
-          setConversationState('AWAITING_SWAP_AMOUNT');
-          addLog(`[AGENT] State changed to AWAITING_SWAP_AMOUNT`);
+      if (data.message) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.message.content }]);
+        if (data.action) {
+           addLog(`[AGENT] Executed action: ${data.action.action}`);
         } else {
-          response = 'Currently I can only swap USDC for EURC on Arc Testnet. Please confirm this pair.';
+           addLog(`[AGENT] Inference completed successfully.`);
         }
-      } 
-      
-      else if (conversationState === 'AWAITING_SWAP_AMOUNT') {
-        response = 'All set! Signing transaction with Agent Wallet and executing Swap on the blockchain... 🔄 Done! Swap completed successfully.';
-        setConversationState('IDLE');
-        addLog(`[TX] Signing Swap Payload...`);
-        addLog(`[TX] Transaction confirmed on Arc Testnet.`);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: "An error occurred." }]);
+        addLog(`[ERROR] Invalid response from AI engine.`);
       }
-
-      else if (conversationState === 'AWAITING_BRIDGE_CHAIN') {
-        if (lowerInput.includes('base') || lowerInput.includes('arbitrum')) {
-          response = 'Network confirmed. Initiating USDC burn on Arc and mint on destination network via Circle CCTP... 🚀 Success! Your funds have reached their destination.';
-          setConversationState('IDLE');
-          addLog(`[AGENT] Cross-Chain transfer executed via CCTP`);
-          addLog(`[AGENT] State changed to IDLE`);
-        } else {
-          response = 'I only support bridges to Base or Arbitrum. To which one?';
-        }
-      }
-
-      else if (conversationState === 'AWAITING_INVOICE_DETAILS') {
-        response = 'Invoice successfully generated and encrypted! 🔒 The B2B payment link is: https://aurapayments.xyz/pay/inv-8842';
-        setConversationState('IDLE');
-        addLog(`[AGENT] Escrow Smart Contract created.`);
-        addLog(`[AGENT] Invoice stored on the blockchain.`);
-      }
-
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
-    }, 1200);
+    } catch (e) {
+      addLog(`[ERROR] Connection failed.`);
+      setMessages(prev => [...prev, { role: 'assistant', content: "Connection error to the agent server." }]);
+    }
   };
 
   const suggestedPrompts = [
@@ -147,7 +122,7 @@ export default function ArcAIPage() {
             <div className="w-full text-left space-y-3 text-sm">
               <div className="flex justify-between items-center">
                 <span className="text-dark-muted font-medium">Model</span>
-                <span className="text-white font-bold">Circle Stack v2</span>
+                <span className="text-white font-bold">Aura AI</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-dark-muted font-medium">Network</span>
@@ -207,7 +182,11 @@ export default function ArcAIPage() {
               </div>
             </div>
             
-            <button className="text-dark-muted hover:text-white transition-colors p-2 bg-dark-input rounded-lg border border-dark-border/50">
+            <button 
+              onClick={handleResetChat}
+              title="Reset Conversation"
+              className="text-dark-muted hover:text-white transition-all p-2 bg-dark-input hover:bg-dark-border rounded-lg border border-dark-border/50 active:scale-95 active:rotate-180 duration-200"
+            >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             </button>
           </div>
@@ -221,7 +200,18 @@ export default function ArcAIPage() {
                     ? 'bg-blue-600 text-white rounded-tr-sm border border-blue-500' 
                     : 'bg-dark-input border border-dark-border/50 text-dark-text rounded-tl-sm'
                 }`}>
-                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                  <div className="text-sm leading-relaxed">
+                    {msg.content.split('\n').map((line, lIdx) => (
+                      <span key={lIdx} className="block mb-2 last:mb-0">
+                        {line.split(/(\*\*.*?\*\*)/g).map((part, pIdx) => {
+                          if (part.startsWith('**') && part.endsWith('**')) {
+                            return <strong key={pIdx} className="text-white font-bold">{part.slice(2, -2)}</strong>;
+                          }
+                          return part;
+                        })}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             ))}
@@ -260,7 +250,7 @@ export default function ArcAIPage() {
               )}
             </div>
             <div className="text-center mt-3">
-              <span className="text-[9px] text-dark-muted font-bold uppercase tracking-[0.2em] opacity-50">Powered by Circle Agent Stack & OpenAI</span>
+              <span className="text-[9px] text-dark-muted font-bold uppercase tracking-[0.2em] opacity-50">Powered by Aura Autonomous Agent Stack</span>
             </div>
           </div>
         </div>

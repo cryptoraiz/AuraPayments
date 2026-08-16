@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useAccount, useConnect } from 'wagmi';
 import { getPaymentLinksByWallet, getSentPaymentsByWallet, clearPaymentLinksByScope, clearSentPaymentsByScope, getBlacklist, syncLocalLinks } from '../../utils/localStorage';
 import { invoiceAPI } from '../../services/invoiceService';
@@ -696,38 +697,41 @@ export default function InvoiceHistory({ onUpdateStats }) {
                 </div>
             </div>
 
-            {/* Notification Toast Container */}
-            <div className="fixed bottom-8 right-6 z-[99999] flex flex-col gap-2 pointer-events-none">
-                <AnimatePresence>
-                    {toasts.map(toast => (
-                        <motion.div
-                            key={toast.id}
-                            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="pointer-events-auto bg-zinc-900/90 border border-emerald-500/30 rounded-xl p-4 shadow-2xl shadow-emerald-900/20 w-80 flex items-start gap-3 backdrop-blur-xl"
-                        >
-                            <div className="p-2 bg-emerald-500/10 rounded-lg shrink-0">
-                                <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-bold text-white mb-0.5">{toast.title}</h4>
-                                <p className="text-xs text-zinc-400 break-words">{toast.message}</p>
-                            </div>
-                            <button
-                                onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-                                className="text-zinc-500 hover:text-white transition-colors"
+            {/* Notification Toast Container (Portal to document.body to prevent footer stacking context overlap) */}
+            {typeof document !== 'undefined' && createPortal(
+                <div className="fixed bottom-20 md:bottom-16 right-6 z-[999999] flex flex-col gap-2 pointer-events-none">
+                    <AnimatePresence>
+                        {toasts.map(toast => (
+                            <motion.div
+                                key={toast.id}
+                                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                className="pointer-events-auto bg-zinc-900/90 border border-emerald-500/30 rounded-xl p-4 shadow-2xl shadow-emerald-900/20 w-80 flex items-start gap-3 backdrop-blur-xl"
                             >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            </div>
+                                <div className="p-2 bg-emerald-500/10 rounded-lg shrink-0">
+                                    <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-sm font-bold text-white mb-0.5">{toast.title}</h4>
+                                    <p className="text-xs text-zinc-400 break-words">{toast.message}</p>
+                                </div>
+                                <button
+                                    onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                                    className="text-zinc-500 hover:text-white transition-colors"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </div>,
+                document.body
+            )}
 
             {/* Clear Data Modal */}
             <AnimatePresence>
