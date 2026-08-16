@@ -20,97 +20,95 @@ export async function handleAgentChat(req, res) {
             genAI = new GoogleGenerativeAI(apiKey);
         }
 
-        // 1. Definição das Ferramentas (Function Calling)
+        // 1. Function Calling Tool Declarations
         const tools = [
             {
                 name: "generate_invoice",
-                description: "Gera um link de pagamento B2B (Invoice). Use quando o usuário pedir para gerar uma cobrança ou invoice.",
+                description: "Generates a decentralized B2B payment invoice link on Arc Testnet.",
                 parameters: {
                     type: "object",
                     properties: {
-                        amount: { type: "number", description: "Valor do invoice em USDC" },
-                        clientName: { type: "string", description: "Nome do cliente ou empresa que vai pagar" },
-                        description: { type: "string", description: "Descrição do serviço ou produto (opcional)" }
+                        amount: { type: "number", description: "Invoice amount in USDC" },
+                        clientName: { type: "string", description: "Client or recipient company name" },
+                        description: { type: "string", description: "Service or product description (optional)" }
                     },
                     required: ["amount", "clientName"]
                 }
             },
             {
                 name: "prepare_swap",
-                description: "Prepara uma transação de Swap entre duas moedas. Use quando o usuário quiser trocar, fazer swap ou comprar uma moeda com outra.",
+                description: "Prepares an on-chain token swap transaction on Arc Testnet. Supported tokens: USDC, EURC, USDT, cirBTC.",
                 parameters: {
                     type: "object",
                     properties: {
-                        amount: { type: "number", description: "Valor a ser trocado" },
-                        fromToken: { type: "string", description: "Moeda de origem (ex: USDC, ETH)" },
-                        toToken: { type: "string", description: "Moeda de destino (ex: EURC, WETH)" }
+                        amount: { type: "number", description: "Amount to swap" },
+                        fromToken: { type: "string", description: "Source token symbol (USDC, EURC, USDT, cirBTC)" },
+                        toToken: { type: "string", description: "Destination token symbol (USDC, EURC, USDT, cirBTC)" }
                     },
                     required: ["amount", "fromToken", "toToken"]
                 }
             },
             {
                 name: "prepare_bridge",
-                description: "Prepara uma transação CCTP Bridge (ponte) para enviar USDC para outra rede blockchain. Use quando o usuário quiser transferir, mandar ou fazer bridge para outra rede.",
+                description: "Prepares a Circle CCTP bridge transaction to transfer USDC to connected testnets.",
                 parameters: {
                     type: "object",
                     properties: {
-                        amount: { type: "number", description: "Valor em USDC a ser enviado" },
-                        destinationNetwork: { type: "string", description: "Rede de destino (ex: Base, Arbitrum)" }
+                        amount: { type: "number", description: "USDC amount to transfer" },
+                        destinationNetwork: { type: "string", description: "Destination network (e.g., Base, Arbitrum)" }
                     },
                     required: ["amount", "destinationNetwork"]
                 }
             },
             {
                 name: "find_yields",
-                description: "Busca os melhores rendimentos (APY) para USDC ou outras moedas em protocolos DeFi. Use quando o usuário perguntar sobre rendimentos, yield, pools ou onde investir.",
+                description: "Searches top DeFi yield pools and APY opportunities on supported networks.",
                 parameters: {
                     type: "object",
                     properties: {
-                        token: { type: "string", description: "Moeda para buscar o rendimento (ex: USDC, ETH, etc. Padrão é USDC)" }
+                        token: { type: "string", description: "Token to search yield for (default: USDC)" }
                     },
                     required: ["token"]
                 }
             },
             {
                 name: "get_portfolio_stats",
-                description: "Analisa o histórico de faturas e pagamentos da carteira do usuário. Use quando o usuário perguntar sobre faturamento, ganhos, estatísticas ou transações passadas.",
+                description: "Retrieves portfolio performance and 7d revenue summary.",
                 parameters: {
                     type: "object",
                     properties: {
-                        period: { type: "string", description: "Período para análise (ex: 'today', 'week', 'month', 'all'). Padrão 'week'." }
+                        period: { type: "string", description: "Analysis period ('today', 'week', 'month', 'all'). Default 'week'." }
                     },
                     required: []
                 }
             }
         ];
 
-        // 2. Configurar o Modelo e o System Instruction
+        // 2. Configure Model and System Instruction
         const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash", // fast model
+            model: "gemini-1.5-flash",
             tools: [{ functionDeclarations: tools }],
-            systemInstruction: `Você é o Aura AI, um assistente financeiro avançado B2B e DeFi criado pela Aura Payments.
-O endereço da carteira (wallet) conectada do usuário atual é: ${userAddress || 'Não conectada'}.
-Seu objetivo é ajudar o usuário a navegar pela economia agêntica na blockchain (Arc Testnet e outras redes).
+            systemInstruction: `You are Aura AI, the official financial co-pilot of Aura Payments.
+User connected wallet address: ${userAddress || 'Not connected'}.
+Your goal is to help users execute swaps, cross-chain CCTP bridges, and create instant B2B on-chain invoices on Arc Testnet.
 
-REGRAS ESTABELECIDAS:
-1. Sempre que você iniciar uma conversa (ou se o usuário não souber o que fazer), dê de forma resumida e amigável as opções em que você pode ajudar (ex: "Posso ajudar você a gerar uma fatura (invoice), fazer um Swap de moedas ou realizar uma ponte (Bridge) para outra rede").
-2. Você tem liberdade para ser descontraído. Se o usuário pedir algo fora do contexto financeiro (como "quero uma pizza"), você pode entrar na brincadeira (ex: "Eu também adoro pizza, principalmente de calabresa! Mas como sou uma inteligência financeira, o máximo que posso fazer é gerar uma fatura para você cobrar o entregador. Vamos fazer um Swap ou Invoice?"). Use jogo de cintura para trazê-lo de volta.
-3. Se o pedido for impossível ou totalmente fora do escopo, avise educadamente que infelizmente não pode ajudar com isso.
-4. Você NUNCA executa transações de fundos sozinho. Você apenas PREPARA as transações usando as suas ferramentas (functions) para que o usuário assine na MetaMask com segurança.
-5. Se o usuário pedir para fazer Swap, Bridge, Invoice, ou buscar rendimentos, use a ferramenta correta IMEDIATAMENTE (Function Call) para processar o pedido.
-6. Ao usar a ferramenta 'find_yields', os dados processados serão injetados de volta. Recomende opções de forma concisa.`,
+SYSTEM RULES:
+1. Always be concise, helpful, objective, and professional.
+2. All explanations and system messages must be in English.
+3. Tokens available on Arc Testnet: USDC, EURC, USDT, cirBTC. Note: USDC is native gas.
+4. You NEVER execute transactions autonomously. You only prepare the transaction parameters for MetaMask confirmation.
+5. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks.`,
         });
 
-        // 3. Formatar o Histórico de Mensagens para o Formato do Gemini
+        // 3. Format Message History for Gemini
         const formattedHistory = messages.map(msg => {
             let role = msg.role === 'assistant' ? 'model' : msg.role;
             return {
                 role: role,
-                parts: [{ text: msg.content || " " }] // Evitar text empty
+                parts: [{ text: msg.content || " " }]
             };
         });
 
-        // Separar a última mensagem do usuário do histórico (pois ela aciona o gerador)
         const lastMessageIndex = formattedHistory.findLastIndex(m => m.role === 'user');
         
         let chatHistory = [];
@@ -120,26 +118,24 @@ REGRAS ESTABELECIDAS:
              chatHistory = formattedHistory.slice(0, lastMessageIndex);
              promptText = formattedHistory[lastMessageIndex].parts[0].text;
         } else {
-             return res.status(400).json({ error: "Nenhuma mensagem do usuário encontrada." });
+             return res.status(400).json({ error: "No user message found in history." });
         }
 
-        // Iniciar chat
+        // Start chat session
         const chat = model.startChat({
             history: chatHistory,
         });
 
-        // Enviar a mensagem para o Gemini
+        // Send message to Gemini
         const result = await chat.sendMessage(promptText);
         const response = result.response;
         const functionCalls = response.functionCalls();
 
-        // 4. Lidar com Function Calling
+        // 4. Handle Function Calling
         if (functionCalls && functionCalls.length > 0) {
             const call = functionCalls[0];
             const functionName = call.name;
             const args = call.args;
-
-            console.log(`[Aura AI] Function Call: ${functionName}`, args);
 
             let actionResponse = {};
             let displayMessage = "";
@@ -151,11 +147,11 @@ REGRAS ESTABELECIDAS:
                     payload: {
                         amount: args.amount,
                         clientName: args.clientName,
-                        description: args.description || "Cobrança gerada via IA",
+                        description: args.description || "B2B Invoice",
                         invoiceId: `INV-${shortId}`
                     }
                 };
-                displayMessage = `Perfeito! Preparei o invoice de **${args.amount} USDC** para **${args.clientName}**. O sistema vai gerar o link de pagamento seguro agora mesmo para você compartilhar!`;
+                displayMessage = `✅ **B2B Invoice Successfully Generated!**\n\n• **Amount:** ${args.amount} USDC\n• **Client:** ${args.clientName}\n• **Invoice ID:** INV-${shortId}\n\nThe secure payment link is ready to share below!`;
             } 
             else if (functionName === "prepare_swap") {
                 actionResponse = {
@@ -166,7 +162,7 @@ REGRAS ESTABELECIDAS:
                         to: args.toToken
                     }
                 };
-                displayMessage = `Entendido! Estou preparando a transação para trocar **${args.amount} ${args.fromToken}** por **${args.toToken}** usando o melhor roteamento na rede. A sua carteira abrirá em breve para você assinar com segurança.`;
+                displayMessage = `🔄 **Swap Transaction Prepared:**\n\n• **Swap:** ${args.amount} ${args.fromToken}\n• **Receive:** ${args.toToken}\n• **Network:** Arc Testnet\n\nPlease confirm in MetaMask below to complete the swap securely.`;
             }
             else if (functionName === "prepare_bridge") {
                 actionResponse = {
@@ -176,10 +172,9 @@ REGRAS ESTABELECIDAS:
                         destination: args.destinationNetwork
                     }
                 };
-                displayMessage = `Excelente! O protocolo Circle CCTP foi acionado. Vou preparar a transação de **${args.amount} USDC** para a rede **${args.destinationNetwork}**. Aguarde a MetaMask para aprovar a ponte.`;
+                displayMessage = `🌉 **Cross-Chain Bridge (CCTP) Prepared:**\n\n• **Amount:** ${args.amount} USDC\n• **Destination:** ${args.destinationNetwork} Network\n\nPlease approve the transaction below to initiate liquidity transfer.`;
             }
             else if (functionName === "find_yields") {
-                // Simulação de retorno de API de yields
                 actionResponse = {
                     action: "SHOW_YIELDS",
                     payload: {
@@ -191,14 +186,14 @@ REGRAS ESTABELECIDAS:
                         ]
                     }
                 };
-                displayMessage = `Pesquisei as melhores taxas (APY) para **${args.token || 'USDC'}** hoje! O protocolo nativo **Aura DEX** está pagando **12.50%** (o melhor no momento), mas se preferir redes Layer 2, a **Aave (Arbitrum)** está pagando **7.45%** e o **Compound (Base)** está com **6.80%**. Posso preparar um depósito em algum deles para você?`;
+                displayMessage = `📊 **Top Yield Opportunities for ${args.token || 'USDC'}:**\n\n• 🚀 **Aura DEX (Arc Testnet):** 12.50% *(Native)*\n• 🔹 **Aave V3 (Base Sepolia):** 8.15%\n• 🟢 **Compound (Arbitrum Sepolia):** 6.40%\n\n⚠️ *Note: The Aura DEX Yield Vaults & Staking module is currently undergoing scheduled maintenance for smart contract upgrades.*`;
             }
             else if (functionName === "get_portfolio_stats") {
                 actionResponse = {
                     action: "SHOW_STATS",
                     payload: { period: args.period }
                 };
-                displayMessage = `Analisando os dados da carteira ${userAddress ? userAddress.slice(0,6) + '...' : ''}. Nos últimos 7 dias, você recebeu **1.450 USDC** através de 5 faturas pagas e economizou cerca de $12 em taxas de rede operando pela Arc!`;
+                displayMessage = `💼 **Portfolio Overview:**\n\n• **7-Day Revenue:** 1,450 USDC (5 settled invoices)\n• **Estimated Gas Saved:** ~$12.40 on Arc Network\n• **Status:** Active & Protected`;
             }
 
             return res.status(200).json({
@@ -211,7 +206,6 @@ REGRAS ESTABELECIDAS:
             });
 
         } else {
-            // Se não chamou função, é uma resposta de texto normal do Gemini
             const textResponse = response.text();
             
             return res.status(200).json({
@@ -226,7 +220,7 @@ REGRAS ESTABELECIDAS:
     } catch (error) {
         console.error("[Agent Chat Error]:", error);
         return res.status(500).json({ 
-            error: "Erro no processamento da Inteligência Artificial.", 
+            error: "Error processing Artificial Intelligence request.", 
             details: error.message 
         });
     }
