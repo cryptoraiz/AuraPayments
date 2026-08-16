@@ -50,13 +50,13 @@ export default async function handler(req, res) {
             },
             {
                 name: "prepare_swap",
-                description: "Prepares a token swap/trade transaction. Trigger for requests about swapping, trading, or converting tokens (trocar moedas, fazer swap, comprar token, trade).",
+                description: "Prepares a token swap/trade transaction. Trigger for requests about swapping, trading, or converting tokens (trocar moedas, fazer swap, comprar token, trade). Supported tokens on Arc: USDC, EURC, USDT, cirBTC.",
                 parameters: {
                     type: "object",
                     properties: {
                         amount: { type: "number", description: "Amount to swap" },
-                        fromToken: { type: "string", description: "Source token symbol (e.g. USDC, ETH)" },
-                        toToken: { type: "string", description: "Target token symbol (e.g. EURC, WETH)" }
+                        fromToken: { type: "string", description: "Source token symbol (e.g. USDC, EURC, USDT, cirBTC)" },
+                        toToken: { type: "string", description: "Target token symbol (e.g. EURC, USDC, USDT, cirBTC)" }
                     },
                     required: ["amount", "fromToken", "toToken"]
                 }
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
                 parameters: {
                     type: "object",
                     properties: {
-                        token: { type: "string", description: "Token to check yields for (e.g., USDC, ETH, EURC, BTC). Default is USDC." }
+                        token: { type: "string", description: "Token to check yields for (e.g., USDC, EURC, USDT, cirBTC). Default is USDC." }
                     },
                     required: ["token"]
                 }
@@ -110,21 +110,25 @@ SYSTEM RULES:
    - Official X / Twitter: https://x.com/danilo_schrute
    - Telegram & Discord: Currently under maintenance / coming soon. If asked for Discord or Telegram, inform the user: "Our Discord and Telegram channels are currently being prepared and will be opened soon. Stay tuned on our X (@danilo_schrute)!"
    - NEVER invent domains like aurapayments.io or fake discord links.
-4. CORE CAPABILITIES:
-   - Token Swaps on Arc Testnet (USDC, EURC, USDT, etc.)
+4. SUPPORTED TOKENS & NETWORK CONSTRAINTS (STRICT):
+   - Tokens available on Arc Testnet: USDC, EURC, USDT, cirBTC.
+   - Note: USDC is the native gas asset on Arc Network.
+   - ETH, WETH, or BTC do NOT exist on Arc Testnet (only cirBTC exists). NEVER suggest ETH in examples or swap parameters. Always use USDC, EURC, USDT, or cirBTC.
+5. CORE CAPABILITIES:
+   - Token Swaps on Arc Testnet (USDC, EURC, USDT, cirBTC)
    - CCTP Cross-chain Bridge (Arc, Base, Arbitrum, Sepolia)
-   - Invoice 2.0 (Instant B2B decentralized on-chain billing)
-5. TOOL MAPPING:
+   - Invoice 2.0 (Instant B2B decentralized on-chain billing in USDC/EURC)
+6. TOOL MAPPING:
    - "invoice", "bill", "payment link", "fatura", "cobrança" -> Call \`generate_invoice\`.
    - "swap", "trade", "exchange", "trocar", "comprar", "por" -> Call \`prepare_swap\`.
    - "bridge", "cross-chain", "transfer network", "ponte" -> Call \`prepare_bridge\`.
    - "portfolio", "history", "stats", "desempenho", "estatísticas" -> Call \`get_portfolio_stats\`.
-6. You NEVER execute transactions autonomously. You only prepare the transaction parameters for MetaMask confirmation.
-7. YIELD & LIQUIDITY DEPOSITS MAINTENANCE RULE:
+7. You NEVER execute transactions autonomously. You only prepare the transaction parameters for MetaMask confirmation.
+8. YIELD & LIQUIDITY DEPOSITS MAINTENANCE RULE:
    - If the user asks to deposit, stake, or invest funds into Aura DEX, Vaults, or any yield pool, apologize and state clearly that the Yield Vaults & Staking module is currently under scheduled maintenance / testnet upgrades for the next phase.
    - Example in PT: "Pedimos desculpas, mas o módulo de depósitos e cofres de rendimento (Aura DEX Vaults) está temporariamente em manutenção para atualizações de contratos. No momento, você pode utilizar normalmente os módulos de Swap, Ponte CCTP e Faturas B2B!"
    - Example in EN: "We apologize, but the Aura DEX Yield Vaults & Staking module is currently undergoing scheduled maintenance for smart contract upgrades. You can freely use Swaps, CCTP Bridges, and B2B Invoices!"
-8. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks (\\n\\n).`;
+9. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks (\\n\\n).`;
 
         // 3. Formatar o Histórico de Mensagens para o Formato do Gemini
         let formattedHistory = messages.map(msg => {
@@ -398,15 +402,19 @@ SYSTEM RULES:
    - Official X / Twitter: https://x.com/danilo_schrute
    - Telegram & Discord: Currently under maintenance / coming soon. If asked for Discord or Telegram, inform the user: "Our Discord and Telegram channels are currently being prepared and will be opened soon. Stay tuned on our X (@danilo_schrute)!"
    - NEVER invent domains like aurapayments.io or fake discord links.
-4. CORE CAPABILITIES:
-   - Token Swaps on Arc Testnet (USDC, EURC, USDT, etc.)
+4. SUPPORTED TOKENS & NETWORK CONSTRAINTS (STRICT):
+   - Tokens available on Arc Testnet: USDC, EURC, USDT, cirBTC.
+   - Note: USDC is the native gas asset on Arc Network.
+   - ETH, WETH, or BTC do NOT exist on Arc Testnet (only cirBTC exists). NEVER suggest ETH in examples or swap parameters. Always use USDC, EURC, USDT, or cirBTC.
+5. CORE CAPABILITIES:
+   - Token Swaps on Arc Testnet (USDC, EURC, USDT, cirBTC)
    - CCTP Cross-chain Bridge (Arc, Base, Arbitrum, Sepolia)
    - Invoice 2.0 (Instant B2B decentralized on-chain billing)
-5. YIELD & LIQUIDITY DEPOSITS MAINTENANCE RULE:
+6. YIELD & LIQUIDITY DEPOSITS MAINTENANCE RULE:
    - If user asks about yield opportunities or to deposit into pools/Aura DEX, explain clearly:
      "⚠️ We apologize, but the Aura DEX Yield Vaults & Staking module is currently undergoing scheduled maintenance and smart contract upgrades for the upcoming phase. Swaps, CCTP Bridges, and B2B Invoices are 100% active!"
-6. You NEVER execute transactions autonomously. You only prepare the transaction parameters for MetaMask confirmation.
-7. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks (\\n\\n).`;
+7. You NEVER execute transactions autonomously. You only prepare the transaction parameters for MetaMask confirmation.
+8. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks (\\n\\n).`;
 
     const groqMessages = [
         { role: "system", content: groqSystemPrompt },
