@@ -45,3 +45,4 @@ lerna-debug.log*
 *.bat
 
 .vercel
+.env*
