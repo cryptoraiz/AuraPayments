@@ -43,3 +43,5 @@ lerna-debug.log*
 
 .agents/
 *.bat
+
+.vercel
