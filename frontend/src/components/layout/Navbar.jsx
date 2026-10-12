@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId } from 'wagmi'
+import { useQueryClient } from '@tanstack/react-query'
 import { useInvoiceNotifications } from '../../hooks/useInvoiceNotifications'
 import { arcTestnet, arcMainnet } from '../../config/wagmi'
 import { toast } from 'sonner'
@@ -15,6 +16,7 @@ export default function Navbar() {
   const { count: notificationCount } = useInvoiceNotifications()
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
+  const queryClient = useQueryClient()
   const [showWalletModal, setShowWalletModal] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -22,6 +24,19 @@ export default function Navbar() {
   useEffect(() => {
     setIsMobileMenuOpen(false)
   }, [location.pathname])
+
+  // Invalidate queries when wallet provider changes chains
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      const handleChainChanged = () => {
+        queryClient.invalidateQueries()
+      }
+      window.ethereum.on?.('chainChanged', handleChainChanged)
+      return () => {
+        window.ethereum.removeListener?.('chainChanged', handleChainChanged)
+      }
+    }
+  }, [queryClient])
   const handleWalletSelect = (connector) => {
     connect({ connector })
   }
@@ -31,6 +46,7 @@ export default function Navbar() {
     const targetChain = chainId === arcMainnet.id ? arcTestnet : arcMainnet
     try {
       await switchChain({ chainId: targetChain.id })
+      queryClient.invalidateQueries()
     } catch (err) {
       if (err.code === 4001 || err.message?.includes('rejected')) {
         return

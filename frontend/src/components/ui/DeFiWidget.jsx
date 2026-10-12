@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance, useChainId, useConnect, useSwitchChain } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { arcMainnet, arcTestnet } from '../../config/wagmi';
 import { toast } from 'sonner';
 import { getTokenBySymbol, TOKENS } from '../../config/tokens';
@@ -30,7 +31,13 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const { switchChain } = useSwitchChain();
   const navigate = useNavigate();
   const connectedChainId = useChainId();
+  const queryClient = useQueryClient();
   const { prices } = useTokenPrices();
+
+  // Invalidate balance caches on network switch
+  useEffect(() => {
+    queryClient.invalidateQueries();
+  }, [connectedChainId, queryClient]);
 
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [amount,    setAmount]    = useState('');
@@ -114,13 +121,13 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     address,
     token: isNativeIn ? undefined : tokenIn?.address,
     chainId: activeSwapChainId,
-    query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
+    query: { enabled: !!address, refetchInterval: 5_000, staleTime: 0 }
   });
   const { data: balOutData } = useBalance({
     address,
     token: isNativeOut ? undefined : tokenOut?.address,
     chainId: activeSwapChainId,
-    query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
+    query: { enabled: !!address, refetchInterval: 5_000, staleTime: 0 }
   });
   const formatBalance = (balData) => {
     if (!balData) return '0.00';
@@ -148,13 +155,13 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     address,
     token: (actualTokenIn?.isNative || isBridgeNativeIn) ? undefined : actualTokenIn?.address,
     chainId: bridgeChainIn?.id,
-    query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
+    query: { enabled: !!address, refetchInterval: 5_000, staleTime: 0 }
   });
   const { data: bridgeBalOutData } = useBalance({
     address,
     token: (actualTokenOut?.isNative || isBridgeNativeOut) ? undefined : actualTokenOut?.address,
     chainId: bridgeChainOut?.id,
-    query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
+    query: { enabled: !!address, refetchInterval: 5_000, staleTime: 0 }
   });
   const fmtInBridge  = formatBalance(bridgeBalInData);
   const fmtOutBridge = formatBalance(bridgeBalOutData);

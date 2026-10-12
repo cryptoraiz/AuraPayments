@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAllTokens } from '../../config/tokens';
 import { getAllChains, getChainsByMode } from '../../config/chains';
 import { useAccount, useBalance, useChainId } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { arcMainnet } from '../../config/wagmi';
 
 export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedChain, selectedToken }) {
@@ -10,9 +11,24 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
   const isMainnet = chainId === arcMainnet.id;
   const chains = getChainsByMode(isMainnet);
   const { address } = useAccount();
+  const queryClient = useQueryClient();
 
   const [activeChain, setActiveChain] = useState(selectedChain || chains[0]);
   const [search, setSearch] = useState('');
+
+  // Synchronize activeChain whenever selectedChain, chainId, or modal open status changes
+  useEffect(() => {
+    if (selectedChain && chains.some(c => c.id === selectedChain.id)) {
+      setActiveChain(selectedChain);
+    } else {
+      setActiveChain(chains[0]);
+    }
+  }, [selectedChain, chainId, isOpen]);
+
+  // Immediately clear cached balances across components on network change
+  useEffect(() => {
+    queryClient.invalidateQueries();
+  }, [chainId, queryClient]);
 
   // Filter only to USDC for the active chain
   const tokens = getAllTokens().filter(t => {
@@ -155,11 +171,19 @@ function TokenIcon({ token }) {
 }
 
 function TokenRow({ token, chain, onSelect, isSelected, userAddress }) {
-  // Pass dynamic chainId to wagmi to fetch balance across different networks!
+  // Arc USDC is the native precompile on Arc Mainnet & Testnet
+  const isArc = chain?.id === 5042 || chain?.id === 5042002;
+  const isNative = token?.isNative || (isArc && (token?.symbol === 'USDC' || token?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000'));
+
   const { data: balanceData } = useBalance({
     address: userAddress,
-    token:   token.isNative ? undefined : token.address,
-    chainId: chain.id, 
+    token:   isNative ? undefined : token?.address,
+    chainId: chain?.id,
+    query: {
+      enabled: !!userAddress,
+      staleTime: 0,
+      refetchInterval: 5000,
+    }
   });
 
   const displayBalance = balanceData 

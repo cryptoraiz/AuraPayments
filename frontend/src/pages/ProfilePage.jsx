@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAccount, useBalance, useChainId } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { arcMainnet, arcTestnet } from '../config/wagmi';
 import { getAllTokens } from '../config/tokens';
 import { motion } from 'framer-motion';
@@ -91,11 +92,11 @@ function usePortfolioBalances(address, chainId) {
   const activeChainId = isMainnet ? arcMainnet.id : arcTestnet.id;
 
   // USDC = native currency on Arc (Mainnet and Testnet)
-  const usdc   = useBalance({ address, chainId: activeChainId, query: { enabled: !!address, refetchInterval: 15_000, staleTime: 10_000 } });
-  const usdt   = useBalance({ address, token: '0x175CdB1D338945f0D851A741ccF787D343E57952', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 15_000, staleTime: 10_000 } });
-  const eurc   = useBalance({ address, token: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 15_000, staleTime: 10_000 } });
-  const wusdc  = useBalance({ address, token: '0x911b4000D3422F482F4062a913885f7b035382Df', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 15_000, staleTime: 10_000 } });
-  const cirBtc = useBalance({ address, token: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 15_000, staleTime: 10_000 } });
+  const usdc   = useBalance({ address, chainId: activeChainId, query: { enabled: !!address, refetchInterval: 5_000, staleTime: 0 } });
+  const usdt   = useBalance({ address, token: '0x175CdB1D338945f0D851A741ccF787D343E57952', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 5_000, staleTime: 0 } });
+  const eurc   = useBalance({ address, token: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 5_000, staleTime: 0 } });
+  const wusdc  = useBalance({ address, token: '0x911b4000D3422F482F4062a913885f7b035382Df', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 5_000, staleTime: 0 } });
+  const cirBtc = useBalance({ address, token: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 5_000, staleTime: 0 } });
 
   const firstLoad = isMainnet
     ? !!(address && usdc.isLoading)
@@ -126,7 +127,13 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('assets');
   const [avatarUrl, setAvatarUrl] = useState(null);
   const { prices } = useTokenPrices();
+  const queryClient = useQueryClient();
   const { loading: balancesLoading, balances } = usePortfolioBalances(address, chainId);
+
+  // Invalidate balance caches on network switch
+  useEffect(() => {
+    queryClient.invalidateQueries();
+  }, [chainId, queryClient]);
 
   // Compute total portfolio value
   const totalValueNum = useMemo(() => {
