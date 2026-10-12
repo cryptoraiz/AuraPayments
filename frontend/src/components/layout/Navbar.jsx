@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId } from 'wagmi'
 import { useInvoiceNotifications } from '../../hooks/useInvoiceNotifications'
-import { arcTestnet } from '../../config/wagmi'
+import { arcTestnet, arcMainnet } from '../../config/wagmi'
 import { toast } from 'sonner'
 import WalletModal from '../ui/WalletModal'
 
@@ -120,7 +120,7 @@ export default function Navbar() {
       }
 
       // chainId detected, check if switching is needed
-      if (realChainId === arcTestnet.id) {
+      if (realChainId === arcTestnet.id || realChainId === arcMainnet.id) {
         return
       }
 
@@ -133,7 +133,7 @@ export default function Navbar() {
 
       // Verify again before switching
       const realChainId = await getRealChainId()
-      if (realChainId === arcTestnet.id) {
+      if (realChainId === arcTestnet.id || realChainId === arcMainnet.id) {
         // console.log('✅ Network already changed')
         return
       }
@@ -176,8 +176,8 @@ export default function Navbar() {
     }
   }, [isConnected, chainId, switchChain, connector])
 
-  // Check if on correct network
-  const isCorrectNetwork = chainId === arcTestnet.id
+  // Check if on correct network (Arc Mainnet or Arc Testnet)
+  const isCorrectNetwork = chainId === arcTestnet.id || chainId === arcMainnet.id
 
   const isActive = (path) => location.pathname === path
 
@@ -255,8 +255,8 @@ export default function Navbar() {
             <div className="flex items-center gap-3">
               {/* Network Badge */}
               <div className="px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-sm font-semibold flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                Arc Testnet
+                <div className={`w-2 h-2 rounded-full ${isCorrectNetwork ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                <span>{chainId === arcMainnet.id ? 'Arc Mainnet' : chainId === arcTestnet.id ? 'Arc Testnet' : 'Arc Network'}</span>
               </div>
 
               {/* Wallet Button */}

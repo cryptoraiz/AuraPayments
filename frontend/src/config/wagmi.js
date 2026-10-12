@@ -2,9 +2,33 @@ import { http, createConfig } from 'wagmi'
 import { mainnet, arbitrum, polygon, optimism, base, sepolia, baseSepolia, arbitrumSepolia, optimismSepolia } from 'wagmi/chains'
 import { walletConnect, injected, coinbaseWallet } from 'wagmi/connectors'
 
+// Arc Network Mainnet Configuration
+export const arcMainnet = {
+  id: 5042, // Official Chain ID Arc Mainnet
+  name: 'Arc',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'USDC',
+    symbol: 'USDC',
+  },
+  rpcUrls: {
+    default: { http: ['https://rpc.mainnet.arc.io'] },
+    public: { http: ['https://rpc.mainnet.arc.io'] },
+  },
+  blockExplorers: {
+    default: { name: 'Arc Explorer', url: 'https://explorer.arc.io' },
+  },
+  contracts: {
+    multicall3: {
+      address: '0xca11bde05977b3631167028862be2a173976ca11',
+    },
+  },
+  testnet: false,
+}
+
 // Arc Network Testnet Configuration
 export const arcTestnet = {
-  id: 5042002, // Chain ID Oficial
+  id: 5042002, // Official Chain ID Arc Testnet
   name: 'Arc Network Testnet',
   nativeCurrency: {
     decimals: 18,
@@ -30,7 +54,7 @@ export const arcTestnet = {
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || '3a8170812b534d0ff9d794f19a901d64';
 
 export const config = createConfig({
-  chains: [arcTestnet, mainnet, arbitrum, polygon, optimism, base, sepolia, baseSepolia, arbitrumSepolia, optimismSepolia],
+  chains: [arcMainnet, arcTestnet, mainnet, arbitrum, polygon, optimism, base, sepolia, baseSepolia, arbitrumSepolia, optimismSepolia],
   batch: {
     multicall: { wait: 50, batchSize: 1024 },
   },
@@ -40,6 +64,9 @@ export const config = createConfig({
     coinbaseWallet({ appName: 'Aura Payments' }),
   ],
   transports: {
+    // Arc Mainnet transport
+    [arcMainnet.id]: http('https://rpc.mainnet.arc.io'),
+
     // Use our Vercel proxy to avoid CORS - the proxy forwards to rpc.testnet.arc.network server-side
     [arcTestnet.id]: http(import.meta.env.PROD ? '/api/rpc' : 'https://rpc.testnet.arc.network'),
 
