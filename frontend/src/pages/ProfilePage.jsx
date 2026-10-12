@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { useAccount, useBalance } from 'wagmi';
+import { useAccount, useBalance, useChainId } from 'wagmi';
+import { arcMainnet, arcTestnet } from '../config/wagmi';
 import { getAllTokens } from '../config/tokens';
 import { motion } from 'framer-motion';
 import { useTokenPrices, formatUsdValue } from '../hooks/useTokenPrices';
 import { getTradeHistoryByWallet } from '../utils/localStorage';
 
-const getExplorerUrl = (txHash, chain) => {
+const getExplorerUrl = (txHash, chain, currentChainId) => {
   if (!txHash || txHash === 'undefined' || txHash === 'null') return null;
   const c = (chain || '').toLowerCase();
   if (c.includes('base')) return `https://sepolia.basescan.org/tx/${txHash}`;
@@ -13,13 +14,17 @@ const getExplorerUrl = (txHash, chain) => {
   if (c.includes('optimism')) return `https://sepolia-optimism.etherscan.io/tx/${txHash}`;
   if (c.includes('arbitrum')) return `https://sepolia.arbiscan.io/tx/${txHash}`;
   if (c.includes('ethereum')) return `https://sepolia.etherscan.io/tx/${txHash}`;
+  if (currentChainId === arcMainnet.id || c.includes('mainnet')) return `https://explorer.arc.io/tx/${txHash}`;
   return `https://testnet.arcscan.app/tx/${txHash}`;
 };
 
-const ARC_CHAIN_ID = 5042002;
+// Portfolio tokens on Arc Mainnet
+export const MAINNET_TOKENS = [
+  { symbol: 'USDC',   name: 'USD Coin (Arc)',   address: null, decimals: 18, color: 'bg-blue-400',   iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png', isNative: true },
+];
 
 // Portfolio tokens on Arc Testnet
-const PORTFOLIO_TOKENS = [
+export const TESTNET_TOKENS = [
   { symbol: 'USDC',   name: 'USD Coin (Arc)',   address: null,                                               decimals: 18, color: 'bg-blue-400',   iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png', isNative: true },
   { symbol: 'USDT',   name: 'Tether USD',       address: '0x175CdB1D338945f0D851A741ccF787D343E57952',       decimals: 18, color: 'bg-green-500',  iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png' },
   { symbol: 'EURC',   name: 'Euro Coin',        address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',       decimals: 6,  color: 'bg-indigo-500', iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c/logo.png' },
@@ -75,49 +80,63 @@ const NetworkBadge = ({ chain }) => {
 
 const getTokenIcon = (symbol) => {
   if (!symbol) return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png';
-  const token = PORTFOLIO_TOKENS.find(t => t.symbol?.toUpperCase() === symbol.toUpperCase());
+  const allTokens = [...TESTNET_TOKENS, ...MAINNET_TOKENS];
+  const token = allTokens.find(t => t.symbol?.toUpperCase() === symbol.toUpperCase());
   return token ? token.iconImg : 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png';
 };
 
-// Balance Hook using Wagmi multicall
-function usePortfolioBalances(address) {
-  // USDC = native currency on Arc, so we call useBalance WITHOUT a token address
-  const usdc   = useBalance({ address, chainId: ARC_CHAIN_ID, query: { enabled: !!address, refetchInterval: 15_000, staleTime: 10_000 } });
-  const usdt   = useBalance({ address, token: '0x175CdB1D338945f0D851A741ccF787D343E57952', chainId: ARC_CHAIN_ID, query: { enabled: !!address, refetchInterval: 15_000, staleTime: 10_000 } });
-  const eurc   = useBalance({ address, token: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', chainId: ARC_CHAIN_ID, query: { enabled: !!address, refetchInterval: 15_000, staleTime: 10_000 } });
-  const wusdc  = useBalance({ address, token: '0x911b4000D3422F482F4062a913885f7b035382Df', chainId: ARC_CHAIN_ID, query: { enabled: !!address, refetchInterval: 15_000, staleTime: 10_000 } });
-  const cirBtc = useBalance({ address, token: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', chainId: ARC_CHAIN_ID, query: { enabled: !!address, refetchInterval: 15_000, staleTime: 10_000 } });
+// Balance Hook using Wagmi
+function usePortfolioBalances(address, chainId) {
+  const isMainnet = chainId === arcMainnet.id;
+  const activeChainId = isMainnet ? arcMainnet.id : arcTestnet.id;
 
-  // Only show skeleton on the very first load (isLoading=true), not on background refetches
-  const firstLoad = !!(address && (usdc.isLoading || usdt.isLoading || eurc.isLoading || wusdc.isLoading || cirBtc.isLoading));
+  // USDC = native currency on Arc (Mainnet and Testnet)
+  const usdc   = useBalance({ address, chainId: activeChainId, query: { enabled: !!address, refetchInterval: 15_000, staleTime: 10_000 } });
+  const usdt   = useBalance({ address, token: '0x175CdB1D338945f0D851A741ccF787D343E57952', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 15_000, staleTime: 10_000 } });
+  const eurc   = useBalance({ address, token: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 15_000, staleTime: 10_000 } });
+  const wusdc  = useBalance({ address, token: '0x911b4000D3422F482F4062a913885f7b035382Df', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 15_000, staleTime: 10_000 } });
+  const cirBtc = useBalance({ address, token: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 15_000, staleTime: 10_000 } });
 
-  const balances = useMemo(() => [
-    usdc.data   ? Number(usdc.data.formatted)   : 0,
-    usdt.data   ? Number(usdt.data.formatted)   : 0,
-    eurc.data   ? Number(eurc.data.formatted)   : 0,
-    wusdc.data  ? Number(wusdc.data.formatted)  : 0,
-    cirBtc.data ? Number(cirBtc.data.formatted) : 0,
-  ], [usdc.data, usdt.data, eurc.data, wusdc.data, cirBtc.data]);
+  const firstLoad = isMainnet
+    ? !!(address && usdc.isLoading)
+    : !!(address && (usdc.isLoading || usdt.isLoading || eurc.isLoading || wusdc.isLoading || cirBtc.isLoading));
+
+  const balances = useMemo(() => {
+    if (isMainnet) {
+      return [usdc.data ? Number(usdc.data.formatted) : 0];
+    }
+    return [
+      usdc.data   ? Number(usdc.data.formatted)   : 0,
+      usdt.data   ? Number(usdt.data.formatted)   : 0,
+      eurc.data   ? Number(eurc.data.formatted)   : 0,
+      wusdc.data  ? Number(wusdc.data.formatted)  : 0,
+      cirBtc.data ? Number(cirBtc.data.formatted) : 0,
+    ];
+  }, [isMainnet, usdc.data, usdt.data, eurc.data, wusdc.data, cirBtc.data]);
 
   return { loading: firstLoad, balances };
 }
 
 export default function ProfilePage() {
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const isMainnet = chainId === arcMainnet.id;
+  const currentTokens = isMainnet ? MAINNET_TOKENS : TESTNET_TOKENS;
+
   const [activeTab, setActiveTab] = useState('assets');
   const [avatarUrl, setAvatarUrl] = useState(null);
   const { prices } = useTokenPrices();
-  const { loading: balancesLoading, balances } = usePortfolioBalances(address);
+  const { loading: balancesLoading, balances } = usePortfolioBalances(address, chainId);
 
   // Compute total portfolio value
   const totalValueNum = useMemo(() => {
     if (!prices) return 0;
-    return PORTFOLIO_TOKENS.reduce((sum, token, i) => {
+    return currentTokens.reduce((sum, token, i) => {
       const bal = balances[i] || 0;
       const price = prices[token.symbol] || 0;
       return sum + bal * price;
     }, 0);
-  }, [balances, prices]);
+  }, [currentTokens, balances, prices]);
 
   const totalBalance = prices
     ? `$${totalValueNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -282,8 +301,8 @@ export default function ProfilePage() {
               </div>
               
               {balancesLoading
-                ? PORTFOLIO_TOKENS.map((_, idx) => <SkeletonRow key={idx} />)
-                : PORTFOLIO_TOKENS.map((token, idx) => (
+                ? currentTokens.map((_, idx) => <SkeletonRow key={idx} />)
+                : currentTokens.map((token, idx) => (
                     <AssetRow key={idx} token={token} balance={balances[idx] || 0} prices={prices} />
                   ))
               }
@@ -398,8 +417,8 @@ export default function ProfilePage() {
                   <div className="md:col-span-1 flex justify-end items-center mt-2 md:mt-0">
                     {(() => {
                       const hash = act.txHash || act.hash;
-                      const chain = act.type === 'Bridge' ? (act.fromChain || 'Arc Testnet') : 'Arc Testnet';
-                      const url = getExplorerUrl(hash, chain);
+                      const chain = act.type === 'Bridge' ? (act.fromChain || 'Arc Testnet') : (isMainnet ? 'Arc Mainnet' : 'Arc Testnet');
+                      const url = getExplorerUrl(hash, chain, chainId);
                       return url ? (
                         <a
                           href={url}

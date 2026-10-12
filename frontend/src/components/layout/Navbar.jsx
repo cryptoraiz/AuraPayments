@@ -250,13 +250,15 @@ export default function Navbar() {
                   </svg>
                   Aura AI
                 </Link>
-                <Link
-                  to="/faucet"
-                  className={`text-sm font-medium transition ${isActive('/faucet') ? 'text-white' : 'text-dark-muted hover:text-white'
-                    } `}
-                >
-                  Faucet
-                </Link>
+                {chainId !== arcMainnet.id && (
+                  <Link
+                    to="/faucet"
+                    className={`text-sm font-medium transition ${isActive('/faucet') ? 'text-white' : 'text-dark-muted hover:text-white'
+                      } `}
+                  >
+                    Faucet
+                  </Link>
+                )}
               </div>
             </div>
 
