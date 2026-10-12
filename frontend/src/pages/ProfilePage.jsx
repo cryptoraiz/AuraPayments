@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAccount, useBalance, useChainId } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { arcMainnet, arcTestnet } from '../config/wagmi';
@@ -156,8 +156,9 @@ export default function ProfilePage() {
     if (file) setAvatarUrl(URL.createObjectURL(file));
   };
 
-  const activities = getTradeHistoryByWallet(address, chainId).map(t => {
-    const d = new Date(t.createdAt);
+  const activities = (getTradeHistoryByWallet(address, chainId) || []).map(t => {
+    const timestamp = t.createdAt ? Number(t.createdAt) : Date.now();
+    const d = new Date(isNaN(timestamp) ? Date.now() : timestamp);
     return {
       ...t,
       dateFormatted: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
@@ -165,7 +166,7 @@ export default function ProfilePage() {
       time: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
       status: 'Completed'
     };
-  }).sort((a, b) => b.createdAt - a.createdAt);
+  }).sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
 
   // Pagination Logic
   const activitiesPerPage = 4;
