@@ -22,24 +22,6 @@ export default function FaucetPage() {
           </p>
         </div>
 
-        {isMainnet && (
-          <div className="w-full max-w-md mb-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl flex items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5 text-yellow-300">
-              <span className="text-lg">⚠️</span>
-              <div>
-                <p className="font-bold text-white">Connected to Arc Mainnet</p>
-                <p className="text-yellow-200/80">Faucets provide free tokens for Arc Testnet only.</p>
-              </div>
-            </div>
-            <button
-              onClick={() => switchChain({ chainId: arcTestnet.id })}
-              className="px-3 py-1.5 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-black font-bold text-xs transition-colors shrink-0 shadow-md cursor-pointer"
-            >
-              Switch to Testnet
-            </button>
-          </div>
-        )}
-
         <div className="flex justify-center w-full">
           <div className="w-full max-w-md">
             {/* Card 2: Official Arc Faucet */}

@@ -9,7 +9,7 @@ import WalletModal from '../components/ui/WalletModal'
 import { toast } from 'sonner'
 import { parseUnits, formatUnits } from 'viem'
 import { ERC20_ABI } from '../utils/abis'
-import { arcTestnet } from '../config/wagmi'
+import { arcTestnet, arcMainnet } from '../config/wagmi'
 import { getAppKit, createCircleAdapter } from '../config/circleKit'
 import SelfPayModal from '../components/ui/SelfPayModal'
 
@@ -55,7 +55,7 @@ export default function PayPage() {
         functionName: 'balanceOf',
         args: [address],
         query: {
-            enabled: !!(address && paymentData?.amount && isConnected && chainId === arcTestnet.id)
+            enabled: !!(address && paymentData?.amount && isConnected && (chainId === arcTestnet.id || chainId === arcMainnet.id))
         }
     })
 
@@ -208,12 +208,11 @@ export default function PayPage() {
             return
         }
 
-        if (chainId !== arcTestnet.id) {
+        if (chainId !== arcTestnet.id && chainId !== arcMainnet.id) {
             try {
-                toast.info('Switching to Arc Testnet...')
-                await switchChain({ chainId: arcTestnet.id })
+                await switchChain({ chainId: arcMainnet.id })
             } catch (err) {
-                toast.error('You need to be on Arc Testnet to pay')
+                toast.error('You need to be on an Arc Network to pay')
                 return
             }
         }
@@ -224,8 +223,9 @@ export default function PayPage() {
             const kit = getAppKit()
             // createCircleAdapter is async (official documentation)
             const adapter = await createCircleAdapter()
+            const targetChainName = chainId === arcMainnet.id ? 'Arc' : 'Arc_Testnet';
             const result = await kit.send({
-                from: { adapter, chain: 'Arc_Testnet' },
+                from: { adapter, chain: targetChainName },
                 to: paymentData.recipientWallet,
                 amount: paymentData.amount.toString(),
                 token: paymentData.currency || 'USDC',

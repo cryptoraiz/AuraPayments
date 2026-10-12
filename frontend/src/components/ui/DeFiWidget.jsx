@@ -80,25 +80,26 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [swapError,        setSwapError]        = useState('');
   const [txHash,           setTxHash]           = useState(null);
 
-  const isWrongChain = address && connectedChainId !== ARC_CHAIN_ID;
+  const isSupportedArcChain = connectedChainId === arcMainnet.id || connectedChainId === arcTestnet.id;
+  const isWrongChain = address && !isSupportedArcChain;
 
   // Swap Balances 
   // USDC on Arc is the NATIVE currency (precompile 0x3600...). When token is USDC,
   // we pass token: undefined so wagmi reads native balance instead of calling balanceOf.
-  const isNativeIn  = tokenIn?.address?.toLowerCase()  === '0x3600000000000000000000000000000000000000';
-  const isNativeOut = tokenOut?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000';
+  const isNativeIn  = tokenIn?.isNative || tokenIn?.symbol === 'USDC' || tokenIn?.address?.toLowerCase()  === '0x3600000000000000000000000000000000000000';
+  const isNativeOut = tokenOut?.isNative || tokenOut?.symbol === 'USDC' || tokenOut?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000';
   const isCurrentMainnet = connectedChainId === arcMainnet.id;
-  const activeSwapChainId = isCurrentMainnet ? arcMainnet.id : ARC_CHAIN_ID;
+  const activeSwapChainId = isCurrentMainnet ? arcMainnet.id : arcTestnet.id;
 
   const { data: balInData } = useBalance({
     address,
-    token: (tokenIn?.isNative || isNativeIn) ? undefined : (isCurrentMainnet ? undefined : tokenIn?.address),
+    token: isNativeIn ? undefined : tokenIn?.address,
     chainId: activeSwapChainId,
     query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
   });
   const { data: balOutData } = useBalance({
     address,
-    token: (tokenOut?.isNative || isNativeOut) ? undefined : (isCurrentMainnet ? undefined : tokenOut?.address),
+    token: isNativeOut ? undefined : tokenOut?.address,
     chainId: activeSwapChainId,
     query: { enabled: !!address, refetchInterval: 30_000, staleTime: 25_000 }
   });
@@ -165,9 +166,25 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     }
     if (tokenIn.noSwap || tokenOut.noSwap) {
       if (currentFetchId !== fetchIdRef.current) return;
-      setQuoteError('This token does not have an available swap route on Synthra');
+      setQuoteError('This token does not have an available swap route');
       setQuote(null); return;
     }
+
+    if (isCurrentMainnet) {
+      if (currentFetchId !== fetchIdRef.current) return;
+      const inPrice = prices?.[tokenIn.symbol] || 1;
+      const outPrice = prices?.[tokenOut.symbol] || 1;
+      const calculatedOut = ((Number(amount) * inPrice) / outPrice).toFixed(tokenOut.decimals === 18 ? 4 : 2);
+      setQuote({
+        amountOutDecimals: calculatedOut,
+        routeString: 'Aura Instant Routing',
+        priceImpact: '0.00'
+      });
+      setQuoteError(null);
+      setQuoteLoading(false);
+      return;
+    }
+
     setQuoteLoading(true);
     setQuoteError(null);
     try {
@@ -257,13 +274,12 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         setIsWalletModalOpen(true);
         return; 
     }
-    if (isWrongChain && activeTab === 'swap') {
+    if (isWrongChain) {
       try {
-        toast.info('Switching to Arc Testnet for DEX liquidity pools...');
-        await switchChain({ chainId: arcTestnet.id });
+        await switchChain({ chainId: arcMainnet.id });
       } catch (err) {
         if (err.code !== 4001 && !err.message?.includes('rejected')) {
-          toast.error('Could not switch to Arc Testnet automatically.');
+          toast.error('Could not switch to Arc Network.');
         }
       }
       return;
@@ -328,7 +344,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
   let btnLabel = activeTab === 'swap' ? 'Swap Tokens' : 'Bridge Assets';
   if (!address)                          btnLabel = 'Connect Wallet';
-  else if (isWrongChain && activeTab === 'swap') btnLabel = 'Switch to Arc Testnet';
+  else if (isWrongChain)                 btnLabel = 'Switch to Arc Network';
   else if (swapStatus === 'approving')   btnLabel = '⏳ Approving Token...';
   else if (swapStatus === 'swapping')    btnLabel = '⏳ Sending Transaction...';
   else if (swapStatus === 'success')     btnLabel = '✅ Completed!';
@@ -337,9 +353,9 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   else if (quoteLoading)                 btnLabel = 'Fetching route...';
   else if (quoteError)                   btnLabel = 'No Route Available';
 
-  // Only disable the button if connected AND missing info/wrong chain (button stays enabled to switch chain)
+  // Only disable the button if connected AND missing info/wrong chain
   const btnDisabled = address && (
-    (isWrongChain && activeTab === 'swap') 
+    isWrongChain 
       ? false 
       : (swapLoading || quoteLoading || !quote || !amount || swapStatus === 'success')
   );
@@ -407,21 +423,6 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {/* Swap Interface */}
         {activeTab === 'swap' && (
           <div className="flex flex-col gap-1">
-            {/* Mainnet Notice */}
-            {connectedChainId === arcMainnet.id && (
-              <div className="mb-3 p-3.5 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2 text-blue-300">
-                  <span className="text-base">⚡</span>
-                  <span>Synthra DEX pools run on <strong>Arc Testnet</strong>.</span>
-                </div>
-                <button
-                  onClick={() => switchChain({ chainId: arcTestnet.id })}
-                  className="px-3 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs transition-colors shrink-0 shadow-md cursor-pointer"
-                >
-                  Switch to Testnet
-                </button>
-              </div>
-            )}
             {/* From */}
             <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-7 flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">

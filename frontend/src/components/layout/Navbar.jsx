@@ -25,7 +25,6 @@ export default function Navbar() {
   // Handle network switch (Toggle between Arc Mainnet and Arc Testnet)
   const handleToggleNetwork = async () => {
     const targetChain = chainId === arcMainnet.id ? arcTestnet : arcMainnet
-    toast.info(`Switching to ${targetChain.name}...`)
     try {
       await switchChain({ chainId: targetChain.id })
     } catch (err) {
