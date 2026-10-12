@@ -14,11 +14,11 @@ interface IERC20 {
 
 contract AuraVault {
     address public owner;
-    address public faucetSigner; // A carteira do nosso Backend
+    address public faucetSigner; // Backend authorized signer
     IERC20 public eurcToken;
     IERC20 public cirbtcToken;
     
-    // Taxas de Cambio Fixas para MVP
+    // Fixed MVP Exchange Rates
     // 1 Native USDC (18 decimals) = 0.92 EURC (6 decimals)
     // 1 cirBTC (8 decimals) = 60000 USDC (18 decimals)
     
@@ -44,7 +44,7 @@ contract AuraVault {
     }
 
     // ============================================
-    // MÓDULO DE SWAP (TROCA) - USDC para EURC
+    // SWAP MODULE - USDC to EURC
     // ============================================
 
     function swapNativeForEURC() external payable {
@@ -52,7 +52,7 @@ contract AuraVault {
         uint256 eurcDecimalsConversion = msg.value / 1e12; 
         uint256 amountOut = (eurcDecimalsConversion * 92) / 100;
         
-        require(eurcToken.balanceOf(address(this)) >= amountOut, "Cofre sem liquidez de EURC");
+        require(eurcToken.balanceOf(address(this)) >= amountOut, "Insufficient EURC liquidity in vault");
         bool success = eurcToken.transfer(msg.sender, amountOut);
         require(success, "EURC transfer failed");
         emit SwapNativeForToken(msg.sender, address(eurcToken), msg.value, amountOut);
@@ -63,7 +63,7 @@ contract AuraVault {
         uint256 usdcDecimalsConversion = eurcAmount * 1e12;
         uint256 amountOut = (usdcDecimalsConversion * 100) / 92;
         
-        require(address(this).balance >= amountOut, "Cofre sem liquidez de USDC");
+        require(address(this).balance >= amountOut, "Insufficient USDC liquidity in vault");
         bool success = eurcToken.transferFrom(msg.sender, address(this), eurcAmount);
         require(success, "EURC transferFrom failed.");
         (bool nativeSuccess, ) = msg.sender.call{value: amountOut}("");
@@ -72,7 +72,7 @@ contract AuraVault {
     }
 
     // ============================================
-    // MÓDULO DE SWAP (TROCA) - USDC para cirBTC
+    // SWAP MODULE - USDC to cirBTC
     // ============================================
 
     function swapNativeForCirBTC() external payable {
@@ -82,7 +82,7 @@ contract AuraVault {
         uint256 cirbtcDecimalsConversion = msg.value / 1e10; 
         uint256 amountOut = cirbtcDecimalsConversion / 60000;
         
-        require(cirbtcToken.balanceOf(address(this)) >= amountOut, "Cofre sem liquidez de cirBTC");
+        require(cirbtcToken.balanceOf(address(this)) >= amountOut, "Insufficient cirBTC liquidity in vault");
         bool success = cirbtcToken.transfer(msg.sender, amountOut);
         require(success, "cirBTC transfer failed");
         emit SwapNativeForToken(msg.sender, address(cirbtcToken), msg.value, amountOut);
@@ -95,7 +95,7 @@ contract AuraVault {
         uint256 usdcDecimalsConversion = btcAmount * 1e10;
         uint256 amountOut = usdcDecimalsConversion * 60000;
         
-        require(address(this).balance >= amountOut, "Cofre sem liquidez de USDC");
+        require(address(this).balance >= amountOut, "Insufficient USDC liquidity in vault");
         bool success = cirbtcToken.transferFrom(msg.sender, address(this), btcAmount);
         require(success, "cirBTC transferFrom failed.");
         (bool nativeSuccess, ) = msg.sender.call{value: amountOut}("");
@@ -104,18 +104,18 @@ contract AuraVault {
     }
 
     // ============================================
-    // MÓDULO DE FAUCET
+    // FAUCET MODULE
     // ============================================
     
     function requestFaucet(address to, uint256 amount) external onlyFaucetSigner {
-        require(address(this).balance >= amount, "Cofre sem USDC suficiente para o Faucet");
+        require(address(this).balance >= amount, "Insufficient USDC balance for Faucet");
         (bool success, ) = to.call{value: amount}("");
         require(success, "Faucet transfer failed");
         emit FaucetFunded(to, amount);
     }
 
     // ============================================
-    // GERENCIAMENTO DA TESOURARIA (Admin)
+    // TREASURY MANAGEMENT (Admin)
     // ============================================
 
     function withdrawNative(uint256 amount) external onlyOwner {

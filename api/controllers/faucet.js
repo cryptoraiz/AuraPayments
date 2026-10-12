@@ -76,35 +76,7 @@ export const faucetHandler = async (req, res) => {
 
         // Check Faucet Balance
         const balance = await provider.getBalance(wallet.address);
-        const amountToSend = ethers.parseEther(FAUCET_AMOUNT); // Native token uses 18 decimals usually? Wait.
-        // Arc documentation says "USDC is the native gas token".
-        // USDC usually has 6 decimals.
-        // However, if it's the NATIVE GAS token, EVM chains usually treat native currency as 18 decimals (Wei).
-        // Let's check the user's previous code or assumptions.
-        // PayPage.jsx used: parseUnits(amount, 6). 
-        // But that was for ERC20 transfer. 
-        // THIS IS NATIVE TRANSFER (Gas). 
-        // Standard EVM native is 18 decimals. 
-        // BUT, some L2s using USDC as gas might use 6.
-        // Let's assume 18 for native transfer unless specifically documented otherwise.
-        // Actually, looking at PayPage.jsx: 
-        // `const USDC_ADDRESS = "0x36..."` 
-        // If USDC is native, `provider.getBalance` returns it.
-        // If I use `wallet.sendTransaction`, value is in Wei.
-        // Most chains using USDC as gas (like Polygon zkEVM? No) reuse the ERC20 logic?
-        // No, if it's native gas, it's just 'value'.
-        // SAFE BET: Check connection. If Arc uses 18 decimals for gas (standard), use parseEther.
-        // If it uses 6, use parseUnits(..., 6).
-        // Let's try 18 first (standard). If it fails or is huge, we adjust. 25.0 * 10^18 is standard.
-        // WAIT: USDC implies 6 decimals. 
-        // Let's use `ethers.parseUnits(FAUCET_AMOUNT, 18)` for safety if standard EVM.
-        // Actually, I'll stick to 18 (ether) because foundry `cast send--value` usually expects wei.
-
-        // Let's double check User provided info:
-        // "USDC is Arc's native gas token"
-        // Usually modifying the native decimal count is rare/hard in EVM config. They likely kept 18.
-        // To be safe, I will use: 
-        // `ethers.parseEther(FAUCET_AMOUNT)` -> 10^18.
+        const amountToSend = ethers.parseEther(FAUCET_AMOUNT);
 
         if (balance < amountToSend) {
             return res.status(503).json({ error: 'Faucet out of funds. Try again later.' });

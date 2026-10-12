@@ -1,44 +1,51 @@
-# ⚡ Aura Payments — Decentralized Financial Hub on Arc Network
+# ⚡ Aura Payments — Web3 Payment Gateway & Invoicing on Arc Network
 
-> Non-custodial B2B on-chain invoicing, Synthra-powered swaps, and Circle CCTP cross-chain bridging with an interactive AI terminal on Arc Testnet.
+> Non-custodial enterprise on-chain invoicing, decentralized checkout, Synthra DEX swaps, and Circle CCTP cross-chain bridging with an interactive AI financial terminal on Arc Mainnet & Testnet.
 
 [![Live Application](https://img.shields.io/badge/Live_App-aurapayments.xyz-blue?style=for-the-badge)](https://www.aurapayments.xyz)
-[![Built on Arc Network](https://img.shields.io/badge/Built_on-Arc_Testnet-6366f1?style=for-the-badge)](https://www.arc.net)
+[![Built on Arc Network](https://img.shields.io/badge/Arc_Network-Mainnet_%26_Testnet-6366f1?style=for-the-badge)](https://arc.network)
 [![License MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
 ---
 
 ## 📌 Overview
 
-**Aura Payments** is an all-in-one financial suite built natively for the **Arc Network**. It streamlines corporate billing and decentralized finance operations into a single, unified, 100% non-custodial interface.
+**Aura Payments** is a financial infrastructure suite built natively for the **Arc Network**. It streamlines Web3 billing, merchant checkout, and decentralized finance operations into a unified, 100% non-custodial interface.
 
 - **Live Application:** [https://www.aurapayments.xyz](https://www.aurapayments.xyz)
-- **Target Network:** Arc Testnet (Chain ID `5042002`)
-- **Native Gas Asset:** USDC
+- **Supported Networks:** 
+  - **Arc Mainnet** (Chain ID `5042`)
+  - **Arc Testnet** (Chain ID `5042002`)
+- **Native Gas Token:** USDC (instant finality, sub-cent fees)
+- **Explorer:** [https://explorer.arc.io](https://explorer.arc.io)
 
 ---
 
 ## ✨ Core Features & Modules
 
-### 1. 🧾 B2B Invoicing (Invoice 2.0)
-- Instant decentralized payment links settled directly in native **USDC** and **EURC**.
+### 1. 🧾 B2B Invoicing & Merchant Checkout (Invoice 2.0)
+- Decentralized payment links settled directly in native **USDC** and **EURC**.
 - Direct wallet-to-wallet transfers with automated on-chain verification.
 - Client-side downloadable **PDF** invoices and payment receipts generated in real time.
 - Custom billing metadata (itemized descriptions, client name, and invoice IDs).
 
-### 2. 💱 Token Swaps (Synthra DEX Integration)
-- Native integration with **Synthra DEX** smart contracts and liquidity pools on Arc Testnet.
-- Instant token swaps between **USDC**, **EURC**, **USDT**, and **cirBTC**.
-- Real-time price routing with direct contract execution without intermediaries.
+### 2. 📜 Smart Contract Layer (`contracts/AuraPayments.sol`)
+- On-chain payment settlement and immutable invoice registry on Arc.
+- Transparent event logging (`PaymentProcessed`, `InvoiceCreated`) for institutional accounting.
+- Direct payment routing with zero protocol friction.
 
-### 3. 🌉 Cross-Chain Bridge (Circle CCTP)
-- Native **USDC** transfers between **Arc Testnet** and connected test networks (**Base Sepolia**, **Arbitrum Sepolia**).
-- Powered by Circle's official burn-and-mint **CCTP protocol**, avoiding wrapped token security risks.
+### 3. 💱 Token Swaps (Synthra DEX Integration)
+- Native integration with **Synthra DEX** liquidity pools on Arc.
+- Real-time token swaps between **USDC**, **EURC**, **USDT**, and **cirBTC**.
+- Direct contract-level execution without intermediaries.
 
-### 4. 🤖 Aura AI Terminal
-- Natural language financial assistant that translates text commands into signed Web3 calls.
-- Multi-tier resilient architecture supporting structured function calling.
-- Strictly non-custodial: the assistant never holds private keys; it only prepares transaction payloads for user confirmation in MetaMask or WalletConnect.
+### 4. 🌉 Cross-Chain Bridge (Circle CCTP)
+- Native **USDC** transfers between **Arc** and connected EVM networks (**Base**, **Arbitrum**, **Ethereum**).
+- Powered by Circle's official burn-and-mint **CCTP protocol**, eliminating wrapped token security risks.
+
+### 5. 🤖 Aura AI Terminal
+- Financial assistant that translates natural language commands into verified Web3 transactions.
+- Strictly non-custodial: the assistant prepares transaction payloads for explicit user confirmation in MetaMask or WalletConnect.
 
 ---
 
@@ -48,12 +55,33 @@
 |---|---|
 | **Frontend** | React 18, Vite, Tailwind CSS |
 | **State & Animations** | Framer Motion, TanStack Query |
-| **Web3 Integration** | Wagmi, Viem, AppKit |
+| **Web3 & Wallet** | Wagmi, Viem, AppKit (Reown) |
+| **Smart Contracts** | Solidity 0.8.20 (Arc EVM Compatible) |
 | **DEX Routing** | Synthra Protocol Smart Contracts |
 | **Cross-Chain** | Circle CCTP (Cross-Chain Transfer Protocol) |
-| **AI Co-pilot** | Multi-tier AI Engine (Gemini / OpenAI / Groq) with structured function calling |
 | **PDF Generation** | jsPDF (Client-side) |
-| **Deployment** | Vercel (Edge-optimized) |
+| **Hosting & CI/CD** | Vercel (Edge Network) |
+
+---
+
+## 📂 Repository Structure
+
+```text
+AuraPayments/
+├── contracts/               # Solidity Smart Contracts
+│   ├── AuraPayments.sol     # Web3 payment gateway & invoice settlement
+│   ├── AuraVault.sol        # Multi-asset treasury and liquidity vault
+│   └── Faucet.sol           # Arc testnet developer faucet
+├── frontend/                # Web Application
+│   ├── src/
+│   │   ├── components/      # UI components (Navbar, modals, forms)
+│   │   ├── config/          # Network, chain and token configurations
+│   │   ├── pages/           # Application views (Invoice, Trade, Bridge, Profile)
+│   │   └── utils/           # Web3 utilities and PDF receipt generators
+│   └── public/              # Static vector assets and icons
+├── api/                     # Backend controllers and edge handlers
+└── README.md                # Project documentation
+```
 
 ---
 
@@ -74,17 +102,7 @@ cd AuraPayments/frontend
 npm install
 ```
 
-### 3. Configure environment variables
-Create a `.env` file in the `frontend/` directory with the following variables:
-```env
-VITE_ARC_RPC_URL="https://arc-testnet.rpc.caldera.xyz/http"
-VITE_CHAIN_ID="5042002"
-VITE_WALLETCONNECT_PROJECT_ID="your_walletconnect_project_id"
-OPENAI_API_KEY="your_openai_key"
-GEMINI_API_KEY="your_gemini_key"
-```
-
-### 4. Start the development server
+### 3. Start the development server
 ```bash
 npm run dev
 ```
@@ -95,9 +113,9 @@ The application will be available at `http://localhost:5173`.
 
 ## 🔒 Security & Custody
 
-- **100% Non-Custodial:** No private keys, mnemonics, or sensitive credentials are ever transmitted, stored, or managed by servers.
-- **Client-Side Signatures:** All transactions are prepared as payloads and signed exclusively within the user's wallet (MetaMask, WalletConnect, etc.).
-- **Open Testnet Validation:** Smart contract integrations and client logic are running in open testnet mode on Arc Testnet.
+- **100% Non-Custodial:** No private keys, seed phrases, or sensitive credentials are ever handled by application servers.
+- **Client-Side Signatures:** All transactions are constructed in-memory and signed exclusively within the user's connected wallet.
+- **Immutable On-Chain Verification:** Settlement and invoices are permanently verifiable on the Arc block explorer.
 
 ---
 
