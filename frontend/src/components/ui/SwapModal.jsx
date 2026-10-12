@@ -59,11 +59,15 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
         saveTrade({
           type: 'Swap',
           walletAddress: userAddress,
+          chainId: arcMainnet.id,
+          fromChain: 'Arc Mainnet',
+          toChain: 'Arc Mainnet',
           tokenIn: tokenIn.symbol,
           tokenOut: tokenOut.symbol,
           amountIn,
           amountOut,
-          txHash: hash
+          txHash: hash,
+          hash: hash
         });
         return;
       }
@@ -128,11 +132,15 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
       saveTrade({
         type: 'Swap',
         walletAddress: userAddress,
+        chainId: ARC_CHAIN_ID,
+        fromChain: 'Arc Testnet',
+        toChain: 'Arc Testnet',
         tokenIn: tokenIn.symbol,
         tokenOut: tokenOut.symbol,
         amountIn,
         amountOut,
-        txHash: hash
+        txHash: hash,
+        hash: hash
       });
     } catch (err) {
       console.error('[SwapModal]', err);

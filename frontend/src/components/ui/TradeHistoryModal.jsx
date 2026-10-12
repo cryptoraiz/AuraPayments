@@ -75,6 +75,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
             (t.tokenOut && t.tokenOut.toLowerCase().includes(q)) ||
             (t.fromChain && t.fromChain.toLowerCase().includes(q)) ||
             (t.toChain && t.toChain.toLowerCase().includes(q)) ||
+            (t.txHash && t.txHash.toLowerCase().includes(q)) ||
             (t.hash && t.hash.toLowerCase().includes(q))
         );
     }, [trades, searchQuery]);

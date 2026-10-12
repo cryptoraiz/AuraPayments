@@ -8,11 +8,11 @@ export default function FAQPage() {
   const faqs = [
     {
       question: 'What is USDC/EURC?',
-      answer: 'Stablecoins issued by Circle. 1 USDC = $1 USD and 1 EURC = €1 EUR. They maintain a stable 1:1 value with traditional currencies.'
+      answer: 'Stablecoins issued by Circle. 1 USDC = 1 USD and 1 EURC = 1 EUR. They maintain a stable 1:1 value with traditional currencies.'
     },
     {
       question: 'How much does Aura Payments cost?',
-      answer: 'Free to create links! You only pay the Arc network fee: ~$0.01 USDC (one tenth of a cent) per transaction. No monthly fees or hidden charges.'
+      answer: 'Free to create links! You only pay the Arc network fee: ~0.01 USDC per transaction. No monthly fees or hidden charges.'
     },
     {
       question: 'Do I need a crypto wallet?',
@@ -28,11 +28,11 @@ export default function FAQPage() {
     },
     {
       question: 'Do payment links expire?',
-      answer: 'Yes! For security, each link expires 5 minutes after creation (for testing). You can create new links at any time, for free and instantly.'
+      answer: 'Yes! For security, each payment link is valid for 24 hours. You can create new links at any time, for free and instantly.'
     },
     {
       question: 'Where do I see my activity?',
-      answer: 'In the "Activity" tab, you see all created links, received and sent payments. You can download PDF receipts and clear data whenever you want.'
+      answer: 'In the "Portfolio" tab, you see your assets and recent transactions. You can also view and manage payment links inside "Invoice 2.0" and download PDF receipts.'
     },
     {
       question: 'How long does it take?',

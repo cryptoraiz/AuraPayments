@@ -163,7 +163,8 @@ export default function HistoryPage() {
                                                 </p>
                                             </div>
                                             
-                                            {item.hash && (() => {
+                                            {(item.txHash || item.hash) && (() => {
+                                                const tx = item.txHash || item.hash;
                                                 const chain = (item.fromChain || item.network || '').toLowerCase();
                                                 const isMainnet = item.chainId === arcMainnet.id || chain.includes('mainnet') || (chainId === arcMainnet.id && !chain.includes('testnet'));
                                                 let explorerBase = isMainnet ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app';
@@ -173,7 +174,7 @@ export default function HistoryPage() {
                                                 else if (chain.includes('arbitrum')) explorerBase = 'https://sepolia.arbiscan.io';
                                                 return (
                                                     <a
-                                                        href={`${explorerBase}/tx/${item.hash}`}
+                                                        href={`${explorerBase}/tx/${tx}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors text-xs font-bold w-max"

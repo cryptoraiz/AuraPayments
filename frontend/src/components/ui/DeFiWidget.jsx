@@ -217,7 +217,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         setQuoteLoading(false);
       }
     }
-  }, [amount, tokenIn, tokenOut, activeTab, bridgeChainIn, bridgeChainOut, bridgeTokenIn, bridgeTokenOut]);
+  }, [amount, tokenIn, tokenOut, activeTab, bridgeChainIn, bridgeChainOut, bridgeTokenIn, bridgeTokenOut, isCurrentMainnet, prices]);
 
   useEffect(() => {
     const t = setTimeout(fetchQuote, 600);

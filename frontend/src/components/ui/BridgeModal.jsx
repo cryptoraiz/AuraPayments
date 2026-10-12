@@ -323,6 +323,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
       saveTrade({
         type: 'Bridge',
         walletAddress: userAddress,
+        chainId: fromChainId,
         tokenIn: token?.symbol,
         tokenOut: token?.symbol, // Added tokenOut so TradeHistoryModal renders correctly
         amountIn: amount,        // Gross amount
@@ -330,6 +331,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
         fromChain: fromChain?.name,
         toChain: toChain?.name,
         txHash: burnHash,
+        hash: burnHash,
       });
 
     } catch (err) {
