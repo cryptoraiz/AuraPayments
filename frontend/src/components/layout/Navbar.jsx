@@ -198,9 +198,13 @@ export default function Navbar() {
                     className="relative w-10 h-10 rounded-xl object-contain shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-all"
                   />
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-xl font-bold tracking-tight leading-none text-dark-text">Aura Payments</span>
-                  <span className="text-xs font-medium text-dark-muted tracking-wider uppercase">DeFi Pro Hub</span>
+                <div className="flex flex-col justify-center">
+                  <span className="text-lg font-bold tracking-tight leading-none text-white group-hover:text-cyan-100 transition-colors">
+                    Aura
+                  </span>
+                  <span className="text-xs font-semibold tracking-wide leading-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-400 to-cyan-300">
+                    Payments
+                  </span>
                 </div>
               </Link>
 
