@@ -7,10 +7,9 @@ import { saveTrade } from '../../utils/localStorage';
 
 const SYNTHRA_API = import.meta.env.VITE_SYNTHRA_API_BASE || 'https://trading-api.synthra.org';
 const ARC_CHAIN_ID = 5042002;
-const API_HEADERS = {
-  'Content-Type': 'application/json',
-  'X-API-KEY': import.meta.env.VITE_SYNTHRA_API_KEY || ''
-};
+const SYNTHRA_KEY_TEST = import.meta.env.VITE_SYNTHRA_API_KEY || '';
+const SYNTHRA_KEY_PRD  = import.meta.env.VITE_SYNTHRA_API_PRD || import.meta.env.VITE_SYNTHRA_API_KEY || '';
+
 
 export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn, amountOut, rawAmountIn, userAddress }) {
   const chainId = useChainId();
@@ -44,10 +43,14 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
         setErrorMsg('DEX liquidity pools are not yet live on Arc Mainnet. Real token swaps will be available as DEX protocols launch.');
         return;
       }
+      const activeSynthraKey = chainId === arcMainnet.id ? SYNTHRA_KEY_PRD : SYNTHRA_KEY_TEST;
       // Fetch the swap payload
       const res = await fetch(`${SYNTHRA_API}/v1/swap`, {
         method:  'POST',
-        headers: API_HEADERS,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-KEY': activeSynthraKey
+        },
         body: JSON.stringify({
           chainId:      ARC_CHAIN_ID,
           tokenIn:      tokenIn.address,

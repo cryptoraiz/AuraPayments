@@ -15,11 +15,10 @@ import WalletModal from './WalletModal';
 import ReceivingWalletModal from './ReceivingWalletModal';
 
 // Config 
-const SYNTHRA_API  = (import.meta.env.VITE_SYNTHRA_API_BASE || 'https://trading-api.synthra.org').replace(/\/+$/, '');
-const SYNTHRA_KEY  = import.meta.env.VITE_SYNTHRA_API_KEY  || '';
-const ARC_CHAIN_ID = 5042002;
-
-const API_HEADERS  = { 'content-type': 'application/json', 'x-api-key': SYNTHRA_KEY };
+const SYNTHRA_API      = (import.meta.env.VITE_SYNTHRA_API_BASE || 'https://trading-api.synthra.org').replace(/\/+$/, '');
+const SYNTHRA_KEY_TEST = import.meta.env.VITE_SYNTHRA_API_KEY  || '';
+const SYNTHRA_KEY_PRD  = import.meta.env.VITE_SYNTHRA_API_PRD  || import.meta.env.VITE_SYNTHRA_API_KEY || '';
+const ARC_CHAIN_ID     = 5042002;
 
 import { toRaw } from '../../utils/chainUtils';
 import { useTokenPrices, formatUsdValue } from '../../hooks/useTokenPrices';
@@ -218,9 +217,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     setQuoteLoading(true);
     setQuoteError(null);
     try {
+      const activeSynthraKey = isCurrentMainnet ? SYNTHRA_KEY_PRD : SYNTHRA_KEY_TEST;
       const res = await fetch(`${SYNTHRA_API}/v1/quote`, {
         method:  'POST',
-        headers: API_HEADERS,
+        headers: { 'content-type': 'application/json', 'x-api-key': activeSynthraKey },
         body: JSON.stringify({
           chainId:   ARC_CHAIN_ID,
           tokenIn:   tokenIn.address,
