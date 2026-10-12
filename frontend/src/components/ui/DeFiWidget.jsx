@@ -198,15 +198,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
     if (isCurrentMainnet) {
       if (currentFetchId !== fetchIdRef.current) return;
-      const inPrice = prices?.[tokenIn.symbol] || 1;
-      const outPrice = prices?.[tokenOut.symbol] || 1;
-      const calculatedOut = ((Number(amount) * inPrice) / outPrice).toFixed(tokenOut.decimals === 18 ? 4 : 2);
-      setQuote({
-        amountOutDecimals: calculatedOut,
-        routeString: 'Aura Instant Routing',
-        priceImpact: '0.00'
-      });
-      setQuoteError(null);
+      setQuote(null);
+      setQuoteError('DEX pools on Arc Mainnet are coming soon');
       setQuoteLoading(false);
       return;
     }
@@ -329,6 +322,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       return;
     }
     
+    if (activeTab === 'swap' && isCurrentMainnet) {
+      toast.info('DEX liquidity pools are not yet deployed on Arc Mainnet. Use the Bridge (CCTP) to transfer USDC across networks.');
+      return;
+    }
+
     if (!quote)                               { alert('Please wait for the quote to load.'); return; }
     const rawAmount = toRaw(amount, tokenIn.decimals);
     if (!rawAmount) return;
@@ -372,21 +370,24 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   }
 
   let btnLabel = activeTab === 'swap' ? 'Swap Tokens' : 'Bridge Assets';
-  if (!address)                          btnLabel = 'Connect Wallet';
-  else if (isWrongChain)                 btnLabel = 'Switch to Arc Network';
-  else if (swapStatus === 'approving')   btnLabel = '⏳ Approving Token...';
-  else if (swapStatus === 'swapping')    btnLabel = '⏳ Sending Transaction...';
-  else if (swapStatus === 'success')     btnLabel = '✅ Completed!';
-  else if (swapStatus === 'error')       btnLabel = '❌ Failed - Try Again';
-  else if (!amount || Number(amount) <= 0) btnLabel = 'Enter an Amount';
-  else if (quoteLoading)                 btnLabel = 'Fetching route...';
-  else if (quoteError)                   btnLabel = 'No Route Available';
+  if (!address)                                     btnLabel = 'Connect Wallet';
+  else if (isWrongChain)                            btnLabel = 'Switch to Arc Network';
+  else if (activeTab === 'swap' && isCurrentMainnet) btnLabel = 'DEX Swaps Coming Soon on Arc Mainnet';
+  else if (swapStatus === 'approving')              btnLabel = '⏳ Approving Token...';
+  else if (swapStatus === 'swapping')               btnLabel = '⏳ Sending Transaction...';
+  else if (swapStatus === 'success')                btnLabel = '✅ Completed!';
+  else if (swapStatus === 'error')                  btnLabel = '❌ Failed - Try Again';
+  else if (!amount || Number(amount) <= 0)          btnLabel = 'Enter an Amount';
+  else if (quoteLoading)                            btnLabel = 'Fetching route...';
+  else if (quoteError)                              btnLabel = 'No Route Available';
 
   // Only disable the button if connected AND missing info/wrong chain
   const btnDisabled = address && (
     isWrongChain 
       ? false 
-      : (swapLoading || quoteLoading || !quote || !amount || swapStatus === 'success')
+      : (activeTab === 'swap' && isCurrentMainnet)
+        ? true
+        : (swapLoading || quoteLoading || !quote || !amount || swapStatus === 'success')
   );
 
   return (
@@ -452,6 +453,39 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {/* Swap Interface */}
         {activeTab === 'swap' && (
           <div className="flex flex-col gap-1">
+            {isCurrentMainnet && (
+              <div className="mb-3 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 backdrop-blur-md">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0 text-blue-400 mt-0.5">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-bold text-white mb-1">Arc Mainnet DEX Swaps Coming Soon</h4>
+                    <p className="text-xs text-dark-muted leading-relaxed mb-3">
+                      Arc Mainnet operates natively with official Circle USDC. DEX liquidity pools are currently being deployed by ecosystem partners. Cross-chain transfers are active on the Bridge (CCTP).
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('bridge')}
+                        className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                      >
+                        Use Bridge (CCTP) →
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => switchChain({ chainId: arcTestnet.id })}
+                        className="px-3 py-1.5 rounded-lg bg-dark-card hover:bg-dark-border border border-dark-border text-dark-muted hover:text-white text-xs font-semibold transition-all cursor-pointer"
+                      >
+                        Switch to Testnet
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* From */}
             <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-7 flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
@@ -629,7 +663,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         )}
 
         {/* Swap Detailed Info */}
-        {activeTab === 'swap' && (quote || quoteLoading || quoteError) && (
+        {activeTab === 'swap' && !isCurrentMainnet && (quote || quoteLoading || quoteError) && (
           <div className="mt-4 mb-2 p-4 bg-dark-bg/60 border border-dark-border/50 rounded-xl shadow-inner flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold text-white flex items-center gap-1.5 cursor-pointer hover:text-blue-400 transition-colors">

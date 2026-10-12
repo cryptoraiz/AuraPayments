@@ -40,35 +40,8 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
 
     try {
       if (chainId === arcMainnet.id) {
-        setCurrentStep(1);
-        const hash = await window.ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [{
-            from:  userAddress,
-            to:    userAddress,
-            value: '0x0',
-            data:  '0x',
-          }],
-        });
-        setSwapTxHash(hash);
-        setCurrentStep(2);
-        await waitForReceipt(hash);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setCurrentStep(4);
-        setStatus('idle');
-        saveTrade({
-          type: 'Swap',
-          walletAddress: userAddress,
-          chainId: arcMainnet.id,
-          fromChain: 'Arc Mainnet',
-          toChain: 'Arc Mainnet',
-          tokenIn: tokenIn.symbol,
-          tokenOut: tokenOut.symbol,
-          amountIn,
-          amountOut,
-          txHash: hash,
-          hash: hash
-        });
+        setStatus('error');
+        setErrorMsg('DEX liquidity pools are not yet live on Arc Mainnet. Real token swaps will be available as DEX protocols launch.');
         return;
       }
       // Fetch the swap payload
