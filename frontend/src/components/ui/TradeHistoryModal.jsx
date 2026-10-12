@@ -55,7 +55,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
     useEffect(() => {
         setIsLoading(true);
         if (isConnected && address) {
-            const history = getTradeHistoryByWallet(address);
+            const history = getTradeHistoryByWallet(address, chainId);
             // Sort by newest first
             history.sort((a, b) => b.createdAt - a.createdAt);
             setTrades(history);
@@ -65,7 +65,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
         
         // Remove artificial loading delay
         setIsLoading(false);
-    }, [address, isConnected, isOpen]);
+    }, [address, isConnected, isOpen, chainId]);
 
     const defaultArc = chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet';
 

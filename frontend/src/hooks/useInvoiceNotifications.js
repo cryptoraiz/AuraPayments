@@ -39,10 +39,15 @@ export const useInvoiceNotifications = () => {
             // Must not be in blacklist (deleted by user)
             if (blacklist.includes(inv.id)) return false;
 
-            // Must not be expired (5-minute test rule)
+            // Network segregation: only show invoices for active network
+            const isMainnet = chainId === arcMainnet.id;
+            const isInvMainnet = inv.chainId === 5042 || (inv.network && inv.network.toLowerCase().includes('mainnet'));
+            if (isMainnet ? !isInvMainnet : isInvMainnet) return false;
+
+            // Must not be expired (24-hour production rule)
             // This is the "Real-Time" part: as 'now' advances, items drop automatically
             const created = new Date(Number(inv.createdAt)).getTime();
-            const isExpired = (now - created) > (5 * 60 * 1000);
+            const isExpired = (now - created) > (24 * 60 * 60 * 1000);
 
             return !isExpired;
         });
@@ -58,7 +63,7 @@ export const useInvoiceNotifications = () => {
             }
             return pending;
         });
-    }, [rawInvoices]); // Dependency only on raw data, not "now" (handled by interval)
+    }, [rawInvoices, chainId]); // Dependency on raw data and current chain
 
     // --- 2. Data Sync (Runs less frequently) ---
     const fetchInvoices = useCallback(async () => {

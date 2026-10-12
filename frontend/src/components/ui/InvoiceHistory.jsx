@@ -64,8 +64,8 @@ export default function InvoiceHistory({ onUpdateStats }) {
             return;
         }
 
-        const receivedLocal = getPaymentLinksByWallet(address);
-        const sentLocal = getSentPaymentsByWallet(address);
+        const receivedLocal = getPaymentLinksByWallet(address, chainId);
+        const sentLocal = getSentPaymentsByWallet(address, chainId);
 
         try {
             // Polling history for address
@@ -84,6 +84,8 @@ export default function InvoiceHistory({ onUpdateStats }) {
                 paidAt: inv.paidAt,
                 txHash: inv.txHash,
                 payer: inv.payer,
+                chainId: inv.chainId,
+                network: inv.network,
                 isBackend: true
             }));
 
@@ -96,6 +98,14 @@ export default function InvoiceHistory({ onUpdateStats }) {
             if (blacklist.length > 0) {
                 uniqueReceived = uniqueReceived.filter(item => !blacklist.includes(item.id));
             }
+
+            // Network segregation: only show invoices belonging to current network (Mainnet vs Testnet)
+            const isCurrentMainnet = chainId === arcMainnet.id;
+            uniqueReceived = uniqueReceived.filter(item => {
+                const isItemMainnet = item.chainId === 5042 || 
+                                      (item.network && item.network.toLowerCase().includes('mainnet'));
+                return isCurrentMainnet ? isItemMainnet : !isItemMainnet;
+            });
 
             // CRITICAL FIX: Ghost Transaction Prevention
             // If I am the payer (fromWallet matches my address), I should NOT see this in "Received"
@@ -140,7 +150,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
         } finally {
             setIsLoading(false);
         }
-    }, [address, isConnected]);
+    }, [address, isConnected, chainId]);
 
     // Polling Effect
     useEffect(() => {

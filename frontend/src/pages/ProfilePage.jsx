@@ -149,7 +149,7 @@ export default function ProfilePage() {
     if (file) setAvatarUrl(URL.createObjectURL(file));
   };
 
-  const activities = getTradeHistoryByWallet(address).map(t => {
+  const activities = getTradeHistoryByWallet(address, chainId).map(t => {
     const d = new Date(t.createdAt);
     return {
       ...t,

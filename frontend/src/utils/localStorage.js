@@ -59,10 +59,22 @@ export const updatePaymentLink = (linkId, updates) => {
 /**
  * Get payment links filtered by wallet address
  */
-export const getPaymentLinksByWallet = (walletAddress) => {
+export const getPaymentLinksByWallet = (walletAddress, chainId) => {
     const links = getPaymentLinks();
     return links.filter(
-        link => link && link.creatorAddress?.toLowerCase() === walletAddress?.toLowerCase()
+        link => {
+            if (!link || link.creatorAddress?.toLowerCase() !== walletAddress?.toLowerCase()) return false;
+            if (!chainId) return true;
+            const isMainnetRequest = chainId === 5042;
+            const mentionsTestnet = 
+                (link.network && (link.network.toLowerCase().includes('testnet') || link.network.toLowerCase().includes('sepolia'))) ||
+                link.chainId === 5042002;
+            const isLinkMainnet = !mentionsTestnet && (
+                link.chainId === 5042 ||
+                (link.network && link.network.toLowerCase().includes('mainnet'))
+            );
+            return isMainnetRequest ? isLinkMainnet : !isLinkMainnet;
+        }
     );
 };
 
@@ -195,10 +207,22 @@ export const saveSentPayment = (paymentData) => {
 /**
  * Get sent payments filtered by payer wallet address
  */
-export const getSentPaymentsByWallet = (walletAddress) => {
+export const getSentPaymentsByWallet = (walletAddress, chainId) => {
     const payments = getSentPayments();
     return payments.filter(
-        payment => payment && payment.payer?.toLowerCase() === walletAddress?.toLowerCase()
+        payment => {
+            if (!payment || payment.payer?.toLowerCase() !== walletAddress?.toLowerCase()) return false;
+            if (!chainId) return true;
+            const isMainnetRequest = chainId === 5042;
+            const mentionsTestnet = 
+                (payment.network && (payment.network.toLowerCase().includes('testnet') || payment.network.toLowerCase().includes('sepolia'))) ||
+                payment.chainId === 5042002;
+            const isPaymentMainnet = !mentionsTestnet && (
+                payment.chainId === 5042 ||
+                (payment.network && payment.network.toLowerCase().includes('mainnet'))
+            );
+            return isMainnetRequest ? isPaymentMainnet : !isPaymentMainnet;
+        }
     );
 };
 
@@ -310,9 +334,25 @@ export const saveTrade = (tradeData) => {
     }
 };
 
-export const getTradeHistoryByWallet = (walletAddress) => {
+export const getTradeHistoryByWallet = (walletAddress, chainId) => {
     const trades = getTradeHistory();
     return trades.filter(
-        trade => trade && trade.walletAddress?.toLowerCase() === walletAddress?.toLowerCase()
+        trade => {
+            if (!trade || trade.walletAddress?.toLowerCase() !== walletAddress?.toLowerCase()) return false;
+            if (!chainId) return true;
+            const isMainnetRequest = chainId === 5042;
+            const mentionsTestnet = 
+                (trade.fromChain && (trade.fromChain.toLowerCase().includes('sepolia') || trade.fromChain.toLowerCase().includes('testnet'))) ||
+                (trade.toChain && (trade.toChain.toLowerCase().includes('sepolia') || trade.toChain.toLowerCase().includes('testnet'))) ||
+                (trade.network && (trade.network.toLowerCase().includes('sepolia') || trade.network.toLowerCase().includes('testnet'))) ||
+                trade.chainId === 5042002 || trade.chainId === 84532 || trade.chainId === 11155111 || trade.chainId === 421614;
+
+            const isTradeMainnet = !mentionsTestnet && (
+                trade.chainId === 5042 ||
+                trade.fromChain === 'Arc Mainnet' ||
+                (trade.network && trade.network.toLowerCase().includes('mainnet'))
+            );
+            return isMainnetRequest ? isTradeMainnet : !isTradeMainnet;
+        }
     );
 };

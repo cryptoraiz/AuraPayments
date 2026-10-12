@@ -109,7 +109,7 @@ export default async function handler(req, res) {
 
 async function handleCreateInvoice(req, res) {
     const body = req.body; // Vercel parses JSON body automatically for us
-    const { id, fromWallet, toWallet, recipientName, amount, currency, description } = body;
+    const { id, fromWallet, toWallet, recipientName, amount, currency, description, chainId, network } = body;
 
     if (!id || !fromWallet || !toWallet || !amount) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -118,7 +118,9 @@ async function handleCreateInvoice(req, res) {
     const db = await getDb();
     const saved = await db.add({
         id, fromWallet, recipientWallet: toWallet, recipientName: recipientName || 'Unknown',
-        amount, currency, description: description || '', status: 'pending', createdAt: Date.now()
+        amount, currency, description: description || '', status: 'pending', createdAt: Date.now(),
+        chainId: chainId || null,
+        network: network || null
     });
 
     return res.status(201).json({ success: true, invoiceId: saved.id });
@@ -257,10 +259,41 @@ async function getDb() {
 
     // Helper methods attached to pool for convenience
     pool.add = async (invoice) => {
-        const q = `INSERT INTO invoices (id, "fromWallet", "recipientWallet", "recipientName", amount, currency, description, status, "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
-        const v = [invoice.id, invoice.fromWallet, invoice.recipientWallet, invoice.recipientName, invoice.amount, invoice.currency, invoice.description, invoice.status, invoice.createdAt, invoice.updatedAt || null];
-        const r = await pool.query(q, v);
-        return r.rows[0];
+        try {
+            const q = `INSERT INTO invoices (id, "fromWallet", "recipientWallet", "recipientName", amount, currency, description, status, "createdAt", "updatedAt", "chainId", "network") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`;
+            const v = [
+                invoice.id, invoice.fromWallet, invoice.recipientWallet, invoice.recipientName,
+                invoice.amount, invoice.currency, invoice.description, invoice.status,
+                invoice.createdAt, invoice.updatedAt || null,
+                invoice.chainId || null, invoice.network || null
+            ];
+            const r = await pool.query(q, v);
+            return r.rows[0];
+        } catch (insertErr) {
+            // Auto-heal table columns if missing
+            if (insertErr.message && (insertErr.message.includes('column "chainId"') || insertErr.message.includes('column "network"'))) {
+                try {
+                    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "chainId" INTEGER');
+                    await pool.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "network" TEXT');
+                    const qRetry = `INSERT INTO invoices (id, "fromWallet", "recipientWallet", "recipientName", amount, currency, description, status, "createdAt", "updatedAt", "chainId", "network") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`;
+                    const vRetry = [
+                        invoice.id, invoice.fromWallet, invoice.recipientWallet, invoice.recipientName,
+                        invoice.amount, invoice.currency, invoice.description, invoice.status,
+                        invoice.createdAt, invoice.updatedAt || null,
+                        invoice.chainId || null, invoice.network || null
+                    ];
+                    const rRetry = await pool.query(qRetry, vRetry);
+                    return rRetry.rows[0];
+                } catch (retryErr) {
+                    console.error('Column auto-migration failed, falling back:', retryErr.message);
+                }
+            }
+            // Fallback insert without chainId/network
+            const qFallback = `INSERT INTO invoices (id, "fromWallet", "recipientWallet", "recipientName", amount, currency, description, status, "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`;
+            const vFallback = [invoice.id, invoice.fromWallet, invoice.recipientWallet, invoice.recipientName, invoice.amount, invoice.currency, invoice.description, invoice.status, invoice.createdAt, invoice.updatedAt || null];
+            const rFallback = await pool.query(qFallback, vFallback);
+            return rFallback.rows[0];
+        }
     };
 
     pool.findById = async (id) => {
@@ -424,7 +457,9 @@ async function handleMigrate(req, res) {
         await db.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "txHash" TEXT');
         await db.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "paidAt" BIGINT');
         await db.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "payer" TEXT');
-        return res.status(200).json({ success: true, msg: 'Migration Applied: Added txHash, paidAt, payer' });
+        await db.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "chainId" INTEGER');
+        await db.query('ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "network" TEXT');
+        return res.status(200).json({ success: true, msg: 'Migration Applied: Added txHash, paidAt, payer, chainId, network' });
     } catch (e) {
         return res.status(500).json({ error: e.message });
     }

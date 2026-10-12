@@ -277,6 +277,7 @@ export default function PayPage() {
         }
 
         // Save sent payment
+        const isMainnet = chainId === arcMainnet.id;
         saveSentPayment({
             id: paymentData?.id || linkId,
             recipientName: paymentData.recipientName,
@@ -285,7 +286,9 @@ export default function PayPage() {
             currency: paymentData.currency,
             description: paymentData.description,
             txHash: confirmedHash,
-            payer: address
+            payer: address,
+            chainId: chainId || (isMainnet ? 5042 : 5042002),
+            network: isMainnet ? 'Arc Mainnet' : 'Arc Testnet'
         })
 
         setIsPaying(false)

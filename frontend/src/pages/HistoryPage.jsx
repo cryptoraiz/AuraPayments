@@ -21,7 +21,7 @@ export default function HistoryPage() {
     useEffect(() => {
         setIsLoading(true);
         if (isConnected && address) {
-            const history = getTradeHistoryByWallet(address);
+            const history = getTradeHistoryByWallet(address, chainId);
             // Sort by newest first
             history.sort((a, b) => b.createdAt - a.createdAt);
             setTrades(history);
@@ -31,7 +31,7 @@ export default function HistoryPage() {
         
         // Remove artificial loading delay
         setIsLoading(false);
-    }, [address, isConnected]);
+    }, [address, isConnected, chainId]);
 
     const HistorySkeleton = () => (
         <div className="group relative bg-white/[0.02] border border-white/5 rounded-xl p-4 animate-pulse">

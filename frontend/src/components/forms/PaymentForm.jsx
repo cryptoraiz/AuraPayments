@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useAccount, useConnect } from 'wagmi'
+import { useAccount, useConnect, useChainId } from 'wagmi'
+import { arcMainnet } from '../../config/wagmi'
 import { v4 as uuidv4 } from 'uuid'
 import CurrencySelect from '../ui/CurrencySelect'
 import { savePaymentLink } from '../../utils/localStorage'
@@ -10,6 +11,7 @@ import WalletModal from '../ui/WalletModal'
 export default function PaymentForm({ theme = 'modern' }) {
   const { address, isConnected } = useAccount()
   const { connect, connectors } = useConnect()
+  const chainId = useChainId()
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
 
   // State
@@ -78,12 +80,18 @@ export default function PaymentForm({ theme = 'modern' }) {
 
     try {
       const newId = uuidv4()
+      const isMainnet = chainId === arcMainnet.id
+      const currentChainId = chainId || (isMainnet ? 5042 : 5042002)
+      const currentNetwork = isMainnet ? 'Arc Mainnet' : 'Arc Testnet'
+
       const linkData = {
         id: newId,
         creatorAddress: address,
         ...formData,
         createdAt: Date.now(),
-        status: 'pending'
+        status: 'pending',
+        chainId: currentChainId,
+        network: currentNetwork
       }
 
       // Save to backend FIRST (if it fails, do not save locally or show success)
@@ -94,7 +102,9 @@ export default function PaymentForm({ theme = 'modern' }) {
         recipientName: formData.name,
         amount: formData.amount,
         currency: formData.currency,
-        description: formData.description
+        description: formData.description,
+        chainId: currentChainId,
+        network: currentNetwork
       }
 
       await invoiceAPI.create(backendPayload)
@@ -242,7 +252,7 @@ export default function PaymentForm({ theme = 'modern' }) {
             {/* Fee Info */}
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/20">
               <span className="text-green-400 font-bold text-sm">✓</span>
-              <span className="text-sm text-green-400">Fee &lt; $0.01 • Instant</span>
+              <span className="text-sm text-green-400">Fee &lt; USD 0.01 • Instant</span>
             </div>
 
             {/* Description */}
