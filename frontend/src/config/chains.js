@@ -55,6 +55,51 @@ export const CHAINS = [
     explorer: 'https://sepolia.arbiscan.io'
   },
 
+  {
+    id: 8453,
+    key: 'BASE_MAINNET',
+    name: 'Base',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png',
+    color: 'bg-blue-500',
+    isTestnet: false,
+    explorer: 'https://basescan.org'
+  },
+  {
+    id: 42161,
+    key: 'ARBITRUM_MAINNET',
+    name: 'Arbitrum One',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png',
+    color: 'bg-blue-400',
+    isTestnet: false,
+    explorer: 'https://arbiscan.io'
+  },
+  {
+    id: 10,
+    key: 'OPTIMISM_MAINNET',
+    name: 'Optimism',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png',
+    color: 'bg-red-500',
+    isTestnet: false,
+    explorer: 'https://optimistic.etherscan.io'
+  },
+  {
+    id: 1,
+    key: 'ETHEREUM_MAINNET',
+    name: 'Ethereum',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    color: 'bg-indigo-500',
+    isTestnet: false,
+    explorer: 'https://etherscan.io'
+  },
+  {
+    id: 137,
+    key: 'POLYGON_MAINNET',
+    name: 'Polygon',
+    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+    color: 'bg-purple-500',
+    isTestnet: false,
+    explorer: 'https://polygonscan.com'
+  },
 ];
 
 export function getChainById(id) {
@@ -63,4 +108,8 @@ export function getChainById(id) {
 
 export function getAllChains() {
   return CHAINS;
+}
+
+export function getChainsByMode(isMainnet = false) {
+  return CHAINS.filter((c) => c.isTestnet === !isMainnet);
 }

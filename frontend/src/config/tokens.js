@@ -85,6 +85,56 @@ export const TOKENS = [
     color:    'bg-blue-400',
     chainId:  11155420, // Optimism Sepolia
   },
+  {
+    // USDC on Base Mainnet
+    symbol:   'USDC',
+    name:     'USD Coin',
+    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    address:  '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    decimals: 6,
+    color:    'bg-blue-400',
+    chainId:  8453, // Base Mainnet
+  },
+  {
+    // USDC on Arbitrum One
+    symbol:   'USDC',
+    name:     'USD Coin',
+    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    address:  '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    decimals: 6,
+    color:    'bg-blue-400',
+    chainId:  42161, // Arbitrum One
+  },
+  {
+    // USDC on Optimism Mainnet
+    symbol:   'USDC',
+    name:     'USD Coin',
+    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    address:  '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
+    decimals: 6,
+    color:    'bg-blue-400',
+    chainId:  10, // Optimism Mainnet
+  },
+  {
+    // USDC on Ethereum Mainnet
+    symbol:   'USDC',
+    name:     'USD Coin',
+    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    address:  '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    decimals: 6,
+    color:    'bg-blue-400',
+    chainId:  1, // Ethereum Mainnet
+  },
+  {
+    // USDC on Polygon PoS
+    symbol:   'USDC',
+    name:     'USD Coin',
+    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    address:  '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+    decimals: 6,
+    color:    'bg-blue-400',
+    chainId:  137, // Polygon Mainnet
+  },
 ];
 
 export function getTokenBySymbol(symbol) {

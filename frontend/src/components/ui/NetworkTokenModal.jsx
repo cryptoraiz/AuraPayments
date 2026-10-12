@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAllTokens } from '../../config/tokens';
-import { getAllChains } from '../../config/chains';
-import { useAccount, useBalance } from 'wagmi';
+import { getAllChains, getChainsByMode } from '../../config/chains';
+import { useAccount, useBalance, useChainId } from 'wagmi';
+import { arcMainnet } from '../../config/wagmi';
 
 export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedChain, selectedToken }) {
-  const chains = getAllChains();
+  const chainId = useChainId();
+  const isMainnet = chainId === arcMainnet.id;
+  const chains = getChainsByMode(isMainnet);
   const { address } = useAccount();
 
   const [activeChain, setActiveChain] = useState(selectedChain || chains[0]);

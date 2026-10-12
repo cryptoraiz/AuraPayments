@@ -91,6 +91,25 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const isCurrentMainnet = connectedChainId === arcMainnet.id;
   const activeSwapChainId = isCurrentMainnet ? arcMainnet.id : arcTestnet.id;
 
+  // Sync bridge chains when switching between Mainnet and Testnet
+  useEffect(() => {
+    if (isCurrentMainnet) {
+      if (bridgeChainIn?.id === arcTestnet.id || !bridgeChainIn) {
+        setBridgeChainIn(getChainById(arcMainnet.id));
+      }
+      if (bridgeChainOut?.isTestnet) {
+        setBridgeChainOut(getChainById(8453)); // Base Mainnet
+      }
+    } else {
+      if (bridgeChainIn?.id === arcMainnet.id) {
+        setBridgeChainIn(getChainById(arcTestnet.id));
+      }
+      if (!bridgeChainOut?.isTestnet) {
+        setBridgeChainOut(getChainById(84532)); // Base Sepolia
+      }
+    }
+  }, [isCurrentMainnet]);
+
   const { data: balInData } = useBalance({
     address,
     token: isNativeIn ? undefined : tokenIn?.address,
@@ -412,7 +431,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                     </div>
                   </div>
                   <p className="text-[10px] text-dark-muted pt-2 border-t border-dark-border/50">
-                    Slippage settings are auto-optimized for best practices on Arc Testnet.
+                    Slippage settings are auto-optimized for best practices on {isCurrentMainnet ? 'Arc Mainnet' : 'Arc Testnet'}.
                   </p>
                 </div>
               </div>

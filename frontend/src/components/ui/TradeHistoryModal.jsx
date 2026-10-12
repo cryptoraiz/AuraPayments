@@ -67,6 +67,8 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
         setIsLoading(false);
     }, [address, isConnected, isOpen]);
 
+    const defaultArc = chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet';
+
     const filteredTrades = useMemo(() => {
         if (!searchQuery) return trades;
         const q = searchQuery.toLowerCase();
@@ -242,7 +244,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                                                     {timeAgo(Number(item.createdAt))}
                                                                 </span>
                                                                 <div className="flex items-center justify-end -space-x-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                                                                    <img src={getChainIcon(item.fromChain || 'Arc Testnet')} className="w-4 h-4 rounded-full z-10 border border-[#1C1C1E]" alt="chain" />
+                                                                    <img src={getChainIcon(item.fromChain || defaultArc)} className="w-4 h-4 rounded-full z-10 border border-[#1C1C1E]" alt="chain" />
                                                                     {item.type === 'Bridge' && (
                                                                         <img src={getChainIcon(item.toChain)} className="w-4 h-4 rounded-full z-0 border border-[#1C1C1E]" alt="chain" />
                                                                     )}
@@ -283,7 +285,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                             <div className="w-[60px] h-[60px] rounded-full bg-[#1C1C1E] flex items-center justify-center p-1 border-2 border-white/5 shadow-[0_0_20px_rgba(255,255,255,0.05)]">
                                                 <img src={getTokenIcon(selectedTrade.tokenIn)} className="w-full h-full rounded-full object-cover" alt="token in" />
                                             </div>
-                                            <img src={getChainIcon(selectedTrade.fromChain || 'Arc Testnet')} className="w-6 h-6 rounded-full absolute -bottom-1 -right-1 border-[3px] border-[#1C1C1E] bg-[#1C1C1E]" alt="chain" />
+                                            <img src={getChainIcon(selectedTrade.fromChain || defaultArc)} className="w-6 h-6 rounded-full absolute -bottom-1 -right-1 border-[3px] border-[#1C1C1E] bg-[#1C1C1E]" alt="chain" />
                                         </div>
                                         
                                         <div className="text-white/20">
@@ -294,7 +296,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                             <div className="w-[60px] h-[60px] rounded-full bg-[#1C1C1E] flex items-center justify-center p-1 border-2 border-white/5 shadow-[0_0_20px_rgba(255,255,255,0.05)]">
                                                 <img src={getTokenIcon(selectedTrade.tokenOut || selectedTrade.tokenIn)} className="w-full h-full rounded-full object-cover" alt="token out" />
                                             </div>
-                                            <img src={getChainIcon(selectedTrade.toChain || selectedTrade.fromChain || 'Arc Testnet')} className="w-6 h-6 rounded-full absolute -bottom-1 -right-1 border-[3px] border-[#1C1C1E] bg-[#1C1C1E]" alt="chain" />
+                                            <img src={getChainIcon(selectedTrade.toChain || selectedTrade.fromChain || defaultArc)} className="w-6 h-6 rounded-full absolute -bottom-1 -right-1 border-[3px] border-[#1C1C1E] bg-[#1C1C1E]" alt="chain" />
                                         </div>
                                     </div>
 
@@ -312,8 +314,8 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                    {/* From */}
                                    <div className="flex justify-between items-center">
                                        <div className="flex items-center gap-2 text-white/60">
-                                           <img src={getChainIcon(selectedTrade.fromChain || (chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet'))} className="w-5 h-5 rounded-full" alt="chain" />
-                                           <span className="text-[14px] font-medium">From {selectedTrade.fromChain || (chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet')}</span>
+                                           <img src={getChainIcon(selectedTrade.fromChain || defaultArc)} className="w-5 h-5 rounded-full" alt="chain" />
+                                           <span className="text-[14px] font-medium">From {selectedTrade.fromChain || defaultArc}</span>
                                        </div>
                                        <div className="text-[14px] font-bold text-white flex items-center gap-1.5">
                                            {Number(selectedTrade.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} {selectedTrade.tokenIn}
@@ -326,8 +328,8 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                    {/* To */}
                                    <div className="flex justify-between items-center">
                                        <div className="flex items-center gap-2 text-white/60">
-                                           <img src={getChainIcon(selectedTrade.toChain || selectedTrade.fromChain || (chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet'))} className="w-5 h-5 rounded-full" alt="chain" />
-                                           <span className="text-[14px] font-medium">To {selectedTrade.toChain || (chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet')}</span>
+                                           <img src={getChainIcon(selectedTrade.toChain || selectedTrade.fromChain || defaultArc)} className="w-5 h-5 rounded-full" alt="chain" />
+                                           <span className="text-[14px] font-medium">To {selectedTrade.toChain || defaultArc}</span>
                                        </div>
                                        <div className="text-[14px] font-bold text-white flex items-center gap-1.5">
                                            {selectedTrade.amountOut ? Number(selectedTrade.amountOut).toLocaleString('en-US', { maximumFractionDigits: 6 }) : Number(selectedTrade.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} {selectedTrade.tokenOut || selectedTrade.tokenIn}

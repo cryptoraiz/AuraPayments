@@ -15,12 +15,25 @@ export default function FaucetPage() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
       <div className="w-full max-w-3xl mx-auto px-6 relative z-10 flex flex-col items-center">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-black text-white mb-3 tracking-tight">Testnet Faucets</h1>
           <p className="text-dark-muted max-w-lg mx-auto">
             Get test tokens to experiment with Aura Payments. Access the official network faucet below.
           </p>
         </div>
+
+        {isMainnet && (
+          <div className="mb-8 w-full max-w-md p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center">
+            <p className="text-sm font-semibold text-amber-400 mb-1">You are currently on Arc Mainnet</p>
+            <p className="text-xs text-dark-muted mb-3">Faucets distribute free test tokens exclusively for Arc Testnet.</p>
+            <button
+              onClick={() => switchChain({ chainId: arcTestnet.id })}
+              className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold transition-colors"
+            >
+              Switch to Arc Testnet
+            </button>
+          </div>
+        )}
 
         <div className="flex justify-center w-full">
           <div className="w-full max-w-md">
