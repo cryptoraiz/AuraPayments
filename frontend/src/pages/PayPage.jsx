@@ -435,7 +435,7 @@ export default function PayPage() {
                                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10">
                                     <p className="text-xs text-gray-400 mb-1">Transaction Hash:</p>
                                     <a
-                                        href={`https://testnet.arcscan.app/tx/${displayHash}`}
+                                        href={`${chainId === arcMainnet.id ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app'}/tx/${displayHash}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-xs font-mono text-blue-400 hover:text-blue-300 break-all transition-colors flex items-center justify-center gap-1"
@@ -611,7 +611,7 @@ export default function PayPage() {
                                 </div>
 
                                 {/* Network Status & Action Area */}
-                                {isConnected && chainId && chainId !== arcTestnet.id ? (
+                                {isConnected && chainId && chainId !== arcTestnet.id && chainId !== arcMainnet.id ? (
                                     <div className="space-y-3">
                                         {/* Compact Error Message */}
                                         <div className="flex items-center justify-center gap-2 text-amber-500 bg-amber-500/10 py-2 px-3 rounded-lg border border-amber-500/20">
@@ -624,20 +624,19 @@ export default function PayPage() {
                                         {/* Switch Network Button */}
                                         <button
                                             onClick={() => {
-                                                toast.info('Switching to Arc Testnet...')
-                                                switchChain({ chainId: arcTestnet.id }).catch(err => {
+                                                switchChain({ chainId: arcMainnet.id }).catch(err => {
                                                     console.error('Error switching network:', err)
                                                     toast.error('Error switching network')
                                                 })
                                             }}
-                                            className="w-full px-6 py-3 rounded-xl font-bold text-base bg-red-500 hover:bg-red-600 text-white transition-all shadow-lg shadow-red-500/20 flex items-center justify-center gap-4 group overflow-hidden relative"
+                                            className="w-full px-6 py-3 rounded-xl font-bold text-base bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-4 group overflow-hidden relative"
                                         >
                                             {/* Left Arrow - Points Right (Inwards) */}
                                             <svg className="w-5 h-5 animate-bounce-right" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                             </svg>
 
-                                            <span className="relative z-10 uppercase tracking-wide">Switch to Arc Testnet</span>
+                                            <span className="relative z-10 uppercase tracking-wide">Switch to Arc</span>
 
                                             {/* Right Arrow - Points Left (Inwards) */}
                                             <svg className="w-5 h-5 animate-bounce-left" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -706,15 +705,17 @@ export default function PayPage() {
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <a
-                                                        href="/faucet"
-                                                        className="px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-semibold hover:bg-blue-500/20 transition-all flex items-center gap-2 whitespace-nowrap"
-                                                    >
-                                                        Get testnet tokens
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                                        </svg>
-                                                    </a>
+                                                    {chainId === arcTestnet.id && (
+                                                        <a
+                                                            href="/faucet"
+                                                            className="px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-semibold hover:bg-blue-500/20 transition-all flex items-center gap-2 whitespace-nowrap"
+                                                        >
+                                                            Get testnet tokens
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                                            </svg>
+                                                        </a>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}

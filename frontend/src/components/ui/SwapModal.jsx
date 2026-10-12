@@ -241,7 +241,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
             <div className="mt-4 flex flex-col gap-2 items-center text-xs text-dark-muted bg-dark-bg/50 p-3 rounded-xl border border-dark-border/50">
               <div>
                 Tx:{' '}
-                <a href={`https://testnet.arcscan.app/tx/${swapTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                <a href={`${chainId === arcMainnet.id ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app'}/tx/${swapTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
                   {swapTxHash.slice(0, 10)}...{swapTxHash.slice(-8)}
                 </a>
               </div>

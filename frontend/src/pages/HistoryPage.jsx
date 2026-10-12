@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useAccount, useConnect } from 'wagmi';
+import { useAccount, useConnect, useChainId } from 'wagmi';
+import { arcMainnet } from '../config/wagmi';
 import { getTradeHistoryByWallet } from '../utils/localStorage';
 import WalletModal from '../components/ui/WalletModal';
 import { motion } from 'framer-motion';
@@ -7,6 +8,7 @@ import { motion } from 'framer-motion';
 export default function HistoryPage() {
     const { address, isConnected } = useAccount();
     const { connect, connectors } = useConnect();
+    const chainId = useChainId();
     const [showWalletModal, setShowWalletModal] = useState(false);
     const [trades, setTrades] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -161,17 +163,26 @@ export default function HistoryPage() {
                                                 </p>
                                             </div>
                                             
-                                            {item.hash && (
-                                                <a
-                                                    href={`https://testnet.arcscan.app/tx/${item.hash}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors text-xs font-bold w-max"
-                                                >
-                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                                    View Tx
-                                                </a>
-                                            )}
+                                            {item.hash && (() => {
+                                                const chain = (item.fromChain || item.network || '').toLowerCase();
+                                                const isMainnet = item.chainId === arcMainnet.id || chain.includes('mainnet') || (chainId === arcMainnet.id && !chain.includes('testnet'));
+                                                let explorerBase = isMainnet ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app';
+                                                if (chain.includes('base')) explorerBase = 'https://sepolia.basescan.org';
+                                                else if (chain.includes('polygon')) explorerBase = 'https://amoy.polygonscan.com';
+                                                else if (chain.includes('optimism')) explorerBase = 'https://sepolia-optimism.etherscan.io';
+                                                else if (chain.includes('arbitrum')) explorerBase = 'https://sepolia.arbiscan.io';
+                                                return (
+                                                    <a
+                                                        href={`${explorerBase}/tx/${item.hash}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors text-xs font-bold w-max"
+                                                    >
+                                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                                        View Tx
+                                                    </a>
+                                                );
+                                            })()}
                                         </div>
 
                                         {/* Right Side: Status */}

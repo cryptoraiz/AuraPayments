@@ -138,8 +138,10 @@ export default function ProfilePage() {
     }, 0);
   }, [currentTokens, balances, prices]);
 
+  const defaultArcLabel = isMainnet ? 'Arc' : 'Arc Testnet';
+
   const totalBalance = prices
-    ? `$${totalValueNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    ? `$${totalValueNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : '...';
 
   const handleImageUpload = (e) => {
@@ -358,11 +360,11 @@ export default function ProfilePage() {
                   <div className="md:col-span-3 flex items-center gap-3">
                     <div className="relative">
                       <img src={getTokenIcon(act.tokenIn || act.currency)} alt="token" className="w-8 h-8 rounded-full" />
-                      <NetworkBadge chain={act.type === 'Receive' ? 'Invoice' : 'Arc Testnet'} />
+                      <NetworkBadge chain={act.type === 'Receive' ? 'Invoice' : defaultArcLabel} />
                     </div>
                     <div className="flex flex-col">
                       <div className="font-bold text-white text-sm">{act.amountIn || act.amount} {act.tokenIn || act.currency}</div>
-                      <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.type === 'Receive' ? 'Invoice' : 'Arc Testnet'}</div>
+                      <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.type === 'Receive' ? 'Invoice' : defaultArcLabel}</div>
                     </div>
                   </div>
 
@@ -372,11 +374,11 @@ export default function ProfilePage() {
                       <>
                         <div className="relative">
                           <img src={getTokenIcon(act.tokenOut || act.tokenIn)} alt="token" className="w-8 h-8 rounded-full" />
-                          <NetworkBadge chain={act.toChain || 'Arc Testnet'} />
+                          <NetworkBadge chain={act.toChain || defaultArcLabel} />
                         </div>
                         <div className="flex flex-col">
                           <div className="font-bold text-white text-sm">{act.amountOut || act.amountIn} {act.tokenOut || act.tokenIn}</div>
-                          <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.toChain || 'Arc Testnet'}</div>
+                          <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.toChain || defaultArcLabel}</div>
                         </div>
                       </>
                     ) : (
@@ -385,11 +387,11 @@ export default function ProfilePage() {
                           <div className="w-8 h-8 rounded-full bg-dark-input border border-dark-border/50 flex items-center justify-center text-dark-muted">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                           </div>
-                          <NetworkBadge chain="Arc Testnet" />
+                          <NetworkBadge chain={defaultArcLabel} />
                         </div>
                         <div className="flex flex-col max-w-[120px]">
                           <div className="font-bold text-white text-sm truncate">{act.type === 'Send' ? (act.recipientName || 'Wallet') : 'Wallet'}</div>
-                          <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.type === 'Send' ? 'Arc Testnet' : 'Arc Testnet'}</div>
+                          <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{defaultArcLabel}</div>
                         </div>
                       </>
                     )}
@@ -417,7 +419,7 @@ export default function ProfilePage() {
                   <div className="md:col-span-1 flex justify-end items-center mt-2 md:mt-0">
                     {(() => {
                       const hash = act.txHash || act.hash;
-                      const chain = act.type === 'Bridge' ? (act.fromChain || 'Arc Testnet') : (isMainnet ? 'Arc Mainnet' : 'Arc Testnet');
+                      const chain = act.type === 'Bridge' ? (act.fromChain || defaultArcLabel) : defaultArcLabel;
                       const url = getExplorerUrl(hash, chain, chainId);
                       return url ? (
                         <a

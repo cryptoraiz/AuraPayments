@@ -428,7 +428,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
               {burnTxHash && (
                 <div>
                   Burn Tx:{' '}
-                  <a href={`https://testnet.arcscan.app/tx/${burnTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                  <a href={fromChain?.explorer ? `${fromChain.explorer}/tx/${burnTxHash}` : `https://explorer.arc.io/tx/${burnTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
                     {burnTxHash.slice(0, 10)}...{burnTxHash.slice(-8)}
                   </a>
                 </div>

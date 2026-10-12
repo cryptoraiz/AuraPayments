@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAccount, useConnect, useSendTransaction } from 'wagmi';
+import { useAccount, useConnect, useSendTransaction, useChainId } from 'wagmi';
 import { parseEther } from 'viem';
 import confetti from 'canvas-confetti';
+import { arcMainnet } from '../config/wagmi';
 import DeFiWidget from '../components/ui/DeFiWidget';
 import PaymentForm from '../components/forms/PaymentForm';
 import WalletModal from '../components/ui/WalletModal';
@@ -10,6 +11,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function ArcAIPage() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
+  const chainId = useChainId();
+  const isMainnet = chainId === arcMainnet.id;
+  const networkName = isMainnet ? 'Arc Mainnet' : 'Arc Testnet';
+  const explorerUrl = isMainnet ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app';
+  const explorerName = isMainnet ? 'Arc Explorer' : 'ArcScan';
+
   const { sendTransaction, isPending, isSuccess } = useSendTransaction();
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [copiedHash, setCopiedHash] = useState(null);
@@ -22,7 +29,7 @@ export default function ArcAIPage() {
   const logsEndRef = useRef(null);
   const [logs, setLogs] = useState([
     "[SYSTEM] Initializing Aura Agent Stack...",
-    "[SYSTEM] Connected to Arc Testnet.",
+    `[SYSTEM] Connected to ${networkName}.`,
     "[AGENT] Monitoring cross-chain routes & gas...",
     "[AGENT] Aura Core Engine active."
   ]);
@@ -50,7 +57,7 @@ export default function ArcAIPage() {
     setInput('');
     setLogs([
       "[SYSTEM] Initializing Aura Agent Stack...",
-      "[SYSTEM] Connected to Arc Testnet.",
+      `[SYSTEM] Connected to ${networkName}.`,
       "[AGENT] Monitoring cross-chain routes & gas...",
       "[AGENT] Aura Core Engine active.",
       "[SYSTEM] Chat session restarted."
@@ -124,7 +131,7 @@ export default function ArcAIPage() {
 
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: `✅ **Transaction Successfully Submitted!**\n\nThe operation is now confirmed on **Arc Testnet**. You can view the live on-chain receipt below:`,
+          content: `✅ **Transaction Successfully Submitted!**\n\nThe operation is now confirmed on **${networkName}**. You can view the live on-chain receipt below:`,
           txHash: hash
         }]);
         addLog(`[SYSTEM] Transaction confirmed: ${hash}`);
@@ -174,7 +181,7 @@ export default function ArcAIPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-dark-muted font-medium">Network</span>
-                <span className="text-white font-bold">Arc Testnet</span>
+                <span className="text-white font-bold">{networkName}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-dark-muted font-medium">Agent Wallet</span>
@@ -302,12 +309,12 @@ export default function ArcAIPage() {
                   {msg.txHash && (
                     <div className="mt-4 pt-3.5 border-t border-dark-border/60 flex flex-wrap gap-2.5">
                       <a
-                        href={`https://testnet.arcscan.app/tx/${msg.txHash}`}
+                        href={`${explorerUrl}/tx/${msg.txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex-1 min-w-[140px] py-2.5 px-3 bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 border border-blue-500/30 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 group active:scale-[0.98]"
                       >
-                        <span>View on ArcScan</span>
+                        <span>View on {explorerName}</span>
                         <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>

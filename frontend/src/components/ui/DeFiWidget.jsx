@@ -688,7 +688,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {/* Tx hash */}
         {txHash && (
           <div className="mt-3 text-center text-xs text-dark-muted">
-            Tx: <a href={`https://testnet.arcscan.app/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+            Tx: <a href={`${connectedChainId === arcMainnet.id ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app'}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
               className="text-blue-400 hover:underline">{txHash.slice(0, 12)}...{txHash.slice(-6)}</a>
           </div>
         )}

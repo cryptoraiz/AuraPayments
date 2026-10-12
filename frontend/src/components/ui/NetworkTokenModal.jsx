@@ -15,7 +15,7 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
   const tokens = getAllTokens().filter(t => {
     if (t.symbol !== 'USDC') return false;
     if (t.chainId) return t.chainId === activeChain.id;
-    return activeChain.id === 5042002; // tokens without chainId belong to Arc
+    return activeChain.id === 5042 || activeChain.id === 5042002; // tokens without chainId belong to Arc
   });
 
   if (!isOpen) return null;
@@ -163,7 +163,7 @@ function TokenRow({ token, chain, onSelect, isSelected, userAddress }) {
     ? Number(balanceData.formatted) < 0.01
       ? Number(balanceData.formatted).toLocaleString('en-US', { maximumFractionDigits: 8 })
       : Number(balanceData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
-    : '0,00';
+    : '0.00';
 
   return (
     <button

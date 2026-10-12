@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useAccount, useConnect } from 'wagmi';
+import { useAccount, useConnect, useChainId } from 'wagmi';
+import { arcMainnet } from '../../config/wagmi';
 import { getTradeHistoryByWallet } from '../../utils/localStorage';
 import WalletModal from './WalletModal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,6 +33,7 @@ function getChainIcon(chainName) {
 export default function TradeHistoryModal({ isOpen, onClose }) {
     const { address, isConnected } = useAccount();
     const { connect, connectors } = useConnect();
+    const chainId = useChainId();
     const [showWalletModal, setShowWalletModal] = useState(false);
     const [trades, setTrades] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -309,8 +311,8 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                    {/* From */}
                                    <div className="flex justify-between items-center">
                                        <div className="flex items-center gap-2 text-white/60">
-                                           <img src={getChainIcon(selectedTrade.fromChain || 'Arc Testnet')} className="w-5 h-5 rounded-full" alt="chain" />
-                                           <span className="text-[14px] font-medium">From {selectedTrade.fromChain || 'Arc Testnet'}</span>
+                                           <img src={getChainIcon(selectedTrade.fromChain || (chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet'))} className="w-5 h-5 rounded-full" alt="chain" />
+                                           <span className="text-[14px] font-medium">From {selectedTrade.fromChain || (chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet')}</span>
                                        </div>
                                        <div className="text-[14px] font-bold text-white flex items-center gap-1.5">
                                            {Number(selectedTrade.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} {selectedTrade.tokenIn}
@@ -323,8 +325,8 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                    {/* To */}
                                    <div className="flex justify-between items-center">
                                        <div className="flex items-center gap-2 text-white/60">
-                                           <img src={getChainIcon(selectedTrade.toChain || selectedTrade.fromChain || 'Arc Testnet')} className="w-5 h-5 rounded-full" alt="chain" />
-                                           <span className="text-[14px] font-medium">To {selectedTrade.toChain || 'Arc Testnet'}</span>
+                                           <img src={getChainIcon(selectedTrade.toChain || selectedTrade.fromChain || (chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet'))} className="w-5 h-5 rounded-full" alt="chain" />
+                                           <span className="text-[14px] font-medium">To {selectedTrade.toChain || (chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet')}</span>
                                        </div>
                                        <div className="text-[14px] font-bold text-white flex items-center gap-1.5">
                                            {selectedTrade.amountOut ? Number(selectedTrade.amountOut).toLocaleString('en-US', { maximumFractionDigits: 6 }) : Number(selectedTrade.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} {selectedTrade.tokenOut || selectedTrade.tokenIn}
@@ -353,8 +355,9 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                         <div className="text-white/60 text-[14px] font-medium">Transaction Hash</div>
                                         {(() => {
                                           const h = selectedTrade.txHash || selectedTrade.hash;
-                                          const chain = (selectedTrade.fromChain || '').toLowerCase();
-                                          let explorerBase = 'https://testnet.arcscan.app';
+                                          const chain = (selectedTrade.fromChain || selectedTrade.network || '').toLowerCase();
+                                          const isMainnet = selectedTrade.chainId === arcMainnet.id || chain.includes('mainnet') || (chainId === arcMainnet.id && !chain.includes('testnet'));
+                                          let explorerBase = isMainnet ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app';
                                           if (chain.includes('base')) explorerBase = 'https://sepolia.basescan.org';
                                           else if (chain.includes('polygon')) explorerBase = 'https://amoy.polygonscan.com';
                                           else if (chain.includes('optimism')) explorerBase = 'https://sepolia-optimism.etherscan.io';

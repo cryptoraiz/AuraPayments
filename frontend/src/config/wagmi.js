@@ -60,7 +60,7 @@ export const config = createConfig({
   },
   connectors: [
     injected(),
-    walletConnect({ projectId, showQrModal: false }), // AppKit gerencia o modal
+    walletConnect({ projectId, showQrModal: false }), // AppKit manages modal
     coinbaseWallet({ appName: 'Aura Payments' }),
   ],
   transports: {

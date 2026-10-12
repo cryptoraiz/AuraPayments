@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useAccount, useConnect } from 'wagmi';
+import { useAccount, useConnect, useChainId } from 'wagmi';
+import { arcMainnet } from '../../config/wagmi';
 import { getPaymentLinksByWallet, getSentPaymentsByWallet, clearPaymentLinksByScope, clearSentPaymentsByScope, getBlacklist, syncLocalLinks } from '../../utils/localStorage';
 import { invoiceAPI } from '../../services/invoiceService';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,6 +19,7 @@ const safeDate = (val) => {
 export default function InvoiceHistory({ onUpdateStats }) {
     const { address, isConnected } = useAccount();
     const { connect, connectors } = useConnect();
+    const chainId = useChainId();
     const [showWalletModal, setShowWalletModal] = useState(false);
     const [receivedLinks, setReceivedLinks] = useState([]);
     const [sentPayments, setSentPayments] = useState([]);
@@ -667,11 +669,11 @@ export default function InvoiceHistory({ onUpdateStats }) {
                                                     {/* Explorer Link */}
                                                     {item.txHash && (
                                                         <a
-                                                            href={`https://testnet.arcscan.app/tx/${item.txHash}`}
+                                                            href={`${(item.chainId === arcMainnet.id || chainId === arcMainnet.id) ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app'}/tx/${item.txHash}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="p-1 rounded-md hover:bg-white/5 text-zinc-600 hover:text-white transition-colors"
-                                                            title="View on Etherscan"
+                                                            title="View on Explorer"
                                                         >
                                                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                                         </a>

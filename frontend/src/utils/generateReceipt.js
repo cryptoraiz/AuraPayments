@@ -182,8 +182,10 @@ const drawReceiptOnDoc = (doc, paymentData) => {
         doc.setTextColor(...COLORS.accent);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
-        doc.textWithLink('View on ArcScan ->', 20, y, {
-            url: `https://testnet.arcscan.app/tx/${paymentData.txHash}`
+        doc.textWithLink('View on Explorer ->', 20, y, {
+            url: (paymentData.chainId === 5042 || (paymentData.network && paymentData.network.toLowerCase().includes('mainnet')))
+                ? `https://explorer.arc.io/tx/${paymentData.txHash}`
+                : `https://testnet.arcscan.app/tx/${paymentData.txHash}`
         });
     }
 

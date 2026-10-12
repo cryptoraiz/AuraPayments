@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useChainId } from 'wagmi';
 import { invoiceAPI } from '../services/invoiceService';
-import { arcTestnet } from '../config/wagmi';
+import { arcMainnet, arcTestnet } from '../config/wagmi';
 import { getBlacklist } from '../utils/localStorage';
 
 /**
@@ -62,7 +62,7 @@ export const useInvoiceNotifications = () => {
 
     // --- 2. Data Sync (Runs less frequently) ---
     const fetchInvoices = useCallback(async () => {
-        if (!isConnected || !address || chainId !== arcTestnet.id) {
+        if (!isConnected || !address || (chainId !== arcTestnet.id && chainId !== arcMainnet.id)) {
             setRawInvoices([]);
             setPendingInvoices([]);
             return;

@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAllTokens } from '../../config/tokens';
-import { useAccount, useBalance } from 'wagmi';
-
-const ARC_CHAIN_ID = 5042002;
+import { useAccount, useBalance, useChainId } from 'wagmi';
+import { arcMainnet, arcTestnet } from '../../config/wagmi';
 
 export default function TokenSelectorModal({ isOpen, onClose, onSelect, selectedToken }) {
   const tokens = getAllTokens();
   const { address } = useAccount();
+  const chainId = useChainId();
+  const isMainnet = chainId === arcMainnet.id;
+  const activeArcChainId = isMainnet ? arcMainnet.id : arcTestnet.id;
   const [search, setSearch] = useState('');
 
   if (!isOpen) return null;
 
   const filtered = tokens.filter(t => {
-    const isArcToken = !t.chainId || t.chainId === ARC_CHAIN_ID;
+    const isArcToken = isMainnet ? (t.symbol === 'USDC' || t.symbol === 'USDT') : (!t.chainId || t.chainId === arcTestnet.id);
     if (!isArcToken) return false;
     return t.symbol.toLowerCase().includes(search.toLowerCase()) ||
            t.name.toLowerCase().includes(search.toLowerCase());
@@ -67,7 +69,7 @@ export default function TokenSelectorModal({ isOpen, onClose, onSelect, selected
           {/* Token List */}
           <div className="overflow-y-auto max-h-[400px] p-2 hide-scrollbar">
             {filtered.length === 0 ? (
-              <div className="text-center py-8 text-dark-muted text-sm">Nenhum token encontrado</div>
+              <div className="text-center py-8 text-dark-muted text-sm">No tokens found</div>
             ) : filtered.map((token) => (
               <TokenRow
                 key={token.symbol}
@@ -75,6 +77,8 @@ export default function TokenSelectorModal({ isOpen, onClose, onSelect, selected
                 onSelect={() => { onSelect(token); onClose(); }}
                 isSelected={selectedToken?.symbol === token.symbol}
                 userAddress={address}
+                activeArcChainId={activeArcChainId}
+                isMainnet={isMainnet}
               />
             ))}
           </div>
@@ -107,11 +111,14 @@ function TokenIcon({ token }) {
   );
 }
 
-function TokenRow({ token, onSelect, isSelected, userAddress }) {
+function TokenRow({ token, onSelect, isSelected, userAddress, activeArcChainId, isMainnet }) {
+  const isNativeUSDC = isMainnet ? token.symbol === 'USDC' : token.isNative;
+  const tokenAddress = isNativeUSDC ? undefined : token.address;
+
   const { data: balanceData } = useBalance({
     address: userAddress,
-    token:   token.isNative ? undefined : token.address,
-    chainId: ARC_CHAIN_ID,
+    token:   tokenAddress,
+    chainId: activeArcChainId,
     query: { refetchInterval: 3000 }
   });
 
@@ -142,7 +149,7 @@ function TokenRow({ token, onSelect, isSelected, userAddress }) {
       </div>
       <div className="flex flex-col items-end">
         <span className="font-semibold text-white">{displayBalance}</span>
-        <span className="text-xs text-dark-muted font-medium">Testnet Asset</span>
+        <span className="text-xs text-dark-muted font-medium">{isMainnet ? 'Arc Native' : 'Testnet Asset'}</span>
       </div>
     </button>
   );

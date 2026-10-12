@@ -46,7 +46,7 @@ export const TOKENS = [
     color:    'bg-orange-500',
   },
   {
-    // USDC da Base Sepolia
+    // USDC on Base Sepolia
     symbol:   'USDC',
     name:     'USD Coin',
     iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
@@ -56,7 +56,7 @@ export const TOKENS = [
     chainId:  84532, // Base Sepolia
   },
   {
-    // USDC do Arbitrum Sepolia
+    // USDC on Arbitrum Sepolia
     symbol:   'USDC',
     name:     'USD Coin',
     iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
@@ -66,7 +66,7 @@ export const TOKENS = [
     chainId:  421614, // Arbitrum Sepolia
   },
   {
-    // USDC do Ethereum Sepolia
+    // USDC on Ethereum Sepolia
     symbol:   'USDC',
     name:     'USD Coin',
     iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
@@ -76,7 +76,7 @@ export const TOKENS = [
     chainId:  11155111, // Ethereum Sepolia
   },
   {
-    // USDC do Optimism Sepolia
+    // USDC on Optimism Sepolia
     symbol:   'USDC',
     name:     'USD Coin',
     iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
