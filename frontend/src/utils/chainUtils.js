@@ -1,12 +1,14 @@
 export function toRaw(amount, decimals) {
-  if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return null;
-  const parts = amount.split('.');
-  let intPart = parts[0];
+  if (!amount) return null;
+  const sanitized = String(amount).replace(',', '.');
+  if (isNaN(Number(sanitized)) || Number(sanitized) <= 0) return null;
+  const parts = sanitized.split('.');
+  let intPart = parts[0] || '0';
   let fracPart = parts[1] || '';
   if (fracPart.length > decimals) fracPart = fracPart.slice(0, decimals);
   else while (fracPart.length < decimals) fracPart += '0';
   const combined = intPart + fracPart;
-  return combined.replace(/^0+(?=\d)/, '');
+  return combined.replace(/^0+(?=\d)/, '') || '0';
 }
 
 export function toHexValue(value) {
