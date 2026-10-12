@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 256" width="760" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0F1B3D"/>
+      <stop offset="1" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="arc" gradientUnits="userSpaceOnUse" x1="76" y1="198" x2="180" y2="70">
+      <stop offset="0" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="txt" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2563EB"/><stop offset="1" stop-color="#22D3EE"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.5">
+      <stop offset="0" stop-color="#22D3EE" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="760" height="256" fill="#020617"/>
+  <g>
+    <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+    <rect width="256" height="256" rx="56" fill="url(#glow)"/>
+    <path d="M44 198 V128 A84 84 0 0 1 212 128 V198" fill="none" stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.28"/>
+    <path d="M58 198 V128 A70 70 0 0 1 198 128 V198" fill="none" stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+    <path d="M76 198 V128 A52 52 0 0 1 180 128 V198" fill="none" stroke="url(#arc)" stroke-width="20" stroke-linecap="round"/>
+    <path d="M104 166 H152" stroke="url(#arc)" stroke-width="14" stroke-linecap="round"/>
+    <circle cx="128" cy="120" r="11" fill="#E0F7FF"/>
+    <circle cx="128" cy="120" r="19" fill="none" stroke="#E0F7FF" stroke-width="2.5" opacity="0.5"/>
+  </g>
+  <text x="292" y="132" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="78" font-weight="700" fill="#F8FAFC" letter-spacing="-1.5">Aura</text>
+  <text x="292" y="196" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="52" font-weight="400" fill="url(#txt)" letter-spacing="1">Payments</text>
+</svg>

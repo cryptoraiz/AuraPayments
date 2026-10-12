@@ -189,19 +189,14 @@ export default function Navbar() {
             {/* Logo + Links */}
             <div className="flex items-center gap-12">
               <Link to="/" className="flex items-center gap-3 group">
-                {/* Logo Icon - Modern Invoice Design */}
+                {/* Official Aura Logo Icon */}
                 <div className="relative w-10 h-10">
-                  {/* Outer glow */}
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 opacity-20 blur-lg group-hover:opacity-30 transition-opacity"></div>
-                  {/* Main logo */}
-                  <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all">
-                    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      {/* Invoice icon */}
-                      <path d="M9 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      <path d="M7 12H13M7 16H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      <path d="M14 3H21L14 10V3Z" fill="currentColor" />
-                    </svg>
-                  </div>
+                  <div className="absolute inset-0 rounded-xl bg-cyan-500/20 blur-md group-hover:bg-cyan-500/40 transition-all"></div>
+                  <img
+                    src="/aura-logo-icon-v2.svg"
+                    alt="Aura Payments"
+                    className="relative w-10 h-10 rounded-xl object-contain shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-all"
+                  />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xl font-bold tracking-tight leading-none text-dark-text">Aura Payments</span>

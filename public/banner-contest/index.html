@@ -1,0 +1,309 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arc Community X/Twitter Banner Customizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center p-4 sm:p-8">
+
+  <!-- Header -->
+  <header class="max-w-5xl w-full text-center mb-8">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-3">
+      Arc-tist Community Contest Template
+    </div>
+    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2">
+      Arc Community X/Twitter Banner Customizer
+    </h1>
+    <p class="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
+      Hand-drawn editorial illustration inspired by Morgan Ramberg & Abbey Lossing. Customize your chapter, role, and avatar to represent Arc on your X profile.
+    </p>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    
+    <!-- Controls Panel -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+      <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+        <span>⚙️</span> Customize Your Banner
+      </h2>
+
+      <!-- Background Style -->
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">1. Artwork Theme</label>
+        <div class="grid grid-cols-2 gap-3">
+          <button id="btnBg2" onclick="setBg('arc_base_artwork_2.png', 2)" class="p-3 rounded-xl border-2 border-indigo-500 bg-indigo-500/10 text-xs font-bold text-left transition-all">
+            <span class="block text-white font-semibold mb-1">Global Map</span>
+            <span class="text-slate-400 font-normal">World chapters & bridges</span>
+          </button>
+          <button id="btnBg1" onclick="setBg('arc_base_artwork_1.png', 1)" class="p-3 rounded-xl border border-slate-700 bg-slate-800 hover:border-slate-600 text-xs font-bold text-left transition-all">
+            <span class="block text-white font-semibold mb-1">Architects City</span>
+            <span class="text-slate-400 font-normal">Builders & blueprints</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Role -->
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">2. Community Role</label>
+        <select id="roleInput" onchange="drawCanvas()" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <option value="ARC ARCHITECT">ARC ARCHITECT</option>
+          <option value="ARC BUILDER">ARC BUILDER</option>
+          <option value="ARC FELLOW">ARC FELLOW</option>
+          <option value="ARC COMMUNITY">ARC COMMUNITY</option>
+        </select>
+      </div>
+
+      <!-- Chapter / Region -->
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">3. Chapter / Region / City</label>
+        <input type="text" id="chapterInput" value="BRAZIL CHAPTER" oninput="drawCanvas()" placeholder="e.g. BRAZIL CHAPTER, TOKYO, GLOBAL" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+      </div>
+
+      <!-- Avatar Photo -->
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">4. Member Photo / Avatar</label>
+        <input type="file" id="avatarUpload" accept="image/*" onchange="handleAvatarUpload(event)" class="w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+      </div>
+
+      <!-- Download Button -->
+      <div class="pt-2">
+        <button onclick="downloadBanner()" class="w-full py-3.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all">
+          <span>📥</span> Download 1,500 × 500 px PNG
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Preview & Canvas -->
+    <div class="lg:col-span-2 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Live 1,500 × 500 px Preview</h2>
+        <span class="text-xs text-slate-500">Twitter/X Exact Ratio (3:1)</span>
+      </div>
+
+      <!-- Canvas Container with Responsive Scaling -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-2xl overflow-hidden flex flex-col items-center">
+        <canvas id="bannerCanvas" width="1500" height="500" class="w-full h-auto rounded-lg shadow-inner bg-slate-950"></canvas>
+      </div>
+
+      <!-- Safe Zone Helper Note -->
+      <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs text-slate-400 space-y-1">
+        <p class="font-medium text-slate-300">💡 Twitter/X Safe-Zone Optimization:</p>
+        <p>The branding and custom chapter badge are aligned to the top-left and top-right so your Twitter avatar (which appears in the bottom-left on desktop/mobile) never obscures your credentials or the hand-drawn artwork.</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentBgSrc = 'arc_base_artwork_2.png';
+    let currentBgImg = new Image();
+    let uploadedAvatarImg = null;
+
+    currentBgImg.src = currentBgSrc;
+    currentBgImg.onload = () => drawCanvas();
+
+    function setBg(src, index) {
+      currentBgSrc = src;
+      currentBgImg.src = src;
+      
+      const b1 = document.getElementById('btnBg1');
+      const b2 = document.getElementById('btnBg2');
+      if (index === 1) {
+        b1.className = 'p-3 rounded-xl border-2 border-indigo-500 bg-indigo-500/10 text-xs font-bold text-left transition-all';
+        b2.className = 'p-3 rounded-xl border border-slate-700 bg-slate-800 hover:border-slate-600 text-xs font-bold text-left transition-all';
+      } else {
+        b2.className = 'p-3 rounded-xl border-2 border-indigo-500 bg-indigo-500/10 text-xs font-bold text-left transition-all';
+        b1.className = 'p-3 rounded-xl border border-slate-700 bg-slate-800 hover:border-slate-600 text-xs font-bold text-left transition-all';
+      }
+      currentBgImg.onload = () => drawCanvas();
+    }
+
+    function handleAvatarUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            uploadedAvatarImg = img;
+            drawCanvas();
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function drawCanvas() {
+      const canvas = document.getElementById('bannerCanvas');
+      const ctx = canvas.getContext('2d');
+      const roleText = document.getElementById('roleInput').value.toUpperCase();
+      const chapterText = document.getElementById('chapterInput').value.trim().toUpperCase() || 'GLOBAL CHAPTER';
+
+      // 1. Draw Background
+      ctx.clearRect(0, 0, 1500, 500);
+      if (currentBgImg.complete && currentBgImg.naturalWidth > 0) {
+        ctx.drawImage(currentBgImg, 0, 0, 1500, 500);
+      } else {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, 1500, 500);
+      }
+
+      // 2. Top-Left Arc Brand Pill
+      const bx = 40, by = 30, bw = 220, bh = 52;
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, bx, by, bw, bh, 14, true, true);
+
+      // Arc Logo Curve
+      const arcX = bx + 28, arcY = by + 26;
+      ctx.beginPath();
+      ctx.arc(arcX, arcY, 12, Math.PI, 0);
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = '#6366f1';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(arcX, arcY, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      // Arc Text
+      ctx.font = 'bold 28px Inter, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('arc', bx + 50, by + 34);
+
+      ctx.font = 'bold 12px Inter, sans-serif';
+      ctx.fillStyle = '#a5b4fc';
+      ctx.fillText('| COMMUNITY', bx + 104, by + 32);
+      ctx.restore();
+
+      // 3. Right-Side Member Card
+      const cw = 350, ch = 96;
+      const cx = 1500 - cw - 40, cy = 30;
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, cx, cy, cw, ch, 18, true, true);
+
+      // Avatar Circle
+      const ar = 32;
+      const acx = cx + 48;
+      const acy = cy + ch / 2;
+
+      if (uploadedAvatarImg) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(acx, acy, ar, 0, Math.PI * 2);
+        ctx.clip();
+        // Scale and center uploaded photo
+        const minDim = Math.min(uploadedAvatarImg.width, uploadedAvatarImg.height);
+        const sx = (uploadedAvatarImg.width - minDim) / 2;
+        const sy = (uploadedAvatarImg.height - minDim) / 2;
+        ctx.drawImage(uploadedAvatarImg, sx, sy, minDim, minDim, acx - ar, acy - ar, ar * 2, ar * 2);
+        ctx.restore();
+
+        // Avatar ring
+        ctx.beginPath();
+        ctx.arc(acx, acy, ar, 0, Math.PI * 2);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+      } else {
+        // Placeholder Slot
+        ctx.beginPath();
+        ctx.arc(acx, acy, ar, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e293b';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#818cf8';
+        ctx.stroke();
+
+        ctx.font = 'bold 10px Inter, sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'center';
+        ctx.fillText('ADD', acx, acy - 3);
+        ctx.fillText('PHOTO', acx, acy + 11);
+      }
+
+      // Member Role & Chapter Text
+      const tx = cx + 96;
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 17px Inter, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(roleText, tx, cy + 34);
+
+      // Chapter Pill
+      const chY = cy + 46;
+      const chW = cw - 112;
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+      ctx.lineWidth = 1;
+      roundRect(ctx, tx, chY, chW, 30, 8, true, true);
+
+      // Pin icon dot
+      ctx.beginPath();
+      ctx.arc(tx + 14, chY + 15, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#6366f1';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(tx + 14, chY + 15, 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      ctx.font = '600 12px Inter, sans-serif';
+      ctx.fillStyle = '#e0e7ff';
+      ctx.fillText(chapterText, tx + 26, chY + 19);
+      ctx.restore();
+
+      // 4. Bottom Footer Bar
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(0, 500 - 26, 1500, 26);
+
+      ctx.font = '500 11px Inter, sans-serif';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText('ARC COMMUNITY BUILDERS & ARCHITECTS', 40, 500 - 9);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText('COMMUNITY X PROFILE BANNER TEMPLATE', 1500 - 40, 500 - 9);
+      ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
+    }
+
+    function downloadBanner() {
+      const canvas = document.getElementById('bannerCanvas');
+      const link = document.createElement('a');
+      const chapter = document.getElementById('chapterInput').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '_') || 'custom';
+      link.download = `arc_community_banner_${chapter}_1500x500.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+  </script>
+</body>
+</html>
