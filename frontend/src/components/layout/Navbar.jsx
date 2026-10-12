@@ -22,19 +22,27 @@ export default function Navbar() {
     connect({ connector })
   }
 
-  // Handle network switch
-  const handleSwitchNetwork = () => {
-    toast.info('Switching to Arc Testnet...')
-    switchChain({ chainId: arcTestnet.id }).catch(() => attemptRawSwitch())
+  // Handle network switch (Toggle between Arc Mainnet and Arc Testnet)
+  const handleToggleNetwork = async () => {
+    const targetChain = chainId === arcMainnet.id ? arcTestnet : arcMainnet
+    toast.info(`Switching to ${targetChain.name}...`)
+    try {
+      await switchChain({ chainId: targetChain.id })
+    } catch (err) {
+      if (err.code === 4001 || err.message?.includes('rejected')) {
+        return
+      }
+      await attemptRawSwitchTo(targetChain)
+    }
   }
 
   // Raw Switch Implementation (Fallback)
-  const attemptRawSwitch = async () => {
+  const attemptRawSwitchTo = async (targetChain) => {
     try {
       const provider = await connector?.getProvider()
       if (!provider) throw new Error('No provider')
 
-      const chainIdHex = '0x4cef02' // 5042002
+      const chainIdHex = `0x${targetChain.id.toString(16)}`
 
       try {
         await provider.request({
@@ -42,16 +50,16 @@ export default function Navbar() {
           params: [{ chainId: chainIdHex }],
         })
       } catch (switchError) {
-        // This error code indicates that the chain has not been added to MetaMask.
         if (switchError.code === 4902 || switchError.data?.originalError?.code === 4902) {
+          const isMainnet = targetChain.id === arcMainnet.id
           await provider.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: chainIdHex,
-              chainName: 'Arc Network Testnet',
+              chainName: targetChain.name,
               nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
-              rpcUrls: ['https://rpc.testnet.arc.network'],
-              blockExplorerUrls: ['https://testnet.arcscan.app']
+              rpcUrls: isMainnet ? ['https://rpc.mainnet.arc.io'] : ['https://rpc.testnet.arc.network'],
+              blockExplorerUrls: isMainnet ? ['https://explorer.arc.io'] : ['https://testnet.arcscan.app']
             }]
           })
         } else {
@@ -61,10 +69,12 @@ export default function Navbar() {
       return true
     } catch (rawErr) {
       console.error("Raw Switch failed:", rawErr)
-      toast.error('Error switching network. Try manually.', { duration: 4000 })
+      toast.error(`Error switching to ${targetChain.name}. Try manually in your wallet.`, { duration: 4000 })
       return false
     }
   }
+
+  const attemptRawSwitch = () => attemptRawSwitchTo(arcTestnet)
 
   // Auto-switch with REAL chainId verification (bypass Rabby cache bug)
   useEffect(() => {
@@ -252,11 +262,18 @@ export default function Navbar() {
 
             {/* Right Buttons */}
             <div className="flex items-center gap-3">
-              {/* Network Badge */}
-              <div className="px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-sm font-semibold flex items-center gap-2">
+              {/* Interactive Network Switch Badge */}
+              <button
+                onClick={handleToggleNetwork}
+                title={`Click to switch to ${chainId === arcMainnet.id ? 'Arc Testnet' : 'Arc Mainnet'}`}
+                className="px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-sm font-semibold flex items-center gap-2 hover:border-blue-500/40 hover:bg-white/5 transition-all group cursor-pointer"
+              >
                 <div className={`w-2 h-2 rounded-full ${isCorrectNetwork ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
                 <span>{chainId === arcMainnet.id ? 'Arc Mainnet' : chainId === arcTestnet.id ? 'Arc Testnet' : 'Arc Network'}</span>
-              </div>
+                <svg className="w-3.5 h-3.5 text-dark-muted group-hover:text-blue-400 transition-colors ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              </button>
 
               {/* Wallet Button */}
               {isConnected ? (
