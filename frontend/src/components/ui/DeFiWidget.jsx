@@ -98,9 +98,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const isCurrentMainnet = connectedChainId === arcMainnet.id;
   const activeSwapChainId = isCurrentMainnet ? arcMainnet.id : arcTestnet.id;
 
-  // Sync bridge chains when switching between Mainnet and Testnet
+  // Sync bridge chains and swap tokens when switching between Mainnet and Testnet
   useEffect(() => {
     if (isCurrentMainnet) {
+      setTokenIn(getTokenBySymbol('USDC', arcMainnet.id));
+      setTokenOut(getTokenBySymbol('EURC', arcMainnet.id));
       if (bridgeChainIn?.id === arcTestnet.id || !bridgeChainIn) {
         setBridgeChainIn(getChainById(arcMainnet.id));
       }
@@ -108,6 +110,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         setBridgeChainOut(getChainById(8453)); // Base Mainnet
       }
     } else {
+      setTokenIn(getTokenBySymbol('USDC', arcTestnet.id));
+      setTokenOut(getTokenBySymbol('USDT', arcTestnet.id));
       if (bridgeChainIn?.id === arcMainnet.id) {
         setBridgeChainIn(getChainById(arcTestnet.id));
       }
@@ -464,7 +468,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                   <div className="flex-1">
                     <h4 className="text-sm font-bold text-white mb-1">Arc Mainnet DEX Swaps Coming Soon</h4>
                     <p className="text-xs text-dark-muted leading-relaxed mb-3">
-                      Arc Mainnet operates natively with official Circle USDC. DEX liquidity pools are currently being deployed by ecosystem partners. Cross-chain transfers are active on the Bridge (CCTP).
+                      Arc Mainnet operates natively with official Circle USDC, EURC, and USYC. DEX liquidity pools are currently being deployed by ecosystem partners. Cross-chain transfers are active on the Bridge (CCTP).
                     </p>
                     <div className="flex items-center gap-2">
                       <button

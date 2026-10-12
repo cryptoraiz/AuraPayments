@@ -15,7 +15,9 @@ export default function TokenSelectorModal({ isOpen, onClose, onSelect, selected
   if (!isOpen) return null;
 
   const filtered = tokens.filter(t => {
-    const isArcToken = isMainnet ? (t.symbol === 'USDC' && (!t.chainId || t.chainId === arcMainnet.id)) : (!t.chainId || t.chainId === arcTestnet.id);
+    const isArcToken = isMainnet 
+      ? t.chainId === arcMainnet.id
+      : (t.chainId === arcTestnet.id || t.symbol === 'USDC' && !t.chainId);
     if (!isArcToken) return false;
     return t.symbol.toLowerCase().includes(search.toLowerCase()) ||
            t.name.toLowerCase().includes(search.toLowerCase());

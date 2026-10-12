@@ -3,14 +3,45 @@
 // Pools with liquidity: USDT/WUSDC, WUSDC/EURC, USDT/EURC (via route)
 
 export const TOKENS = [
+  // Arc Mainnet Tokens (chainId: 5042)
+  {
+    symbol:   'USDC',
+    name:     'USD Coin (Arc)',
+    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    address:  '0x3600000000000000000000000000000000000000',
+    decimals: 6,
+    color:    'bg-blue-400',
+    chainId:  5042,
+    isNative: true,
+  },
+  {
+    symbol:   'EURC',
+    name:     'Euro Coin (Circle)',
+    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c/logo.png',
+    address:  '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1',
+    decimals: 6,
+    color:    'bg-indigo-500',
+    chainId:  5042,
+  },
+  {
+    symbol:   'USYC',
+    name:     'Circle USYC (Yield)',
+    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    address:  '0x8a5D989Bbb96929F689B0200f435f53dA42bF490',
+    decimals: 6,
+    color:    'bg-emerald-500',
+    chainId:  5042,
+  },
+
+  // Arc Testnet Tokens (chainId: 5042002)
   {
     symbol:   'USDT',
     name:     'Tether USD',
-    // Reliable trustwallet CDN logo
     iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
     address:  '0x175CdB1D338945f0D851A741ccF787D343E57952',
     decimals: 18,
     color:    'bg-green-500',
+    chainId:  5042002,
   },
   {
     symbol:   'EURC',
@@ -19,6 +50,7 @@ export const TOKENS = [
     address:  '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',
     decimals: 6,
     color:    'bg-indigo-500',
+    chainId:  5042002,
   },
   {
     symbol:   'WUSDC',
@@ -27,15 +59,7 @@ export const TOKENS = [
     address:  '0x911b4000D3422F482F4062a913885f7b035382Df',
     decimals: 18,
     color:    'bg-blue-500',
-  },
-  {
-    // Arc native USDC precompile (ERC-20, 6 decimals)
-    symbol:   'USDC',
-    name:     'USD Coin (Arc)',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
-    address:  '0x3600000000000000000000000000000000000000',
-    decimals: 6,
-    color:    'bg-blue-400',
+    chainId:  5042002,
   },
   {
     symbol:   'cirBTC',
@@ -44,6 +68,7 @@ export const TOKENS = [
     address:  '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF',
     decimals: 8,
     color:    'bg-orange-500',
+    chainId:  5042002,
   },
   {
     // USDC on Base Sepolia
@@ -137,7 +162,11 @@ export const TOKENS = [
   },
 ];
 
-export function getTokenBySymbol(symbol) {
+export function getTokenBySymbol(symbol, chainId) {
+  if (chainId) {
+    const match = TOKENS.find(t => t.symbol.toUpperCase() === symbol.toUpperCase() && t.chainId === chainId);
+    if (match) return match;
+  }
   return TOKENS.find(t => t.symbol.toUpperCase() === symbol.toUpperCase()) || TOKENS[0];
 }
 
