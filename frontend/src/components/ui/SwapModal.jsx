@@ -10,7 +10,8 @@ const ARC_CHAIN_ID = 5042002;
 const SYNTHRA_KEY_TEST = import.meta.env.VITE_SYNTHRA_API_KEY || '';
 const SYNTHRA_KEY_PRD  = import.meta.env.VITE_SYNTHRA_API_PRD || import.meta.env.VITE_SYNTHRA_API_KEY || '';
 const TOWER_API        = (import.meta.env.VITE_TOWER_API_BASE   || 'https://www.tower.exchange').replace(/\/+$/, '');
-const TOWER_KEY_PRD    = import.meta.env.VITE_TOWER_API_KEY_PRD || import.meta.env.VITE_TOWER_API_KEY || '';
+const TOWER_KEY_TEST   = import.meta.env.VITE_TOWER_API_KEY_TEST || '';
+const TOWER_KEY_PRD    = import.meta.env.VITE_TOWER_API_KEY_PRD  || import.meta.env.VITE_TOWER_API_KEY || '';
 
 export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn, amountOut, rawAmountIn, userAddress, quote }) {
   const chainId = useChainId();
@@ -39,13 +40,14 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
     setErrorMsg('');
 
     try {
-      // 1. Tower Multi-DEX execution on Arc Mainnet
-      if (chainId === arcMainnet.id && quote?.provider === 'tower' && quote?.towerQuote && TOWER_KEY_PRD) {
+      const activeTowerKey = chainId === arcMainnet.id ? TOWER_KEY_PRD : TOWER_KEY_TEST;
+      // 1. Tower Multi-DEX execution (Mainnet or Testnet)
+      if (quote?.provider === 'tower' && quote?.towerQuote && activeTowerKey) {
         const buildRes = await fetch(`${TOWER_API}/api/public/swap/build-tx`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': TOWER_KEY_PRD
+            'x-api-key': activeTowerKey
           },
           body: JSON.stringify({
             quote: quote.towerQuote,

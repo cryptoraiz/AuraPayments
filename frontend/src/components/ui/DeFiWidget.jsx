@@ -19,8 +19,10 @@ const SYNTHRA_API      = (import.meta.env.VITE_SYNTHRA_API_BASE || 'https://trad
 const SYNTHRA_KEY_TEST = import.meta.env.VITE_SYNTHRA_API_KEY  || '';
 const SYNTHRA_KEY_PRD  = import.meta.env.VITE_SYNTHRA_API_PRD  || import.meta.env.VITE_SYNTHRA_API_KEY || '';
 const TOWER_API        = (import.meta.env.VITE_TOWER_API_BASE   || 'https://www.tower.exchange').replace(/\/+$/, '');
-const TOWER_KEY_PRD    = import.meta.env.VITE_TOWER_API_KEY_PRD || import.meta.env.VITE_TOWER_API_KEY || '';
+const TOWER_KEY_TEST   = import.meta.env.VITE_TOWER_API_KEY_TEST || '';
+const TOWER_KEY_PRD    = import.meta.env.VITE_TOWER_API_KEY_PRD  || import.meta.env.VITE_TOWER_API_KEY || '';
 const ARC_CHAIN_ID     = 5042002;
+
 
 
 import { toRaw } from '../../utils/chainUtils';
