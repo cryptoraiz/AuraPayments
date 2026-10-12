@@ -9,9 +9,10 @@ const SYNTHRA_API = import.meta.env.VITE_SYNTHRA_API_BASE || 'https://trading-ap
 const ARC_CHAIN_ID = 5042002;
 const SYNTHRA_KEY_TEST = import.meta.env.VITE_SYNTHRA_API_KEY || '';
 const SYNTHRA_KEY_PRD  = import.meta.env.VITE_SYNTHRA_API_PRD || import.meta.env.VITE_SYNTHRA_API_KEY || '';
+const TOWER_API        = (import.meta.env.VITE_TOWER_API_BASE   || 'https://www.tower.exchange').replace(/\/+$/, '');
+const TOWER_KEY_PRD    = import.meta.env.VITE_TOWER_API_KEY_PRD || import.meta.env.VITE_TOWER_API_KEY || '';
 
-
-export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn, amountOut, rawAmountIn, userAddress }) {
+export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn, amountOut, rawAmountIn, userAddress, quote }) {
   const chainId = useChainId();
   const [currentStep, setCurrentStep] = useState(0); // 0: approve, 1: swap, 2: wait, 3: success
   const [status, setStatus] = useState('idle'); // idle, loading, error
@@ -38,9 +39,74 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
     setErrorMsg('');
 
     try {
+      // 1. Tower Multi-DEX execution on Arc Mainnet
+      if (chainId === arcMainnet.id && quote?.provider === 'tower' && quote?.towerQuote && TOWER_KEY_PRD) {
+        const buildRes = await fetch(`${TOWER_API}/api/public/swap/build-tx`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': TOWER_KEY_PRD
+          },
+          body: JSON.stringify({
+            quote: quote.towerQuote,
+            userAddress
+          })
+        });
+        const buildData = await buildRes.json();
+        if (!buildRes.ok || !buildData?.success) {
+          throw new Error(buildData?.error || `Tower build-tx error (${buildRes.status})`);
+        }
+
+        const approveTx = buildData.data?.approval;
+        if (approveTx && approveTx.to && approveTx.data) {
+          setCurrentStep(0);
+          const approveHash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [{ from: userAddress, to: approveTx.to, data: approveTx.data }],
+          });
+          await waitForReceipt(approveHash);
+        }
+
+        setCurrentStep(1);
+        const swapTx = buildData.data?.swap;
+        if (!swapTx || !swapTx.to || !swapTx.data) throw new Error('Tower did not return a swap transaction');
+
+        const hash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from:  userAddress,
+            to:    swapTx.to,
+            data:  swapTx.data,
+            value: swapTx.value ? toHexValue(swapTx.value) : '0x0',
+            gas:   arcGasHeadroom(swapTx.gasLimit),
+          }],
+        });
+        setSwapTxHash(hash);
+
+        setCurrentStep(2);
+        await waitForReceipt(hash);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        setCurrentStep(4);
+        setStatus('idle');
+        saveTrade({
+          type: 'Swap',
+          walletAddress: userAddress,
+          txHash: hash,
+          tokenIn: tokenIn.symbol,
+          tokenOut: tokenOut.symbol,
+          amountIn,
+          amountOut,
+          status: 'Confirmed',
+          chainId: arcMainnet.id,
+          provider: 'Tower Multi-DEX'
+        });
+        return;
+      }
+
       if (chainId === arcMainnet.id) {
         setStatus('error');
-        setErrorMsg('DEX liquidity pools are not yet live on Arc Mainnet. Real token swaps will be available as DEX protocols launch.');
+        setErrorMsg('DEX liquidity pools are awaiting liquidity on Arc Mainnet. Swaps will execute automatically as liquidity is funded on Tower / Synthra.');
         return;
       }
       const activeSynthraKey = chainId === arcMainnet.id ? SYNTHRA_KEY_PRD : SYNTHRA_KEY_TEST;

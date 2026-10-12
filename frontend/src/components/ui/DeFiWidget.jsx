@@ -18,7 +18,10 @@ import ReceivingWalletModal from './ReceivingWalletModal';
 const SYNTHRA_API      = (import.meta.env.VITE_SYNTHRA_API_BASE || 'https://trading-api.synthra.org').replace(/\/+$/, '');
 const SYNTHRA_KEY_TEST = import.meta.env.VITE_SYNTHRA_API_KEY  || '';
 const SYNTHRA_KEY_PRD  = import.meta.env.VITE_SYNTHRA_API_PRD  || import.meta.env.VITE_SYNTHRA_API_KEY || '';
+const TOWER_API        = (import.meta.env.VITE_TOWER_API_BASE   || 'https://www.tower.exchange').replace(/\/+$/, '');
+const TOWER_KEY_PRD    = import.meta.env.VITE_TOWER_API_KEY_PRD || import.meta.env.VITE_TOWER_API_KEY || '';
 const ARC_CHAIN_ID     = 5042002;
+
 
 import { toRaw } from '../../utils/chainUtils';
 import { useTokenPrices, formatUsdValue } from '../../hooks/useTokenPrices';
@@ -201,13 +204,56 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
     if (isCurrentMainnet) {
       if (currentFetchId !== fetchIdRef.current) return;
+      setQuoteLoading(true);
+      setQuoteError(null);
+
+      // 1. Try Tower Multi-DEX Aggregator on Mainnet if key available
+      if (TOWER_KEY_PRD) {
+        try {
+          const res = await fetch(`${TOWER_API}/api/public/swap/quote`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': TOWER_KEY_PRD
+            },
+            body: JSON.stringify({
+              inputToken: tokenIn.address,
+              outputToken: tokenOut.address,
+              inputAmount: rawAmount,
+              slippageTolerance: Math.round(Number(slippage || 0.5) * 100),
+              chainId: 5042
+            })
+          });
+          const resData = await res.json();
+          if (resData?.success && resData?.data?.outputAmount) {
+            const outUnits = resData.data.outputAmount;
+            const formattedOut = (Number(outUnits) / (10 ** tokenOut.decimals)).toFixed(tokenOut.decimals === 18 ? 4 : 2);
+            if (currentFetchId !== fetchIdRef.current) return;
+            setQuote({
+              amountOutDecimals: formattedOut,
+              routeString: `Tower Multi-DEX (${resData.data.dexName || 'Best Route'})`,
+              priceImpact: (resData.data.priceImpact || 0).toFixed(2),
+              towerQuote: resData.data,
+              provider: 'tower'
+            });
+            setQuoteLoading(false);
+            return;
+          }
+        } catch (towerErr) {
+          console.warn('[Tower Quote Fallback]', towerErr);
+        }
+      }
+
+      // 2. Fallback to Real-Time Oracle Quote
       const inPrice = prices?.[tokenIn.symbol] || (tokenIn.symbol === 'EURC' ? 1.08 : 1);
       const outPrice = prices?.[tokenOut.symbol] || (tokenOut.symbol === 'EURC' ? 1.08 : 1);
       const calculatedOut = ((Number(amount) * inPrice) / outPrice).toFixed(tokenOut.decimals === 18 ? 4 : 2);
+      if (currentFetchId !== fetchIdRef.current) return;
       setQuote({
         amountOutDecimals: calculatedOut,
-        routeString: 'Arc DEX Protocol',
-        priceImpact: '0.00'
+        routeString: 'Tower DEX Engine (Pyth Oracle)',
+        priceImpact: '0.00',
+        provider: 'oracle'
       });
       setQuoteError(null);
       setQuoteLoading(false);
@@ -821,6 +867,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         rawAmountIn={toRaw(amount, tokenIn.decimals)}
         userAddress={address}
         slippage={slippage}
+        quote={quote}
       />
       <TradeHistoryModal 
         isOpen={isHistoryModalOpen} 
