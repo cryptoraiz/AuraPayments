@@ -312,13 +312,16 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     }
     if (activeTab === 'bridge') {
       if (bridgeChainIn.id === bridgeChainOut.id) {
-         alert('Source and destination networks cannot be the same.');
+         toast.error('Source and destination networks cannot be the same.');
          return;
       }
       
-      const supportedCCTPChains = [5042002, 11155111, 84532, 421614, 11155420];
+      const supportedCCTPChains = [
+        5042002, 11155111, 84532, 421614, 11155420, // Testnet
+        5042, 8453, 42161, 10, 1, 137                // Mainnet
+      ];
       if (!supportedCCTPChains.includes(bridgeChainOut.id)) {
-          alert(`Network ${bridgeChainOut.name} is not officially supported by Circle (CCTP) yet. We will need to use Synthra's standard route. Proceed?`);
+          toast.error(`Network ${bridgeChainOut.name} is not supported for CCTP routing.`);
           return;
       }
 

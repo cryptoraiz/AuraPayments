@@ -122,12 +122,21 @@ function addressToBytes32(address) {
   return '0x' + address.replace('0x', '').toLowerCase().padStart(64, '0');
 }
 
+// Official CCTP V2 Mainnet Contract Deployments (Shared across EVM chains)
+const CCTP_V2_MAINNET_MESSENGER   = '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d';
+const CCTP_V2_MAINNET_TRANSMITTER = '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64';
+
 // Helper: poll Iris API for attestation 
-async function pollAttestation(txHash, maxAttempts = 60) {
+async function pollAttestation(txHash, fromChainId, maxAttempts = 60) {
+  const isMainnet = fromChainId === 5042 || fromChainId === 1 || fromChainId === 8453 || fromChainId === 42161 || fromChainId === 10 || fromChainId === 137;
+  const irisApiUrl = isMainnet 
+    ? 'https://iris-api.circle.com/v2/messages/26'
+    : 'https://iris-api-sandbox.circle.com/v2/messages/26';
+
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise(r => setTimeout(r, 3000)); // wait 3s per attempt
     try {
-      const res = await fetch(`${IRIS_API}?transactionHash=${txHash}`);
+      const res = await fetch(`${irisApiUrl}?transactionHash=${txHash}`);
       if (!res.ok) continue;
       const data = await res.json();
       const msg  = data?.messages?.[0];
@@ -142,28 +151,52 @@ async function pollAttestation(txHash, maxAttempts = 60) {
 // CCTP Domain map 
 // Source: https://developers.circle.com/stablecoins/supported-domains
 const CHAIN_DOMAIN_MAP = {
+  // Testnet
   5042002: 26,  // Arc Testnet
   11155111: 0,  // Ethereum Sepolia
   84532: 6,     // Base Sepolia
   421614: 3,    // Arbitrum Sepolia
   11155420: 2,  // Optimism Sepolia
+  // Mainnet
+  5042: 26,     // Arc Mainnet
+  1: 0,         // Ethereum Mainnet
+  10: 2,        // Optimism Mainnet
+  42161: 3,     // Arbitrum One
+  8453: 6,      // Base Mainnet
+  137: 7,       // Polygon PoS
 };
 
 const CHAIN_MESSENGER_MAP = {
+  // Testnet
   11155111: '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5', // Ethereum Sepolia TokenMessengerV2
-  84532:    '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA', // Base Sepolia  (same addr pattern)
+  84532:    '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA', // Base Sepolia
   421614:   '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5',
   11155420: '0x9f3B8679c73C2Fef8b59B4f3444d4e156fb70AA5',
   5042002:  TOKEN_MESSENGER_V2,
+  // Mainnet
+  5042:     CCTP_V2_MAINNET_MESSENGER,
+  8453:     CCTP_V2_MAINNET_MESSENGER,
+  42161:    CCTP_V2_MAINNET_MESSENGER,
+  10:       CCTP_V2_MAINNET_MESSENGER,
+  1:        CCTP_V2_MAINNET_MESSENGER,
+  137:      CCTP_V2_MAINNET_MESSENGER,
 };
 
 const CHAIN_TRANSMITTER_MAP = {
+  // Testnet
   11155111: MESSAGE_TRANSMITTER_V2,
   84532:    MESSAGE_TRANSMITTER_V2,
   421614:   MESSAGE_TRANSMITTER_V2,
   11155420: MESSAGE_TRANSMITTER_V2,
   64165:    MESSAGE_TRANSMITTER_V2,
   5042002:  MESSAGE_TRANSMITTER_V2,
+  // Mainnet
+  5042:     CCTP_V2_MAINNET_TRANSMITTER,
+  8453:     CCTP_V2_MAINNET_TRANSMITTER,
+  42161:    CCTP_V2_MAINNET_TRANSMITTER,
+  10:       CCTP_V2_MAINNET_TRANSMITTER,
+  1:        CCTP_V2_MAINNET_TRANSMITTER,
+  137:      CCTP_V2_MAINNET_TRANSMITTER,
 };
 
 export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChain, token, userAddress, receiverAddress, onComplete }) {
@@ -252,7 +285,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
 
       // STEP 3: FETCH ATTESTATION (Iris API) 
       setCurrentStep(3);
-      const { attestation, message } = await pollAttestation(burnHash);
+      const { attestation, message } = await pollAttestation(burnHash, fromChainId);
 
       // STEP 4: MAGIC WITHDRAWAL VIA RELAYER 
       setCurrentStep(4);
