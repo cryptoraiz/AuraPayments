@@ -1,28 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0F1B3D"/>
-      <stop offset="1" stop-color="#020617"/>
-    </linearGradient>
-    <linearGradient id="arc" gradientUnits="userSpaceOnUse" x1="76" y1="198" x2="180" y2="70">
-      <stop offset="0" stop-color="#2563EB"/>
-      <stop offset="1" stop-color="#22D3EE"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.5">
-      <stop offset="0" stop-color="#22D3EE" stop-opacity="0.28"/>
-      <stop offset="1" stop-color="#22D3EE" stop-opacity="0"/>
-    </radialGradient>
-  </defs>
-  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
-  <rect width="256" height="256" rx="56" fill="url(#glow)"/>
-  <!-- aura: outer halo arcs -->
-  <path d="M44 198 V128 A84 84 0 0 1 212 128 V198" fill="none" stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.28"/>
-  <path d="M58 198 V128 A70 70 0 0 1 198 128 V198" fill="none" stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
-  <!-- main arch = letter A + Arc network -->
-  <path d="M76 198 V128 A52 52 0 0 1 180 128 V198" fill="none" stroke="url(#arc)" stroke-width="20" stroke-linecap="round"/>
-  <!-- crossbar = invoice line -->
-  <path d="M104 166 H152" stroke="url(#arc)" stroke-width="14" stroke-linecap="round"/>
-  <!-- node / coin at the center of the aura -->
-  <circle cx="128" cy="120" r="11" fill="#E0F7FF"/>
-  <circle cx="128" cy="120" r="19" fill="none" stroke="#E0F7FF" stroke-width="2.5" opacity="0.5"/>
+  <defs><linearGradient id="auraBg" gradientUnits="userSpaceOnUse" x1="40" y1="30" x2="216" y2="230"><stop offset="0" stop-color="#5CC8FF"/><stop offset="1" stop-color="#2459F2"/></linearGradient></defs>
+  <circle cx="128" cy="128" r="124" fill="url(#auraBg)"/>
+  <path d="M214.9 151.3 A90 90 0 1 1 104.7 41.1" fill="none" stroke="#fff" stroke-opacity="0.65" stroke-width="18" stroke-linecap="round"/><path d="M73.9 113.5 A56 56 0 1 1 142.5 182.1" fill="none" stroke="#fff" stroke-opacity="1" stroke-width="24" stroke-linecap="round"/><rect x="-24" y="-24" width="48" height="48" rx="11" fill="#fff" transform="translate(128 128) rotate(45)"/>
 </svg>

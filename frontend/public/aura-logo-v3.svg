@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" width="640" height="160" fill="none">
+  <defs>
+    <!-- Aura Glow Core -->
+    <radialGradient id="hAuraGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#0284C7" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Arc Primary Gradient -->
+    <linearGradient id="hAuraFlow" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="45%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+
+    <!-- Crossbeam Gradient -->
+    <linearGradient id="hBeamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#60A5FA"/>
+    </linearGradient>
+
+    <!-- Text Gradient for 'Payments' -->
+    <linearGradient id="hTextGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#60A5FA"/>
+    </linearGradient>
+
+    <!-- Halo Ring -->
+    <linearGradient id="hHaloRing" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0.2"/>
+      <stop offset="50%" stop-color="#38BDF8" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#BAE6FD" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ICON SECTION (x: 10 to 150) -->
+  <g transform="translate(10, 10) scale(0.55)">
+    <!-- Glow -->
+    <circle cx="128" cy="128" r="118" fill="url(#hAuraGlow)"/>
+
+    <!-- Orbital Ring -->
+    <circle cx="128" cy="128" r="104" stroke="url(#hHaloRing)" stroke-width="3" stroke-dasharray="140 18 40 18" stroke-linecap="round"/>
+
+    <!-- Left/Right Pillar Form 'A' -->
+    <path d="M68 196 L112 72 C116 61 123 55 128 55 C133 55 140 61 144 72 L188 196" 
+          stroke="url(#hAuraFlow)" 
+          stroke-width="20" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+
+    <!-- Bridge Arch -->
+    <path d="M96 156 Q128 126 160 156" 
+          stroke="url(#hBeamGrad)" 
+          stroke-width="15" 
+          stroke-linecap="round"/>
+
+    <!-- Core Orb -->
+    <circle cx="128" cy="106" r="13" fill="#FFFFFF"/>
+    <circle cx="128" cy="106" r="24" stroke="#38BDF8" stroke-width="2.5" stroke-opacity="0.6"/>
+  </g>
+
+  <!-- TYPOGRAPHY SECTION -->
+  <g transform="translate(165, 96)">
+    <!-- 'Aura' -->
+    <text x="0" y="0" 
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif" 
+          font-size="52" 
+          font-weight="800" 
+          fill="#FFFFFF" 
+          letter-spacing="-1.2">Aura</text>
+
+    <!-- 'Payments' -->
+    <text x="132" y="0" 
+          font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif" 
+          font-size="52" 
+          font-weight="600" 
+          fill="url(#hTextGrad)" 
+          letter-spacing="-0.8">Payments</text>
+  </g>
+</svg>

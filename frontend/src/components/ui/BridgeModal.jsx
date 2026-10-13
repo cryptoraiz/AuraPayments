@@ -218,7 +218,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
   // Helper component for timeline dots
   const StepIndicator = ({ stepIndex }) => {
     const isActive = currentStep === stepIndex;
-    const isDone = currentStep > stepIndex || (stepIndex === steps.length - 1 && currentStep === stepIndex);
+    const isDone = currentStep > stepIndex || (stepIndex === steps.length - 1 && currentStep === stepIndex && status === 'idle');
     const isLoading = isActive && status === 'loading';
     if (isDone) return (
       <div className="w-5 h-5 rounded-full bg-[#4A90E2] border-2 border-[#4A90E2] flex items-center justify-center shrink-0">
@@ -253,9 +253,6 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
 
       if (destinationDomain === undefined) throw new Error(`Destination network not supported (chainId ${toChainId})`);
 
-      // STEP 1: APPROVE 
-      setCurrentStep(1);
-      
       // Ensure we're on the source chain
       try {
         await switchChainAsync({ chainId: fromChainId });
@@ -263,15 +260,38 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
         throw new Error('You must be on the source network to start the bridge.');
       }
 
-      const approveData = encodeApprove(srcMessenger, rawAmount);
-      const approveHash = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [{ from: userAddress, to: token.address, data: approveData }],
-      });
-      await waitForTxReceipt(approveHash);
+      // Check existing ERC-20 allowance to avoid redundant approvals and unnecessary wallet popups
+      let currentAllowance = 0n;
+      try {
+        const allowanceCallData = encodeFunctionData({
+          abi: ERC20_ABI,
+          functionName: 'allowance',
+          args: [getAddress(userAddress), getAddress(srcMessenger)],
+        });
+        const allowanceHex = await window.ethereum.request({
+          method: 'eth_call',
+          params: [{ to: token.address, data: allowanceCallData }, 'latest'],
+        });
+        if (allowanceHex && allowanceHex !== '0x') {
+          currentAllowance = BigInt(allowanceHex);
+        }
+      } catch (allowanceErr) {
+        console.warn('[BridgeModal] Allowance check fallback:', allowanceErr);
+      }
 
-      // STEP 2: BURN (depositForBurn) 
-      setCurrentStep(2);
+      // STEP 0: APPROVE (only prompted if allowance is insufficient)
+      if (currentAllowance < BigInt(rawAmount)) {
+        setCurrentStep(0);
+        const approveData = encodeApprove(srcMessenger, rawAmount);
+        const approveHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{ from: userAddress, to: token.address, data: approveData }],
+        });
+        await waitForTxReceipt(approveHash);
+      }
+
+      // STEP 1: BURN (depositForBurn) 
+      setCurrentStep(1);
       const mintRecipient = addressToBytes32(receiverAddress || userAddress);
       const burnData = encodeDepositForBurn(rawAmount, destinationDomain, mintRecipient, token.address);
       const txParams = { from: userAddress, to: srcMessenger, data: burnData, gas: '0x3D0900' };
@@ -283,12 +303,12 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
       setBurnTxHash(burnHash);
       await waitForTxReceipt(burnHash);
 
-      // STEP 3: FETCH ATTESTATION (Iris API) 
-      setCurrentStep(3);
+      // STEP 2: FETCH ATTESTATION (Iris API) 
+      setCurrentStep(2);
       const { attestation, message } = await pollAttestation(burnHash, fromChainId);
 
-      // STEP 4: MAGIC WITHDRAWAL VIA RELAYER 
-      setCurrentStep(4);
+      // STEP 3: MAGIC WITHDRAWAL VIA RELAYER 
+      setCurrentStep(3);
 
       try {
         // Send to our Relayer server
@@ -338,15 +358,15 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
           await waitForTxReceipt(receiveHash);
         } catch (receiveErr) {
           console.error('[BridgeModal receiveMessage error]', receiveErr);
-          if (receiveErr?.code === 4001) {
+          if (receiveErr?.code === 4001 || receiveErr?.message?.toLowerCase().includes('user rejected')) {
             throw new Error('Manual transaction cancelled by user.');
           }
           throw new Error(`Relayer and manual withdrawal failed. Please check if you have native ETH on ${toChain?.name || 'destination'} network.`);
         }
       }
 
-      // STEP 5: SUCCESS — restore back to Arc Testnet 
-      setCurrentStep(5);
+      // STEP 4: SUCCESS — restore back to Arc Testnet 
+      setCurrentStep(4);
       setStatus('idle');
 
       try {
@@ -358,9 +378,9 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
         walletAddress: userAddress,
         chainId: fromChainId,
         tokenIn: token?.symbol,
-        tokenOut: token?.symbol, // Added tokenOut so TradeHistoryModal renders correctly
-        amountIn: amount,        // Gross amount
-        amountOut: bridgeAmt,    // Net amount (amount - fee)
+        tokenOut: token?.symbol,
+        amountIn: amount,
+        amountOut: bridgeAmt,
         fromChain: fromChain?.name,
         toChain: toChain?.name,
         txHash: burnHash,
@@ -369,8 +389,16 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
 
     } catch (err) {
       console.error('[BridgeModal CCTP]', err);
-      if (err.code === 4001 || err.message?.includes('user rejected')) {
-        setErrorMsg('Transaction rejected by user.');
+      const isUserReject = 
+        err?.code === 4001 || 
+        err?.cause?.code === 4001 ||
+        err?.message?.toLowerCase().includes('user rejected') ||
+        err?.message?.toLowerCase().includes('cancelled') ||
+        err?.message?.toLowerCase().includes('canceled') ||
+        err?.message?.toLowerCase().includes('denied');
+
+      if (isUserReject) {
+        setErrorMsg('Transaction cancelled in your wallet.');
       } else {
         setErrorMsg(err.message || 'Unknown error');
       }
@@ -446,19 +474,19 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
               <div key={i} className={`flex items-center gap-4 relative z-10 ${i < steps.length - 1 ? 'mb-6' : ''}`}>
                 <StepIndicator stepIndex={i} />
                 <div className="flex-1 flex justify-between items-center">
-                  <span className={`font-semibold text-[15px] transition-colors ${currentStep >= i ? (i === 5 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]') : 'text-white/40'}`}>
-                    {i === 5 && currentStep >= 5 ? 'Bridge Successful!' : step.label}
+                  <span className={`font-semibold text-[15px] transition-colors ${currentStep >= i ? (i === 4 && status === 'idle' ? 'text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]') : 'text-white/40'}`}>
+                    {i === 4 && currentStep >= 4 && status === 'idle' ? 'Bridge Successful!' : step.label}
                   </span>
                   {currentStep === i && status === 'loading' && step.hint && (
                     <span className="text-[13px] text-[#4A90E2] drop-shadow-[0_0_5px_rgba(74,144,226,0.5)] animate-pulse">{step.hint}</span>
                   )}
-                  {i === 5 && currentStep >= 5 && <span className="text-[13px] text-green-400">✓ Done</span>}
+                  {i === 4 && currentStep >= 4 && status === 'idle' && <span className="text-[13px] text-green-400">✓ Done</span>}
                 </div>
               </div>
             ))}
           </div>
 
-          {(burnTxHash || receiveTxHash) && currentStep >= 5 && (
+          {(burnTxHash || receiveTxHash) && currentStep >= 4 && (
             <div className="mt-4 flex flex-col gap-2 items-center text-xs text-dark-muted bg-dark-bg/50 p-3 rounded-xl border border-dark-border/50">
               {burnTxHash && (
                 <div>
@@ -480,16 +508,30 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
           )}
 
           {errorMsg && (
-            <div className="mt-4 p-3 bg-red-900/30 border border-red-500/50 rounded-xl text-xs text-red-400 text-center">
-              ⚠️ {errorMsg}
-              <button onClick={() => { setErrorMsg(''); executeBridge(); }} className="block mx-auto mt-2 text-xs text-blue-400 hover:underline">
-                Try again
-              </button>
+            <div className="mt-4 p-4 bg-red-900/30 border border-red-500/50 rounded-2xl text-xs text-red-300 text-center">
+              <div className="flex items-center justify-center gap-2 font-medium mb-1">
+                <span>⚠️</span>
+                <span>{errorMsg}</span>
+              </div>
+              <div className="flex items-center justify-center gap-3 mt-3">
+                <button 
+                  onClick={() => { setErrorMsg(''); executeBridge(); }} 
+                  className="px-4 py-1.5 bg-[#4A90E2] hover:bg-[#357ABD] text-white rounded-lg font-semibold transition-all shadow-[0_0_10px_rgba(74,144,226,0.4)]"
+                >
+                  Try again
+                </button>
+                <button 
+                  onClick={handleClose} 
+                  className="px-4 py-1.5 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white rounded-lg font-semibold transition-all"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           )}
 
-          {currentStep === 4 && (
-            <button onClick={handleClose} className="w-full mt-4 bg-[#2C2C2E] hover:bg-[#3C3C3E] text-white py-3 rounded-xl font-bold transition-all">
+          {currentStep === 4 && status === 'idle' && (
+            <button onClick={handleClose} className="w-full mt-4 bg-[#4A90E2] hover:bg-[#357ABD] text-white py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(74,144,226,0.4)]">
               Completed ✓
             </button>
           )}

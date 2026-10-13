@@ -218,17 +218,16 @@ export default function Navbar() {
             {/* Logo + Links */}
             <div className="flex items-center gap-12">
               <Link to="/" className="flex items-center gap-3 group">
-                {/* Official Aura Logo Icon */}
-                <div className="relative w-10 h-10">
-                  <div className="absolute inset-0 rounded-xl bg-cyan-500/20 blur-md group-hover:bg-cyan-500/40 transition-all"></div>
+                <div className="relative w-10 h-10 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-sm group-hover:bg-blue-500/35 transition-all"></div>
                   <img
-                    src="/aura-logo-icon-v2.svg"
+                    src="/aura-icon.svg"
                     alt="Aura Payments"
-                    className="relative w-10 h-10 rounded-xl object-contain shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-all"
+                    className="relative w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-200"
                   />
                 </div>
                 <div className="flex items-center gap-1.5 leading-none">
-                  <span className="text-xl font-bold tracking-tight text-white group-hover:text-cyan-100 transition-colors">
+                  <span className="text-xl font-bold tracking-tight text-white group-hover:text-blue-100 transition-colors">
                     Aura
                   </span>
                   <span className="text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-400 to-cyan-300">

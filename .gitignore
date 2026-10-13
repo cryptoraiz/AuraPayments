@@ -46,3 +46,7 @@ lerna-debug.log*
 
 .vercel
 .env*
+
+Thumbs.db
+img/
+
