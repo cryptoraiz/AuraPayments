@@ -24,12 +24,12 @@ export const TOKENS = [
     chainId:  5042,
   },
   {
-    symbol:   'USYC',
-    name:     'Circle USYC (Yield)',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
-    address:  '0x8a5D989Bbb96929F689B0200f435f53dA42bF490',
-    decimals: 6,
-    color:    'bg-emerald-500',
+    symbol:   'cirBTC',
+    name:     'Circle Bitcoin',
+    iconImg:  '/cirbtc.svg',
+    address:  '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF',
+    decimals: 8,
+    color:    'bg-orange-500',
     chainId:  5042,
   },
 

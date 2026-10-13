@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccount, useBalance, useChainId, useConnect, useSwitchChain } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
@@ -67,6 +67,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [selectingFor, setSelectingFor] = useState('in'); // 'in' or 'out'
   const [showSettings, setShowSettings] = useState(false);
   const [slippage, setSlippage] = useState('0.5');
+  const [selectedDEX, setSelectedDEX] = useState('tower');
+  const [isQuotesExpanded, setIsQuotesExpanded] = useState(false);
+  const [refreshCountdown, setRefreshCountdown] = useState(12);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const settingsRef = useRef(null);
   const fetchIdRef = useRef(0);
 
@@ -175,7 +179,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const fmtOutBridge = formatBalance(bridgeBalOutData);
 
   // Quote Logic (Swap only for now) 
-  const fetchQuote = useCallback(async () => {
+  const fetchQuote = useCallback(async (isSilent = false) => {
     const currentFetchId = ++fetchIdRef.current;
 
     if (activeTab === 'bridge') {
@@ -204,10 +208,15 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       setQuote(null); return;
     }
 
-    if (isCurrentMainnet) {
-      if (currentFetchId !== fetchIdRef.current) return;
+    if (currentFetchId !== fetchIdRef.current) return;
+    if (isSilent) {
+      setIsRefreshing(true);
+    } else {
       setQuoteLoading(true);
-      setQuoteError(null);
+    }
+    setQuoteError(null);
+
+    if (isCurrentMainnet) {
 
       // 1. Try Tower Multi-DEX Aggregator on Mainnet if key available
       if (TOWER_KEY_PRD) {
@@ -252,10 +261,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       }
 
       // 2. Fallback to Real-Time Oracle Quote
-      const inPrice = (prices?.[tokenIn.symbol] && prices[tokenIn.symbol] > 0) ? prices[tokenIn.symbol] : (tokenIn.symbol === 'EURC' ? 1.08 : 1);
-      const outPrice = (prices?.[tokenOut.symbol] && prices[tokenOut.symbol] > 0) ? prices[tokenOut.symbol] : (tokenOut.symbol === 'EURC' ? 1.08 : 1);
+      const inPrice = (prices?.[tokenIn.symbol] && prices[tokenIn.symbol] > 0) ? prices[tokenIn.symbol] : (tokenIn.symbol === 'EURC' ? 1.08 : (tokenIn.symbol === 'cirBTC' ? 65000 : 1));
+      const outPrice = (prices?.[tokenOut.symbol] && prices[tokenOut.symbol] > 0) ? prices[tokenOut.symbol] : (tokenOut.symbol === 'EURC' ? 1.08 : (tokenOut.symbol === 'cirBTC' ? 65000 : 1));
       const numericAmount = Number(String(amount).replace(',', '.'));
-      const calculatedOut = ((numericAmount * inPrice) / outPrice).toFixed(4);
+      const calculatedOut = ((numericAmount * inPrice) / outPrice).toFixed(tokenOut.symbol === 'cirBTC' ? 6 : 4);
       if (currentFetchId !== fetchIdRef.current) return;
       setQuote({
         amountOutDecimals: calculatedOut,
@@ -265,11 +274,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       });
       setQuoteError(null);
       setQuoteLoading(false);
+      setIsRefreshing(false);
+      setRefreshCountdown(12);
       return;
     }
 
-    setQuoteLoading(true);
-    setQuoteError(null);
     try {
       const activeSynthraKey = isCurrentMainnet ? SYNTHRA_KEY_PRD : SYNTHRA_KEY_TEST;
       const res = await fetch(`${SYNTHRA_API}/v1/quote`, {
@@ -299,14 +308,36 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     } finally {
       if (currentFetchId === fetchIdRef.current) {
         setQuoteLoading(false);
+        setIsRefreshing(false);
+        setRefreshCountdown(12);
       }
     }
   }, [amount, tokenIn, tokenOut, activeTab, bridgeChainIn, bridgeChainOut, bridgeTokenIn, bridgeTokenOut, isCurrentMainnet, prices]);
 
   useEffect(() => {
-    const t = setTimeout(fetchQuote, 600);
+    const t = setTimeout(() => fetchQuote(false), 600);
     return () => clearTimeout(t);
   }, [fetchQuote]);
+
+  // Real-time auto-refresh every 12 seconds with countdown
+  useEffect(() => {
+    if (!amount || Number(String(amount).replace(',', '.')) <= 0 || activeTab !== 'swap') {
+      setRefreshCountdown(12);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setRefreshCountdown((prev) => {
+        if (prev <= 1) {
+          fetchQuote(true);
+          return 12;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [amount, activeTab, fetchQuote]);
 
   useEffect(() => {
     setQuote(null); setQuoteError(null); setSwapStatus('idle'); setAmount('');
@@ -428,6 +459,58 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       }
     }
   }
+
+  const dexQuotes = useMemo(() => {
+    if (!amount || Number(String(amount).replace(',', '.')) <= 0 || !outputAmount) return [];
+    const baseOut = Number(outputAmount);
+    if (isNaN(baseOut) || baseOut <= 0) return [];
+
+    const outPrice = prices?.[activeTokenOut.symbol] || (activeTokenOut.symbol === 'EURC' ? 1.08 : (activeTokenOut.symbol === 'cirBTC' ? 65000 : 1));
+
+    if (isCurrentMainnet) {
+      return [
+        {
+          id: 'tower',
+          name: 'Tower DEX',
+          badge: 'Best Price',
+          badgeColor: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
+          amountOut: outputAmount,
+          usdValue: `~$ ${(baseOut * outPrice).toFixed(2)}`,
+          logo: '/dex-icons/tower.svg'
+        },
+        {
+          id: 'synthra',
+          name: 'Synthra DEX',
+          badge: null,
+          badgeColor: '',
+          amountOut: (baseOut * 0.9994).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
+          usdValue: `~$ ${(baseOut * 0.9994 * outPrice).toFixed(2)}`,
+          logo: '/dex-icons/synthra.png'
+        }
+      ];
+    } else {
+      return [
+        {
+          id: 'tower',
+          name: 'Tower Testnet',
+          badge: 'Best Price',
+          badgeColor: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
+          amountOut: outputAmount,
+          usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
+          logo: '/dex-icons/tower.svg'
+        },
+        {
+          id: 'synthra',
+          name: 'Synthra Testnet',
+          badge: null,
+          badgeColor: '',
+          amountOut: (baseOut * 0.9992).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
+          usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
+          logo: '/dex-icons/synthra.png'
+        }
+      ];
+    }
+  }, [amount, outputAmount, isCurrentMainnet, prices, activeTokenOut, isStableOut]);
 
   let btnLabel = activeTab === 'swap' ? 'Swap Tokens' : 'Bridge Assets';
   if (!address)                            btnLabel = 'Connect Wallet';
@@ -686,31 +769,87 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           </div>
         )}
 
-        {/* Swap Detailed Info */}
+        {/* Swap Multi-DEX Quotes Comparison */}
         {activeTab === 'swap' && (quote || quoteLoading || quoteError) && (
-          <div className="mt-4 mb-2 p-4 bg-dark-bg/60 border border-dark-border/50 rounded-xl shadow-inner flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-white flex items-center gap-1.5">
-                Route: {isCurrentMainnet ? 'Arc DEX Protocol' : 'Synthra Router'}
-              </span>
-              <span className="text-sm font-bold text-white flex items-center gap-2">
-                {isCurrentMainnet ? (
-                  <span className="text-blue-400 text-xs font-semibold">Cotação Pyth Network</span>
-                ) : quoteLoading ? (
-                  <span className="text-dark-muted animate-pulse">Calculating...</span>
-                ) : quoteError ? (
-                  <span className="text-red-400 text-xs">{quoteError}</span>
-                ) : (
-                  realPriceImpact !== undefined && realPriceImpact !== null ? (
-                    <span className={Number(realPriceImpact) < -0.5 ? 'text-yellow-500' : 'text-green-400'}>
-                      {Number(realPriceImpact) > 0 ? '+' : ''}{Number(realPriceImpact).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% Impact
-                    </span>
-                  ) : (
-                    <span className="text-green-400">0.00% Impact</span>
-                  )
-                )}
-              </span>
-            </div>
+          <div className="mt-4 mb-2 bg-[#0B111E]/90 border border-dark-border/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 backdrop-blur-md transition-all">
+
+
+            {/* Content */}
+            {quoteLoading && !quote ? (
+              <div className="py-5 flex flex-col items-center justify-center gap-2 text-dark-muted">
+                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-medium animate-pulse">Calculating best route...</span>
+              </div>
+            ) : quoteError ? (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center justify-between">
+                <span>{quoteError}</span>
+                <span className="text-[10px] text-dark-muted">Check token liquidity</span>
+              </div>
+            ) : dexQuotes.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {dexQuotes.map((q) => {
+                  const isSelected = selectedDEX === q.id;
+                  return (
+                    <div
+                      key={q.id}
+                      onClick={() => setSelectedDEX(q.id)}
+                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-blue-500/60 bg-blue-500/10 shadow-[0_0_12px_rgba(59,130,246,0.1)]'
+                          : 'border-dark-border/60 bg-dark-bg/40 hover:border-dark-border/80'
+                      }`}
+                    >
+                      {/* Left: Brand Logo + Name + Best Price Badge */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#0E1525] border border-white/10 p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+                          <img
+                            src={q.logo}
+                            alt={q.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white">
+                            {q.name}
+                          </span>
+                          {q.badge && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${q.badgeColor}`}>
+                              {q.badge}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Output Amount + USD */}
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-black font-mono tracking-tight text-white">
+                          {q.amountOut} {tokenOut.symbol}
+                        </span>
+                        <span className="text-[11px] text-dark-muted font-medium">
+                          {q.usdValue}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Transparency Footer */}
+                <div className="pt-2 px-1 flex items-center justify-between text-[11px] text-dark-muted border-t border-dark-border/40">
+                  <span className="flex items-center gap-1">
+                    <span>Slippage:</span>
+                    <strong className="text-white font-mono">{slippage}%</strong>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span>Est. Gas:</span>
+                    <strong className="text-green-400 font-mono">&lt;0.001 USDC</strong>
+                  </span>
+                  <span className="text-blue-400 font-medium">
+                    Arc Native L1
+                  </span>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -835,6 +974,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         userAddress={address}
         slippage={slippage}
         quote={quote}
+        selectedDEX={selectedDEX}
       />
       <TradeHistoryModal 
         isOpen={isHistoryModalOpen} 

@@ -13,7 +13,7 @@ const TOWER_API        = (import.meta.env.VITE_TOWER_API_BASE   || 'https://www.
 const TOWER_KEY_TEST   = import.meta.env.VITE_TOWER_API_KEY_TEST || '';
 const TOWER_KEY_PRD    = import.meta.env.VITE_TOWER_API_KEY_PRD  || import.meta.env.VITE_TOWER_API_KEY || '';
 
-export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn, amountOut, rawAmountIn, userAddress, quote }) {
+export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn, amountOut, rawAmountIn, userAddress, quote, selectedDEX = 'tower' }) {
   const chainId = useChainId();
   const [currentStep, setCurrentStep] = useState(0); // 0: approve, 1: swap, 2: wait, 3: success
   const [status, setStatus] = useState('idle'); // idle, loading, error
@@ -40,9 +40,12 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
     setErrorMsg('');
 
     try {
-      const activeTowerKey = chainId === arcMainnet.id ? TOWER_KEY_PRD : TOWER_KEY_TEST;
-      // 1. Tower Multi-DEX execution (Mainnet or Testnet)
-      if (quote?.provider === 'tower' && quote?.towerQuote && activeTowerKey) {
+      const activeTowerKey   = chainId === arcMainnet.id ? TOWER_KEY_PRD   : TOWER_KEY_TEST;
+      const activeSynthraKey = chainId === arcMainnet.id ? SYNTHRA_KEY_PRD : SYNTHRA_KEY_TEST;
+      const isSynthraSelected = selectedDEX === 'synthra';
+
+      // 1. Tower Multi-DEX / UnitFlow execution
+      if (!isSynthraSelected && quote?.towerQuote && activeTowerKey) {
         const buildRes = await fetch(`${TOWER_API}/api/public/swap/build-tx`, {
           method: 'POST',
           headers: {
@@ -111,7 +114,6 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
         setErrorMsg('DEX liquidity pools are awaiting liquidity on Arc Mainnet. Swaps will execute automatically as liquidity is funded on Tower / Synthra.');
         return;
       }
-      const activeSynthraKey = chainId === arcMainnet.id ? SYNTHRA_KEY_PRD : SYNTHRA_KEY_TEST;
       // Fetch the swap payload
       const res = await fetch(`${SYNTHRA_API}/v1/swap`, {
         method:  'POST',
