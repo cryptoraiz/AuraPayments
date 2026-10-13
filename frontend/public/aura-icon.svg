@@ -1,5 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
-  <defs><linearGradient id="auraBg" gradientUnits="userSpaceOnUse" x1="40" y1="30" x2="216" y2="230"><stop offset="0" stop-color="#5CC8FF"/><stop offset="1" stop-color="#2459F2"/></linearGradient></defs>
-  <circle cx="128" cy="128" r="124" fill="url(#auraBg)"/>
-  <path d="M214.9 151.3 A90 90 0 1 1 104.7 41.1" fill="none" stroke="#fff" stroke-opacity="0.65" stroke-width="18" stroke-linecap="round"/><path d="M73.9 113.5 A56 56 0 1 1 142.5 182.1" fill="none" stroke="#fff" stroke-opacity="1" stroke-width="24" stroke-linecap="round"/><rect x="-24" y="-24" width="48" height="48" rx="11" fill="#fff" transform="translate(128 128) rotate(45)"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="60" height="60">
+  <defs>
+    <linearGradient id="aura-d" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#3b8de0"/>
+      <stop offset="1" stop-color="#7ff0ff"/>
+    </linearGradient>
+  </defs>
+  <path d="M6 36 A24 24 0 0 1 54 36" fill="none" stroke="url(#aura-d)" stroke-opacity="0.4" stroke-width="2" stroke-linecap="round"/>
+  <path d="M13 52 L30 10 L47 52" fill="none" stroke="url(#aura-d)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="30" cy="38" r="4.2" fill="#e6f8ff"/>
 </svg>

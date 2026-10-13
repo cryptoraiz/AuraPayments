@@ -129,9 +129,10 @@ const CCTP_V2_MAINNET_TRANSMITTER = '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64'
 // Helper: poll Iris API for attestation 
 async function pollAttestation(txHash, fromChainId, maxAttempts = 60) {
   const isMainnet = fromChainId === 5042 || fromChainId === 1 || fromChainId === 8453 || fromChainId === 42161 || fromChainId === 10 || fromChainId === 137;
+  const sourceDomain = CHAIN_DOMAIN_MAP[fromChainId] ?? 26;
   const irisApiUrl = isMainnet 
-    ? 'https://iris-api.circle.com/v2/messages/26'
-    : 'https://iris-api-sandbox.circle.com/v2/messages/26';
+    ? `https://iris-api.circle.com/v2/messages/${sourceDomain}`
+    : `https://iris-api-sandbox.circle.com/v2/messages/${sourceDomain}`;
 
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise(r => setTimeout(r, 3000)); // wait 3s per attempt
@@ -253,11 +254,20 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
 
       if (destinationDomain === undefined) throw new Error(`Destination network not supported (chainId ${toChainId})`);
 
-      // Ensure we're on the source chain
+      // Ensure we're on the source chain and verify wallet actively switched
       try {
-        await switchChainAsync({ chainId: fromChainId });
+        const currentChainHex = await window.ethereum?.request({ method: 'eth_chainId' });
+        const currentChainId = currentChainHex ? parseInt(currentChainHex, 16) : null;
+        if (currentChainId && currentChainId !== fromChainId) {
+          await switchChainAsync({ chainId: fromChainId });
+          await new Promise(r => setTimeout(r, 800));
+          const postSwitchHex = await window.ethereum?.request({ method: 'eth_chainId' });
+          if (postSwitchHex && parseInt(postSwitchHex, 16) !== fromChainId) {
+            throw new Error(`Please confirm the network switch to ${fromChain?.name || 'source'} in your wallet.`);
+          }
+        }
       } catch (err) {
-        throw new Error('You must be on the source network to start the bridge.');
+        throw new Error(err.message || `You must switch to ${fromChain?.name || 'source'} network to start the bridge.`);
       }
 
       // Check existing ERC-20 allowance to avoid redundant approvals and unnecessary wallet popups

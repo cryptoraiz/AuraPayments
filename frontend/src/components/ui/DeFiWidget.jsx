@@ -407,10 +407,22 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       }
       setBridgeChainIn(selection.chain);
       setBridgeTokenIn(selection.token);
+
+      // Automatically prompt wallet to switch to the new source network
+      if (address && connectedChainId && selection.chain.id !== connectedChainId) {
+        try {
+          switchChain({ chainId: selection.chain.id });
+        } catch (_) {}
+      }
     } else {
       if (selection.chain.id === bridgeChainIn.id) {
          setBridgeChainIn(bridgeChainOut);
          setBridgeTokenIn(bridgeTokenOut);
+         if (address && connectedChainId && bridgeChainOut.id !== connectedChainId) {
+           try {
+             switchChain({ chainId: bridgeChainOut.id });
+           } catch (_) {}
+         }
       }
       setBridgeChainOut(selection.chain);
       setBridgeTokenOut(selection.token);
@@ -433,6 +445,17 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     }
 
     if (activeTab === 'bridge') {
+      if (address && connectedChainId && bridgeChainIn && connectedChainId !== bridgeChainIn.id) {
+        try {
+          await switchChain({ chainId: bridgeChainIn.id });
+        } catch (err) {
+          if (err.code !== 4001 && !err.message?.includes('rejected')) {
+            toast.error(`Could not switch to ${bridgeChainIn.name}.`);
+          }
+        }
+        return;
+      }
+
       if (bridgeChainIn.id === bridgeChainOut.id) {
         const isMainnet = !bridgeChainIn.isTestnet;
         const complementary = isMainnet
@@ -565,9 +588,12 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     }
   }, [amount, outputAmount, isCurrentMainnet, prices, activeTokenOut, isStableOut]);
 
+  const isBridgeWrongChain = activeTab === 'bridge' && address && connectedChainId && bridgeChainIn && connectedChainId !== bridgeChainIn.id;
+
   let btnLabel = activeTab === 'swap' ? 'Swap Tokens' : 'Bridge Assets';
   if (!address)                                        btnLabel = 'Connect Wallet';
   else if (activeTab === 'swap' && isWrongChain)       btnLabel = 'Switch to Arc Network';
+  else if (isBridgeWrongChain)                         btnLabel = `Switch to ${bridgeChainIn.name}`;
   else if (swapStatus === 'approving')                 btnLabel = '⏳ Approving Token...';
   else if (swapStatus === 'swapping')                  btnLabel = '⏳ Sending Transaction...';
   else if (swapStatus === 'success')                   btnLabel = '✅ Completed!';
@@ -579,7 +605,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
   // Only disable the button if connected AND missing info/wrong chain or insufficient balance
   const btnDisabled = address && (
-    (activeTab === 'swap' && isWrongChain)
+    (activeTab === 'swap' && isWrongChain) || isBridgeWrongChain
       ? false 
       : (swapLoading || quoteLoading || !quote || !amount || Number(amount) <= 0 || isInsufficientBalance || swapStatus === 'success')
   );
@@ -778,6 +804,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             {/* Arrow */}
             <div className="relative h-2 flex items-center justify-center z-10 -my-3">
               <div onClick={() => { 
+                  const targetChain = bridgeChainOut;
                   setBridgeChainIn(bridgeChainOut); setBridgeChainOut(bridgeChainIn); 
                   setBridgeTokenIn(bridgeTokenOut); setBridgeTokenOut(bridgeTokenIn);
                   if (quote && quote.amountOutDecimals) {
@@ -786,6 +813,13 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                     setAmount('');
                   }
                   setQuote(null); setSwapStatus('idle'); 
+
+                  // Automatically prompt wallet to switch to the new source chain
+                  if (address && connectedChainId && targetChain && targetChain.id !== connectedChainId) {
+                    try {
+                      switchChain({ chainId: targetChain.id });
+                    } catch (_) {}
+                  }
                 }}
                 className="absolute w-10 h-10 bg-dark-card border-4 border-dark-bg rounded-xl flex items-center justify-center text-dark-muted hover:text-white transition-all hover:bg-dark-border cursor-pointer shadow-lg hover:rotate-180 duration-500">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
@@ -1007,7 +1041,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         amount={amount}
         fromChain={bridgeChainIn}
         toChain={bridgeChainOut}
-        token={bridgeTokenIn}
+        token={actualTokenIn}
         userAddress={address}
         receiverAddress={receiverAddress}
         onComplete={() => {
