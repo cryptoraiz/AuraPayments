@@ -32,11 +32,38 @@ import { useTokenPrices, formatUsdValue } from '../../hooks/useTokenPrices';
 export default function DeFiWidget({ defaultTab = 'swap' }) {
   const { address }   = useAccount();
   const { connect, connectors } = useConnect();
-  const { switchChain } = useSwitchChain();
+  const { switchChain, switchChainAsync } = useSwitchChain();
   const navigate = useNavigate();
   const connectedChainId = useChainId();
   const queryClient = useQueryClient();
   const { prices } = useTokenPrices();
+
+  // Resilient Network Switching with Raw Fallback
+  const handleSwitchNetwork = async (targetChainId) => {
+    if (!targetChainId) return;
+    try {
+      if (switchChainAsync) {
+        await switchChainAsync({ chainId: targetChainId });
+      } else {
+        await switchChain({ chainId: targetChainId });
+      }
+      queryClient.invalidateQueries();
+    } catch (err) {
+      if (err?.code === 4001 || err?.message?.includes('rejected')) return;
+      try {
+        if (typeof window !== 'undefined' && window.ethereum) {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+          });
+          queryClient.invalidateQueries();
+        }
+      } catch (fallbackErr) {
+        if (fallbackErr?.code === 4001 || fallbackErr?.message?.includes('rejected')) return;
+        console.warn('Network switch failed:', fallbackErr);
+      }
+    }
+  };
 
   // Invalidate balance caches on network switch
   useEffect(() => {
@@ -410,18 +437,14 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
       // Automatically prompt wallet to switch to the new source network
       if (address && connectedChainId && selection.chain.id !== connectedChainId) {
-        try {
-          switchChain({ chainId: selection.chain.id });
-        } catch (_) {}
+        handleSwitchNetwork(selection.chain.id);
       }
     } else {
       if (selection.chain.id === bridgeChainIn.id) {
          setBridgeChainIn(bridgeChainOut);
          setBridgeTokenIn(bridgeTokenOut);
          if (address && connectedChainId && bridgeChainOut.id !== connectedChainId) {
-           try {
-             switchChain({ chainId: bridgeChainOut.id });
-           } catch (_) {}
+           handleSwitchNetwork(bridgeChainOut.id);
          }
       }
       setBridgeChainOut(selection.chain);
@@ -446,13 +469,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
     if (activeTab === 'bridge') {
       if (address && connectedChainId && bridgeChainIn && connectedChainId !== bridgeChainIn.id) {
-        try {
-          await switchChain({ chainId: bridgeChainIn.id });
-        } catch (err) {
-          if (err.code !== 4001 && !err.message?.includes('rejected')) {
-            toast.error(`Could not switch to ${bridgeChainIn.name}.`);
-          }
-        }
+        await handleSwitchNetwork(bridgeChainIn.id);
         return;
       }
 
@@ -478,13 +495,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     }
 
     if (isWrongChain) {
-      try {
-        await switchChain({ chainId: arcMainnet.id });
-      } catch (err) {
-        if (err.code !== 4001 && !err.message?.includes('rejected')) {
-          toast.error('Could not switch to Arc Network.');
-        }
-      }
+      await handleSwitchNetwork(arcMainnet.id);
       return;
     }
 
@@ -816,9 +827,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
                   // Automatically prompt wallet to switch to the new source chain
                   if (address && connectedChainId && targetChain && targetChain.id !== connectedChainId) {
-                    try {
-                      switchChain({ chainId: targetChain.id });
-                    } catch (_) {}
+                    handleSwitchNetwork(targetChain.id);
                   }
                 }}
                 className="absolute w-10 h-10 bg-dark-card border-4 border-dark-bg rounded-xl flex items-center justify-center text-dark-muted hover:text-white transition-all hover:bg-dark-border cursor-pointer shadow-lg hover:rotate-180 duration-500">

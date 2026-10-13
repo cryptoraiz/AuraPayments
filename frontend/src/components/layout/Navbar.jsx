@@ -15,7 +15,7 @@ export default function Navbar() {
   const { disconnect } = useDisconnect()
   const { count: notificationCount } = useInvoiceNotifications()
   const chainId = useChainId()
-  const { switchChain } = useSwitchChain()
+  const { switchChain, switchChainAsync } = useSwitchChain()
   const queryClient = useQueryClient()
   const [showWalletModal, setShowWalletModal] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -41,17 +41,23 @@ export default function Navbar() {
     connect({ connector })
   }
 
-  // Handle network switch (Toggle between Arc Mainnet and Arc Testnet)
-  const handleToggleNetwork = async () => {
-    const targetChain = chainId === arcMainnet.id ? arcTestnet : arcMainnet
+  // Switch wallet to Arc Mainnet if not already on it
+  const handleSwitchToMainnet = async () => {
+    if (chainId === arcMainnet.id) {
+      return
+    }
     try {
-      await switchChain({ chainId: targetChain.id })
+      if (switchChainAsync) {
+        await switchChainAsync({ chainId: arcMainnet.id })
+      } else {
+        await switchChain({ chainId: arcMainnet.id })
+      }
       queryClient.invalidateQueries()
     } catch (err) {
       if (err.code === 4001 || err.message?.includes('rejected')) {
         return
       }
-      await attemptRawSwitchTo(targetChain)
+      await attemptRawSwitchTo(arcMainnet)
     }
   }
 
@@ -92,121 +98,6 @@ export default function Navbar() {
       return false
     }
   }
-
-  const attemptRawSwitch = () => attemptRawSwitchTo(arcMainnet)
-
-  // Auto-switch with REAL chainId verification (bypass Rabby cache bug)
-  useEffect(() => {
-    if (!isConnected) {
-      // console.log('❌ Not connected, skipping auto-switch')
-      return
-    }
-
-    let mounted = true
-    let pollAttempts = 0
-    const maxPollAttempts = 30 // Poll for 15 seconds total
-    let retryCount = 0
-    const maxRetries = 2
-
-    // Get REAL chainId from provider (bypass wagmi cache)
-    const getRealChainId = async () => {
-      try {
-        let provider = null
-        if (typeof connector?.getProvider === 'function') {
-          provider = await connector.getProvider()
-        } else if (connector?.provider) {
-          provider = connector.provider
-        } else if (typeof window !== 'undefined' && window.ethereum) {
-          provider = window.ethereum
-        }
-
-        if (!provider || typeof provider.request !== 'function') return null
-
-        const hexChainId = await provider.request({ method: 'eth_chainId' })
-        const realChainId = parseInt(hexChainId, 16)
-        return realChainId
-      } catch (err) {
-        return null
-      }
-    }
-
-    // Poll for chainId if not immediately available
-    const pollForChainId = async () => {
-      if (!mounted) return
-
-      // Get real chainId from provider
-      const realChainId = await getRealChainId()
-
-      if (!realChainId) {
-        pollAttempts++
-        if (pollAttempts < maxPollAttempts) {
-          setTimeout(pollForChainId, 500)
-        } else {
-          console.error('❌ chainId not detected after 5s - possible wallet issue')
-          // toast.error('Error detecting network. Try disconnecting and reconnecting.')
-        }
-        return
-      }
-
-      // chainId detected, check if switching is needed
-      if (realChainId === arcTestnet.id || realChainId === arcMainnet.id) {
-        return
-      }
-
-      // Different chainId detected, starting auto-switch...
-      attemptSwitch()
-    }
-
-    const attemptSwitch = async () => {
-      if (!mounted) return
-
-      // Verify again before switching
-      const realChainId = await getRealChainId()
-      if (realChainId === arcTestnet.id || realChainId === arcMainnet.id) {
-        // console.log('✅ Network already changed')
-        return
-      }
-
-      // Auto-Switch started
-
-      try {
-        await switchChain({ chainId: arcMainnet.id })
-        // console.log('✅ Auto-Switch successful!')
-        // toast.success('Network switched successfully!')
-      } catch (err) {
-        console.warn(`⚠️ Auto - Switch Error(Attempt ${retryCount + 1}): `, err)
-
-        // Ignore user rejection
-        if (err.code === 4001 || err.message?.includes('rejected')) {
-          // console.log('❌ User rejected network switch')
-          return
-        }
-
-        // Fallback to Raw Switch on last attempt
-        if (retryCount >= maxRetries) {
-          // console.log("🔧 Trying Fallback Raw Switch...")
-          const success = await attemptRawSwitch()
-          if (!success) {
-            toast.error('Could not switch to Arc Network. Please switch manually.', { duration: 5000 })
-          }
-        } else {
-          retryCount++
-          // console.log(`⏳ Waiting 1.5s for next attempt...`)
-          setTimeout(attemptSwitch, 1500)
-        }
-      }
-    }
-
-    // Start polling
-    pollForChainId()
-
-    return () => {
-      mounted = false
-    }
-  }, [isConnected, chainId, switchChain, connector])
-
-  // Check if on correct network (Arc Mainnet or Arc Testnet)
-  const isCorrectNetwork = chainId === arcTestnet.id || chainId === arcMainnet.id
 
   const isActive = (path) => location.pathname === path
 
@@ -268,7 +159,7 @@ export default function Navbar() {
                   </svg>
                   Aura AI
                 </Link>
-                {chainId !== arcMainnet.id && (
+                {chainId === arcTestnet.id && (
                   <Link
                     to="/faucet"
                     className={`text-sm font-medium transition ${isActive('/faucet') ? 'text-white' : 'text-dark-muted hover:text-white'
@@ -282,18 +173,15 @@ export default function Navbar() {
 
             {/* Right Buttons */}
             <div className="flex items-center gap-3">
-              {/* Interactive Network Switch Badge */}
+              {/* Network Badge - Always Arc Mainnet */}
               <button
-                onClick={handleToggleNetwork}
-                title={`Click to switch to ${chainId === arcMainnet.id ? 'Arc Testnet' : 'Arc Mainnet'}`}
+                onClick={handleSwitchToMainnet}
+                title="Arc Mainnet"
                 className="px-2.5 sm:px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 hover:border-blue-500/40 hover:bg-white/5 transition-all group cursor-pointer"
               >
-                <div className={`w-2 h-2 rounded-full ${isCorrectNetwork ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-                <span className="hidden sm:inline">{chainId === arcMainnet.id ? 'Arc Mainnet' : chainId === arcTestnet.id ? 'Arc Testnet' : 'Arc Network'}</span>
-                <span className="sm:hidden">{chainId === arcMainnet.id ? 'Mainnet' : chainId === arcTestnet.id ? 'Testnet' : 'Arc'}</span>
-                <svg className="w-3.5 h-3.5 text-dark-muted group-hover:text-blue-400 transition-colors ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
+                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                <span className="hidden sm:inline">Arc Mainnet</span>
+                <span className="sm:hidden">Mainnet</span>
               </button>
 
               {/* Wallet Button */}
@@ -386,7 +274,7 @@ export default function Navbar() {
               </svg>
               Aura AI
             </Link>
-            {chainId !== arcMainnet.id && (
+            {chainId === arcTestnet.id && (
               <Link
                 to="/faucet"
                 onClick={() => setIsMobileMenuOpen(false)}

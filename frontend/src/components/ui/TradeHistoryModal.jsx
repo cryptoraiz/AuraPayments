@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAccount, useConnect, useChainId } from 'wagmi';
 import { arcMainnet } from '../../config/wagmi';
-import { getTradeHistoryByWallet } from '../../utils/localStorage';
+import { getTradeHistoryByWallet, deleteTrade } from '../../utils/localStorage';
+import { toast } from 'sonner';
 import WalletModal from './WalletModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TOKENS } from '../../config/tokens';
@@ -43,6 +44,15 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
     const handleWalletSelect = (connector) => {
         connect({ connector });
         setShowWalletModal(false);
+    };
+
+    const handleDelete = (tradeId) => {
+        deleteTrade(tradeId);
+        setTrades(prev => prev.filter(t => t.id !== tradeId));
+        if (selectedTrade && selectedTrade.id === tradeId) {
+            setSelectedTrade(null);
+        }
+        toast.success('Activity removed from history');
     };
 
     useEffect(() => {
@@ -120,7 +130,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                     </button>
                     <div className="relative mb-8 mx-auto w-24 h-24 mt-4">
                             <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl animate-pulse"></div>
-                            <div className="relative w-full h-full bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full border border-white/10 flex items-center justify-center p-5">
+                            <div className="relative w-full h-full bg-gradient-to-br from-blue-500/15 via-sky-500/10 to-cyan-500/15 rounded-full border border-white/10 flex items-center justify-center p-5">
                                 <svg className="w-10 h-10 text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
@@ -183,7 +193,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                             >
                                 {/* Header: Unique Aura Theme */}
                                 <div className="flex flex-col items-center mt-2 mb-6">
-                                    <h2 className="text-[26px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 tracking-tight mb-1 text-center">
+                                    <h2 className="text-[26px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-400 to-cyan-300 tracking-tight mb-1 text-center">
                                         Transaction Log
                                     </h2>
                                     <span className="text-xs text-white/50 uppercase tracking-widest font-bold">Your recent activity</span>
@@ -258,9 +268,23 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                                                 <span className="text-[11px] font-bold uppercase tracking-wider">Confirmed</span>
                                                             </div>
                                                             
-                                                            <div className="flex items-center gap-1 text-[12px] font-medium text-white/50 group-hover:text-blue-400 transition-colors">
-                                                                Details
-                                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDelete(item.id);
+                                                                    }}
+                                                                    title="Remove from history"
+                                                                    className="p-1.5 text-white/30 hover:text-red-400 transition-colors rounded-lg hover:bg-white/5"
+                                                                >
+                                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                                <div className="flex items-center gap-1 text-[12px] font-medium text-white/50 group-hover:text-blue-400 transition-colors">
+                                                                    Details
+                                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -386,6 +410,15 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                    >
                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                                        Back to Timeline
+                                   </button>
+                                   <button 
+                                       onClick={() => handleDelete(selectedTrade.id)} 
+                                       className="w-full mt-2.5 py-2.5 text-xs text-red-400/80 hover:text-red-300 hover:bg-red-500/10 active:scale-[0.98] rounded-xl font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                   >
+                                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                       </svg>
+                                       Delete from Log
                                    </button>
                                 </div>
 

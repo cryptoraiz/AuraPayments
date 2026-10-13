@@ -357,7 +357,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
                         {/* Icon Container with Animation */}
                         <div className="relative mb-8 mx-auto w-24 h-24">
                             <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl animate-pulse"></div>
-                            <div className="relative w-full h-full bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full border border-white/10 flex items-center justify-center p-5">
+                            <div className="relative w-full h-full bg-gradient-to-br from-blue-500/15 via-sky-500/10 to-cyan-500/15 rounded-full border border-white/10 flex items-center justify-center p-5">
                                 <svg className="w-10 h-10 text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>

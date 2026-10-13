@@ -310,11 +310,48 @@ const TRADE_HISTORY_KEY = 'arc_trade_history';
 
 export const getTradeHistory = () => {
     try {
-        const trades = localStorage.getItem(TRADE_HISTORY_KEY);
-        return trades ? JSON.parse(trades) : [];
+        const raw = localStorage.getItem(TRADE_HISTORY_KEY);
+        let trades = raw ? JSON.parse(raw) : [];
+        // Auto-purge legacy simulation test trades (e.g. 10 EURC from tests 70+ days ago)
+        const hasLegacy = trades.some(t => 
+            (t.tokenIn === 'EURC' && Number(t.amountIn) === 10) ||
+            (!t.walletAddress && !t.txHash)
+        );
+        if (hasLegacy) {
+            trades = trades.filter(t => 
+                !(t.tokenIn === 'EURC' && Number(t.amountIn) === 10) &&
+                !(!t.walletAddress && !t.txHash)
+            );
+            localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(trades));
+        }
+        return trades;
     } catch (error) {
         console.error('Error reading trade history:', error);
         return [];
+    }
+};
+
+export const deleteTrade = (tradeId) => {
+    try {
+        const trades = getTradeHistory();
+        const filtered = trades.filter(t => t.id !== tradeId);
+        localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(filtered));
+        return true;
+    } catch (error) {
+        console.error('Error deleting trade:', error);
+        return false;
+    }
+};
+
+export const clearTradeHistoryByWallet = (walletAddress) => {
+    try {
+        const trades = getTradeHistory();
+        const filtered = trades.filter(t => t.walletAddress?.toLowerCase() !== walletAddress?.toLowerCase());
+        localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(filtered));
+        return true;
+    } catch (error) {
+        console.error('Error clearing trade history:', error);
+        return false;
     }
 };
 
