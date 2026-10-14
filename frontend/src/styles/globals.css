@@ -81,7 +81,7 @@
     background-color: rgb(15 23 42 / 0.5) !important;
   }
 
-  /* Forçar fundo escuro no autofill/paste */
+  /* Force dark background on autofill/paste */
   .input-float:-webkit-autofill,
   .input-float:-webkit-autofill:hover,
   .input-float:-webkit-autofill:focus,

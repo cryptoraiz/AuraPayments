@@ -393,3 +393,61 @@ export const getTradeHistoryByWallet = (walletAddress, chainId) => {
         }
     );
 };
+
+// PENDING BRIDGE RECOVERY MANAGEMENT
+const PENDING_BRIDGE_KEY = 'aura_pending_bridge_';
+
+export const savePendingBridge = (bridgeData) => {
+    try {
+        if (!bridgeData?.userAddress) return false;
+        const key = `${PENDING_BRIDGE_KEY}${bridgeData.userAddress.toLowerCase()}`;
+        localStorage.setItem(key, JSON.stringify(bridgeData));
+        window.dispatchEvent(new Event('pending_bridge_updated'));
+        return true;
+    } catch (e) {
+        console.error('Error saving pending bridge:', e);
+        return false;
+    }
+};
+
+export const getPendingBridge = (walletAddress) => {
+    try {
+        if (!walletAddress) return null;
+        const key = `${PENDING_BRIDGE_KEY}${walletAddress.toLowerCase()}`;
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        return null;
+    }
+};
+
+export const clearPendingBridge = (walletAddress) => {
+    try {
+        if (!walletAddress) return false;
+        const key = `${PENDING_BRIDGE_KEY}${walletAddress.toLowerCase()}`;
+        localStorage.removeItem(key);
+        window.dispatchEvent(new Event('pending_bridge_updated'));
+        return true;
+    } catch (e) {
+        return false;
+    }
+};
+
+export const updateTradeByHash = (txHash, updates) => {
+    try {
+        const trades = getTradeHistory();
+        const idx = trades.findIndex(t => 
+            (t.txHash && t.txHash.toLowerCase() === txHash.toLowerCase()) || 
+            (t.hash && t.hash.toLowerCase() === txHash.toLowerCase())
+        );
+        if (idx !== -1) {
+            trades[idx] = { ...trades[idx], ...updates };
+            localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(trades));
+            window.dispatchEvent(new Event('storage'));
+            return true;
+        }
+        return false;
+    } catch (e) {
+        return false;
+    }
+};

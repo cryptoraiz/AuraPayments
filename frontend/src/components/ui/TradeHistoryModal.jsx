@@ -263,10 +263,17 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                                         </div>
 
                                                         <div className="flex items-center justify-between mt-4">
-                                                            <div className="flex items-center gap-1.5 text-emerald-400/90 bg-emerald-400/10 px-2.5 py-1 rounded-md">
-                                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                                                                <span className="text-[11px] font-bold uppercase tracking-wider">Confirmed</span>
-                                                            </div>
+                                                            {item.status === 'pending_attestation' ? (
+                                                                <div className="flex items-center gap-1.5 text-sky-400 bg-sky-400/10 px-2.5 py-1 rounded-md">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></div>
+                                                                    <span className="text-[11px] font-bold uppercase tracking-wider">Aguardando Circle (~15m)</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-1.5 text-emerald-400/90 bg-emerald-400/10 px-2.5 py-1 rounded-md">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                                                                    <span className="text-[11px] font-bold uppercase tracking-wider">Confirmed</span>
+                                                                </div>
+                                                            )}
                                                             
                                                             <div className="flex items-center gap-2">
                                                                 <button
@@ -385,10 +392,10 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                           const chain = (selectedTrade.fromChain || selectedTrade.network || '').toLowerCase();
                                           const isMainnet = selectedTrade.chainId === arcMainnet.id || chain.includes('mainnet') || (chainId === arcMainnet.id && !chain.includes('testnet'));
                                           let explorerBase = isMainnet ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app';
-                                          if (chain.includes('base')) explorerBase = 'https://sepolia.basescan.org';
-                                          else if (chain.includes('polygon')) explorerBase = 'https://amoy.polygonscan.com';
-                                          else if (chain.includes('optimism')) explorerBase = 'https://sepolia-optimism.etherscan.io';
-                                          else if (chain.includes('arbitrum')) explorerBase = 'https://sepolia.arbiscan.io';
+                                          if (chain.includes('base')) explorerBase = isMainnet ? 'https://basescan.org' : 'https://sepolia.basescan.org';
+                                          else if (chain.includes('polygon')) explorerBase = isMainnet ? 'https://polygonscan.com' : 'https://amoy.polygonscan.com';
+                                          else if (chain.includes('optimism')) explorerBase = isMainnet ? 'https://optimistic.etherscan.io' : 'https://sepolia-optimism.etherscan.io';
+                                          else if (chain.includes('arbitrum')) explorerBase = isMainnet ? 'https://arbiscan.io' : 'https://sepolia.arbiscan.io';
                                           const validHash = h && h !== 'undefined' && h !== 'null';
                                           return validHash ? (
                                             <a href={`${explorerBase}/tx/${h}`} target="_blank" rel="noopener noreferrer" className="text-[14px] font-bold text-white hover:text-blue-400 flex items-center gap-1.5 transition-colors underline decoration-white/20 underline-offset-2">

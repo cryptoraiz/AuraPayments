@@ -27,16 +27,16 @@ export default class ErrorBoundary extends React.Component {
               ⚡
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-white tracking-tight">Interface Recarregando</h2>
+              <h2 className="text-2xl font-bold text-white tracking-tight">Interface Reload</h2>
               <p className="text-sm text-gray-400">
-                Ocorreu uma atualização de componentes na tela. Clique abaixo para restabelecer a visualização.
+                A component update occurred. Click below to refresh the view.
               </p>
             </div>
             <button
               onClick={this.handleReload}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold transition-all shadow-lg active:scale-98 cursor-pointer"
             >
-              Recarregar Página
+              Reload Page
             </button>
           </div>
         </div>

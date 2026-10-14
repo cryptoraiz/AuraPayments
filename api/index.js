@@ -1,6 +1,3 @@
-// ZERO DEPENDENCY BACKEND
-// No Express, No Cors package. Just native Node.js and dynamic PG.
-
 export default async function handler(req, res) {
     // 1. CORS Headers (Manual)
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -65,8 +62,19 @@ export default async function handler(req, res) {
 
         // POST /api/relayer/bridge
         if (req.method === 'POST' && pathname === '/api/relayer/bridge') {
-            const { handleRelayerBridge } = await import('./controllers/relayer.js');
             return await handleRelayerBridge(req, res);
+        }
+
+        // POST /api/swap/uniswap/quote or /api/swap/quote
+        if (req.method === 'POST' && (pathname === '/api/swap/uniswap/quote' || pathname === '/api/swap/quote')) {
+            const { handleUniswapQuote } = await import('./controllers/uniswap.js');
+            return await handleUniswapQuote(req, res);
+        }
+
+        // POST /api/swap/uniswap/build-tx or /api/swap/build-tx
+        if (req.method === 'POST' && (pathname === '/api/swap/uniswap/build-tx' || pathname === '/api/swap/build-tx')) {
+            const { handleUniswapBuildTx } = await import('./controllers/uniswap.js');
+            return await handleUniswapBuildTx(req, res);
         }
 
         // POST /api/faucet
@@ -105,7 +113,83 @@ export default async function handler(req, res) {
 
 // --- HANDLERS ---
 
-// --- HANDLERS ---
+async function handleRelayerBridge(req, res) {
+    try {
+        const { message, attestation, destinationChainId, dstTransmitter } = req.body || {};
+
+        if (!message || !attestation || !destinationChainId || !dstTransmitter) {
+            return res.status(400).json({ error: 'Missing required CCTP bridge parameters' });
+        }
+
+        const privateKey = process.env.FAUCET_PRIVATE_KEY ? process.env.FAUCET_PRIVATE_KEY.trim() : null;
+        if (!privateKey) {
+            console.error('[Relayer] FAUCET_PRIVATE_KEY missing');
+            return res.status(500).json({ error: 'Relayer is not configured properly (missing private key)' });
+        }
+
+        const RPC_MAP = {
+            11155111: 'https://ethereum-sepolia-rpc.publicnode.com',
+            84532:    'https://sepolia.base.org',
+            421614:   'https://sepolia-rollup.arbitrum.io/rpc',
+            11155420: 'https://sepolia.optimism.io',
+            5042002:  'https://rpc.testnet.arc.network',
+            8453:     'https://mainnet.base.org',
+            42161:    'https://arb1.arbitrum.io/rpc',
+            10:       'https://mainnet.optimism.io',
+            1:        'https://eth.llamarpc.com',
+            137:      'https://polygon-rpc.com',
+            5042:     'https://5042.rpc.thirdweb.com',
+        };
+
+        const chainIdNum = Number(destinationChainId);
+        const rpcUrl = RPC_MAP[chainIdNum] || RPC_MAP[destinationChainId];
+        if (!rpcUrl) {
+            return res.status(400).json({ error: `Unsupported destination chain ID: ${destinationChainId}` });
+        }
+
+        const { ethers } = await import('ethers');
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const wallet = new ethers.Wallet(privateKey, provider);
+
+        const transmitterAbi = [
+            "function receiveMessage(bytes message, bytes attestation) returns (bool)"
+        ];
+
+        const transmitterContract = new ethers.Contract(dstTransmitter, transmitterAbi, wallet);
+
+        try {
+            await transmitterContract.receiveMessage.estimateGas(message, attestation);
+        } catch (gasErr) {
+            console.error('[Relayer] Pre-flight gas estimation failed:', gasErr);
+            const errStr = (gasErr.message || '').toLowerCase();
+            if (errStr.includes('nonce already used') || errStr.includes('already used') || errStr.includes('already minted') || errStr.includes('-39000')) {
+                return res.status(200).json({ 
+                    success: true, 
+                    alreadyMinted: true, 
+                    message: 'Tokens already minted on destination chain' 
+                });
+            }
+            return res.status(400).json({ 
+                error: 'Pre-flight check failed. Message might be invalid.', 
+                details: gasErr.message 
+            });
+        }
+
+        console.log(`[Relayer] Broadcasting receiveMessage to ${dstTransmitter} on chain ${destinationChainId}`);
+        const tx = await transmitterContract.receiveMessage(message, attestation);
+        console.log(`[Relayer] Transaction sent: ${tx.hash}`);
+
+        return res.status(200).json({
+            success: true,
+            txHash: tx.hash,
+            message: 'Bridge transaction broadcasted successfully via Relayer'
+        });
+
+    } catch (error) {
+        console.error('[Relayer] Error executing bridge:', error);
+        return res.status(500).json({ error: 'Internal relayer error', details: error.message });
+    }
+}
 
 async function handleCreateInvoice(req, res) {
     const body = req.body; // Vercel parses JSON body automatically for us

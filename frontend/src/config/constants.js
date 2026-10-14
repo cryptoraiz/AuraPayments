@@ -1,1 +1,9 @@
-export const TREASURY_ADDRESS = '0xDc4fbC06a3Dac1d6b42FB4808B4c98179059C1C4';
+export const TREASURY_ADDRESS = import.meta.env.VITE_TREASURY_ADDRESS || '0xDc4fbC06a3Dac1d6b42FB4808B4c98179059C1C4';
+export const BRIDGE_FEE = 0.00;
+
+// Uniswap V3 Official Deployments on Arc Mainnet (Chain ID 5042)
+export const UNISWAP_V3_ROUTER_ARC = '0x53bf6b0684ec7ef91e1387da3d1a1769bc5a6f77';
+export const UNISWAP_V3_FACTORY_ARC = '0xf0db7b58379503491d857db50ac9ece64c653918';
+export const UNISWAP_V3_QUOTER_ARC = '0x7dfd4f31be6814d2906bde155c3e1b146eac1468';
+export const UNISWAP_V3_UNIVERSAL_ROUTER_ARC = '0x8702463e73f74d0b6765aBceb314Ef07aCb92650';
+

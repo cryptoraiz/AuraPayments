@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { message, attestation, destinationChainId, dstTransmitter } = req.body;
+        const { message, attestation, destinationChainId, dstTransmitter } = req.body || {};
 
         if (!message || !attestation || !destinationChainId || !dstTransmitter) {
             return res.status(400).json({ error: 'Missing required CCTP bridge parameters' });
@@ -30,16 +30,25 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: 'Relayer is not configured properly (missing private key)' });
         }
 
-        // RPC Maps for Testnets
+        // RPC Maps for Testnets and Mainnets
         const RPC_MAP = {
+            // Testnets
             11155111: 'https://ethereum-sepolia-rpc.publicnode.com', // Ethereum Sepolia
-            84532:    'https://sepolia.base.org',            // Base Sepolia
-            421614:   'https://sepolia-rollup.arbitrum.io/rpc', // Arbitrum Sepolia
-            11155420: 'https://sepolia.optimism.io',         // Optimism Sepolia
-            5042002:  'https://rpc.testnet.arc.network'      // Arc Testnet
+            84532:    'https://sepolia.base.org',                    // Base Sepolia
+            421614:   'https://sepolia-rollup.arbitrum.io/rpc',      // Arbitrum Sepolia
+            11155420: 'https://sepolia.optimism.io',                 // Optimism Sepolia
+            5042002:  'https://rpc.testnet.arc.network',             // Arc Testnet
+            // Mainnets
+            8453:     'https://mainnet.base.org',                    // Base Mainnet
+            42161:    'https://arb1.arbitrum.io/rpc',                // Arbitrum One
+            10:       'https://mainnet.optimism.io',                 // Optimism Mainnet
+            1:        'https://eth.llamarpc.com',                    // Ethereum Mainnet
+            137:      'https://polygon-rpc.com',                     // Polygon PoS
+            5042:     'https://5042.rpc.thirdweb.com',               // Arc Mainnet
         };
 
-        const rpcUrl = RPC_MAP[destinationChainId];
+        const chainIdNum = Number(destinationChainId);
+        const rpcUrl = RPC_MAP[chainIdNum] || RPC_MAP[destinationChainId];
         if (!rpcUrl) {
             return res.status(400).json({ error: `Unsupported destination chain ID: ${destinationChainId}` });
         }
@@ -58,12 +67,29 @@ export default async function handler(req, res) {
         const transmitterContract = new ethers.Contract(dstTransmitter, transmitterAbi, wallet);
 
         // Pre-flight check: Estimate Gas.
+        // If this reverts, the attestation might be invalid, or the message was already received.
         try {
             await transmitterContract.receiveMessage.estimateGas(message, attestation);
         } catch (gasErr) {
             console.error('[Relayer] Pre-flight gas estimation failed:', gasErr);
+            const errStr = (gasErr.message || '').toLowerCase();
+            const fullErrStr = JSON.stringify(gasErr).toLowerCase();
+            if (
+                errStr.includes('nonce already used') || 
+                errStr.includes('already used') || 
+                errStr.includes('already minted') || 
+                errStr.includes('-39000') ||
+                fullErrStr.includes('nonce already used') ||
+                fullErrStr.includes('-39000')
+            ) {
+                return res.status(200).json({ 
+                    success: true, 
+                    alreadyMinted: true, 
+                    message: 'Tokens already minted on destination chain' 
+                });
+            }
             return res.status(400).json({ 
-                error: 'Pre-flight check failed. Message might be invalid or already minted.', 
+                error: 'Pre-flight check failed. Message might be invalid.', 
                 details: gasErr.message 
             });
         }
@@ -74,17 +100,10 @@ export default async function handler(req, res) {
         
         console.log(`[Relayer] Transaction sent: ${tx.hash}`);
 
-        // Wait for 1 confirmation to ensure it's mined successfully
-        const receipt = await tx.wait(1);
-
-        if (receipt.status === 0) {
-            throw new Error('Transaction reverted on chain.');
-        }
-
         return res.status(200).json({
             success: true,
-            txHash: receipt.hash,
-            message: 'Bridge completed successfully via Relayer'
+            txHash: tx.hash,
+            message: 'Bridge transaction broadcasted successfully via Relayer'
         });
 
     } catch (error) {

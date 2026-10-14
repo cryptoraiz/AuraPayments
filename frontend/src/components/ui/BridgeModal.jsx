@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { saveTrade } from '../../utils/localStorage';
+import { saveTrade, savePendingBridge, clearPendingBridge, updateTradeByHash } from '../../utils/localStorage';
 import { ERC20_ABI } from '../../utils/abis';
 import { encodeFunctionData, encodeAbiParameters, parseAbiParameters, getAddress } from 'viem';
 import { useSwitchChain } from 'wagmi';
@@ -74,7 +74,7 @@ const RECEIVE_MESSAGE_ABI = [{
   ],
 }];
 
-function encodeDepositForBurn(amount, destinationDomain, mintRecipient, burnToken) {
+function encodeDepositForBurn(amount, destinationDomain, mintRecipient, burnToken, maxFee = 0n, minFinalityThreshold = 1000) {
   return encodeFunctionData({
     abi: DEPOSIT_FOR_BURN_ABI,
     functionName: 'depositForBurn',
@@ -84,8 +84,8 @@ function encodeDepositForBurn(amount, destinationDomain, mintRecipient, burnToke
       mintRecipient,           // already bytes32 hex string
       getAddress(burnToken),   // checksum-safe address
       '0x' + '0'.repeat(64),  // destinationCaller = bytes32(0)
-      BigInt(0),               // maxFee = 0
-      2000,                    // minFinalityThreshold = Full Finality
+      BigInt(maxFee),          // maxFee (atomic units / wei)
+      minFinalityThreshold,    // 1000 = Fast Transfer (sub-minute finality)
     ],
   });
 }
@@ -115,7 +115,7 @@ function encodeTransfer(recipient, amount) {
 }
 
 // Treasury Configuration
-import { TREASURY_ADDRESS } from '../../config/constants';
+import { TREASURY_ADDRESS, BRIDGE_FEE } from '../../config/constants';
 
 // Helper: convert wallet address to bytes32 
 function addressToBytes32(address) {
@@ -125,29 +125,6 @@ function addressToBytes32(address) {
 // Official CCTP V2 Mainnet Contract Deployments (Shared across EVM chains)
 const CCTP_V2_MAINNET_MESSENGER   = '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d';
 const CCTP_V2_MAINNET_TRANSMITTER = '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64';
-
-// Helper: poll Iris API for attestation 
-async function pollAttestation(txHash, fromChainId, maxAttempts = 60) {
-  const isMainnet = fromChainId === 5042 || fromChainId === 1 || fromChainId === 8453 || fromChainId === 42161 || fromChainId === 10 || fromChainId === 137;
-  const sourceDomain = CHAIN_DOMAIN_MAP[fromChainId] ?? 26;
-  const irisApiUrl = isMainnet 
-    ? `https://iris-api.circle.com/v2/messages/${sourceDomain}`
-    : `https://iris-api-sandbox.circle.com/v2/messages/${sourceDomain}`;
-
-  for (let i = 0; i < maxAttempts; i++) {
-    await new Promise(r => setTimeout(r, 3000)); // wait 3s per attempt
-    try {
-      const res = await fetch(`${irisApiUrl}?transactionHash=${txHash}`);
-      if (!res.ok) continue;
-      const data = await res.json();
-      const msg  = data?.messages?.[0];
-      if (msg?.status === 'complete' && msg?.attestation && msg?.message) {
-        return { attestation: msg.attestation, message: msg.message };
-      }
-    } catch (_) { /* keep polling */ }
-  }
-  throw new Error('Attestation timeout - please try again in a few minutes.');
-}
 
 // CCTP Domain map 
 // Source: https://developers.circle.com/stablecoins/supported-domains
@@ -166,6 +143,79 @@ const CHAIN_DOMAIN_MAP = {
   8453: 6,      // Base Mainnet
   137: 7,       // Polygon PoS
 };
+
+// Helper: poll Iris API for attestation with live progress updates
+async function pollAttestation(txHash, fromChainId, onProgress = null, maxAttempts = 360) {
+  const isMainnet = fromChainId === 5042 || fromChainId === 1 || fromChainId === 8453 || fromChainId === 42161 || fromChainId === 10 || fromChainId === 137;
+  const primaryDomain = CHAIN_DOMAIN_MAP[fromChainId] ?? 26;
+  const baseUrl = isMainnet 
+    ? 'https://iris-api.circle.com' 
+    : 'https://iris-api-sandbox.circle.com';
+
+  const candidateDomains = [primaryDomain, 26, 6, 0, 3, 2, 7].filter((v, i, a) => a.indexOf(v) === i);
+
+  const startTime = Date.now();
+  for (let i = 0; i < maxAttempts; i++) {
+    if (i > 0) {
+      await new Promise(r => setTimeout(r, 3500)); // wait 3.5s per attempt
+    }
+    const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+    const mins = Math.floor(elapsedSec / 60);
+    const secs = elapsedSec % 60;
+    const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+    for (const domain of candidateDomains) {
+      try {
+        const res = await fetch(`${baseUrl}/v2/messages/${domain}?transactionHash=${txHash}`);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const msg  = data?.messages?.[0];
+        if (msg?.status === 'complete' && msg?.attestation && msg?.message) {
+          if (onProgress) onProgress({ status: 'complete', timeStr, elapsedSec });
+          return { attestation: msg.attestation, message: msg.message };
+        } else if (msg) {
+          const circleStatus = msg?.status || 'pending_confirmations';
+          if (onProgress) onProgress({ status: circleStatus, timeStr, elapsedSec });
+          break; // Found the right source domain, stay on it for next poll
+        }
+      } catch (_) {}
+    }
+    if (onProgress) onProgress({ status: 'connecting', timeStr, elapsedSec });
+  }
+  throw new Error('Circle verification timeout. The transaction is still being validated on-chain. You can safely retry or resume anytime.');
+}
+
+// Helper: query Circle Iris API for route fee (bps) for Fast Transfer (threshold: 1000)
+async function getCctpFastTransferParams(fromChainId, toChainId, rawAmount) {
+  const isMainnet = fromChainId === 5042 || fromChainId === 1 || fromChainId === 8453 || fromChainId === 42161 || fromChainId === 10 || fromChainId === 137;
+  const srcDomain = CHAIN_DOMAIN_MAP[fromChainId] ?? 26;
+  const dstDomain = CHAIN_DOMAIN_MAP[toChainId] ?? 6;
+  const baseUrl = isMainnet ? 'https://iris-api.circle.com' : 'https://iris-api-sandbox.circle.com';
+
+  let maxFee = 0n;
+  const minFinalityThreshold = 1000; // 1000 = Fast Transfer tier (sub-minute attestation)
+
+  try {
+    const res = await fetch(`${baseUrl}/v2/burn/USDC/fees/${srcDomain}/${dstDomain}`);
+    if (res.ok) {
+      const data = await res.json();
+      const fastTier = Array.isArray(data) ? data.find(t => t.finalityThreshold === 1000) : null;
+      if (fastTier && typeof fastTier.minimumFee === 'number' && fastTier.minimumFee > 0) {
+        // minimumFee is in basis points (1 = 0.01%). Add 50% safety buffer.
+        const multiplier = BigInt(Math.ceil(fastTier.minimumFee * 1500));
+        maxFee = (BigInt(rawAmount) * multiplier) / 10000000n;
+        if (maxFee === 0n && fastTier.minimumFee > 0) {
+          maxFee = 100n; // fallback to minimum subunits (0.0001 USDC)
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[CCTP Fast Transfer] Failed to fetch fee, using fallback:', err);
+    maxFee = BigInt(rawAmount) / 10000n;
+  }
+
+  return { maxFee, minFinalityThreshold };
+}
 
 const CHAIN_MESSENGER_MAP = {
   // Testnet
@@ -200,14 +250,22 @@ const CHAIN_TRANSMITTER_MAP = {
   137:      CCTP_V2_MAINNET_TRANSMITTER,
 };
 
-export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChain, token, userAddress, receiverAddress, onComplete }) {
+export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChain, token, userAddress, receiverAddress, initialBurnTxHash, onComplete }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [status, setStatus] = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const [burnTxHash, setBurnTxHash] = useState('');
+  const [burnTxHash, setBurnTxHash] = useState(initialBurnTxHash || '');
   const [receiveTxHash, setReceiveTxHash] = useState('');
+  const [attestationStatus, setAttestationStatus] = useState(null);
+  const [rescueHashInput, setRescueHashInput] = useState('');
+  const [showRescueInput, setShowRescueInput] = useState(false);
+  const isExecutingRef = useRef(false);
+  const hasStartedRef = useRef(false);
 
   const handleClose = () => {
+    hasStartedRef.current = false;
+    isExecutingRef.current = false;
+    setBurnTxHash('');
     if (currentStep === 4 && onComplete) {
       onComplete();
     } else if (onClose) {
@@ -230,21 +288,13 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
     return <div className={`w-5 h-5 rounded-full border-2 shrink-0 transition-all ${isActive ? 'border-[#4A90E2] bg-[#4A90E2]/20 shadow-[0_0_12px_rgba(74,144,226,0.4)]' : 'border-dark-border bg-transparent'}`} />;
   };
 
-  const executeBridge = async () => {
+  const executeBridge = async (existingHash = null) => {
+    if (isExecutingRef.current) return;
+    isExecutingRef.current = true;
     setStatus('loading');
     setErrorMsg('');
     try {
       if (!userAddress) throw new Error('Wallet not connected.');
-      if (!token || typeof token.decimals !== 'number') throw new Error('Invalid token.');
-      const amtNum = Number(amount || 0);
-      const bridgeAmt = amtNum;
-
-      // Use BigInt math to avoid JavaScript float precision errors
-      const decimals = token.decimals;
-      const [intPart, decPart = ''] = String(bridgeAmt.toFixed(6)).replace(/0+$/, '').split('.');
-      const decPadded = (decPart + '0'.repeat(decimals)).slice(0, decimals);
-      const rawAmount = (BigInt(intPart) * BigInt(10 ** decimals) + BigInt(decPadded || '0')).toString();
-
       const fromChainId = fromChain?.id || 5042002;
       const toChainId   = toChain?.id   || 11155111;
 
@@ -254,148 +304,275 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
 
       if (destinationDomain === undefined) throw new Error(`Destination network not supported (chainId ${toChainId})`);
 
-      // Ensure we're on the source chain and verify wallet actively switched
-      try {
-        const currentChainHex = await window.ethereum?.request({ method: 'eth_chainId' });
-        const currentChainId = currentChainHex ? parseInt(currentChainHex, 16) : null;
-        if (currentChainId && currentChainId !== fromChainId) {
-          await switchChainAsync({ chainId: fromChainId });
-          await new Promise(r => setTimeout(r, 800));
-          const postSwitchHex = await window.ethereum?.request({ method: 'eth_chainId' });
-          if (postSwitchHex && parseInt(postSwitchHex, 16) !== fromChainId) {
-            throw new Error(`Please confirm the network switch to ${fromChain?.name || 'source'} in your wallet.`);
+      let activeBurnHash = existingHash || initialBurnTxHash || null;
+
+      // STEP 0 & STEP 1: APPROVE AND BURN (Only executed if no burn hash exists yet)
+      if (!activeBurnHash) {
+        if (!token || typeof token.decimals !== 'number') throw new Error('Invalid token.');
+        const amtNum = Number(amount || 0);
+        const hasFee = BRIDGE_FEE > 0 && amtNum > BRIDGE_FEE;
+        const netBridgeAmt = hasFee ? (amtNum - BRIDGE_FEE) : amtNum;
+
+        // Use BigInt math to avoid JavaScript float precision errors
+        const decimals = token.decimals;
+        const [intPart, decPart = ''] = String(netBridgeAmt.toFixed(6)).replace(/0+$/, '').split('.');
+        const decPadded = (decPart + '0'.repeat(decimals)).slice(0, decimals);
+        const rawAmount = (BigInt(intPart) * BigInt(10 ** decimals) + BigInt(decPadded || '0')).toString();
+
+        // Ensure we're on the source chain and verify wallet actively switched
+        try {
+          const currentChainHex = await window.ethereum?.request({ method: 'eth_chainId' });
+          const currentChainId = currentChainHex ? parseInt(currentChainHex, 16) : null;
+          if (currentChainId && currentChainId !== fromChainId) {
+            await switchChainAsync({ chainId: fromChainId });
+            await new Promise(r => setTimeout(r, 800));
+            const postSwitchHex = await window.ethereum?.request({ method: 'eth_chainId' });
+            if (postSwitchHex && parseInt(postSwitchHex, 16) !== fromChainId) {
+              throw new Error(`Please confirm the network switch to ${fromChain?.name || 'source'} in your wallet.`);
+            }
+          }
+        } catch (err) {
+          throw new Error(err.message || `You must switch to ${fromChain?.name || 'source'} network to start the bridge.`);
+        }
+
+        // Check existing ERC-20 allowance to avoid redundant approvals
+        let currentAllowance = 0n;
+        try {
+          const allowanceCallData = encodeFunctionData({
+            abi: ERC20_ABI,
+            functionName: 'allowance',
+            args: [getAddress(userAddress), getAddress(srcMessenger)],
+          });
+          const allowanceHex = await window.ethereum.request({
+            method: 'eth_call',
+            params: [{ to: token.address, data: allowanceCallData }, 'latest'],
+          });
+          if (allowanceHex && allowanceHex !== '0x') {
+            currentAllowance = BigInt(allowanceHex);
+          }
+        } catch (allowanceErr) {
+          console.warn('[BridgeModal] Allowance check fallback:', allowanceErr);
+        }
+
+        // STEP 0: APPROVE (only prompted if allowance is insufficient - standard 1st popup)
+        const requiredAllowance = BigInt(rawAmount);
+        if (currentAllowance < requiredAllowance) {
+          setCurrentStep(0);
+          // Standard infinite approval (Circle CCTP official best practice)
+          const MAX_UINT256_HEX = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+          const approveData = encodeApprove(srcMessenger, MAX_UINT256_HEX);
+          const approveHash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [{ from: userAddress, to: token.address, data: approveData }],
+          });
+          await waitForTxReceipt(approveHash);
+        }
+
+        // STEP 1: BURN (depositForBurn - standard 2nd popup, zero extra fee transactions)
+        setCurrentStep(1);
+
+        const mintRecipient = addressToBytes32(receiverAddress || userAddress);
+        const { maxFee, minFinalityThreshold } = await getCctpFastTransferParams(fromChainId, toChainId, rawAmount);
+        const burnData = encodeDepositForBurn(rawAmount, destinationDomain, mintRecipient, token.address, maxFee, minFinalityThreshold);
+        
+        // Dynamically estimate gas with 25% safety buffer instead of hardcoding 4,000,000 gas
+        let gasLimitHex = undefined;
+        try {
+          const estGas = await window.ethereum.request({
+            method: 'eth_estimateGas',
+            params: [{ from: userAddress, to: srcMessenger, data: burnData }],
+          });
+          if (estGas) {
+            const buffered = (BigInt(estGas) * 125n) / 100n;
+            gasLimitHex = '0x' + buffered.toString(16);
+          }
+        } catch (gasEstErr) {
+          console.warn('[BridgeModal] Gas estimation fallback:', gasEstErr);
+          gasLimitHex = '0x493E0'; // 300,000 gas fallback (realistic, prevents excessive gas reserve errors)
+        }
+
+        const txParams = { from: userAddress, to: srcMessenger, data: burnData };
+        if (gasLimitHex) txParams.gas = gasLimitHex;
+
+        activeBurnHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [txParams],
+        });
+        setBurnTxHash(activeBurnHash);
+        await waitForTxReceipt(activeBurnHash);
+
+        // Immediately persist pending bridge to localStorage
+        savePendingBridge({
+          burnHash: activeBurnHash,
+          fromChainId,
+          toChainId,
+          fromChainName: fromChain?.name,
+          toChainName: toChain?.name,
+          amount,
+          tokenSymbol: token?.symbol,
+          userAddress,
+          receiverAddress: receiverAddress || userAddress,
+          timestamp: Date.now(),
+        });
+
+        // Also record in trade history with pending status
+        saveTrade({
+          id: activeBurnHash,
+          type: 'Bridge',
+          status: 'pending_attestation',
+          walletAddress: userAddress,
+          chainId: fromChainId,
+          tokenIn: token?.symbol,
+          tokenOut: token?.symbol,
+          amountIn: amount,
+          amountOut: netBridgeAmt,
+          fromChain: fromChain?.name,
+          toChain: toChain?.name,
+          txHash: activeBurnHash,
+          hash: activeBurnHash,
+        });
+      } else {
+        setBurnTxHash(activeBurnHash);
+      }
+
+      // STEP 2 & 3: FETCH ATTESTATION & WAIT FOR FINALITY
+      setCurrentStep(2);
+      setAttestationStatus({ status: 'pending_confirmations', timeStr: '00:00' });
+      const { attestation, message } = await pollAttestation(
+        activeBurnHash, 
+        fromChainId, 
+        (progress) => {
+          setAttestationStatus(progress);
+          if (progress.elapsedSec >= 4) {
+            setCurrentStep(3);
           }
         }
-      } catch (err) {
-        throw new Error(err.message || `You must switch to ${fromChain?.name || 'source'} network to start the bridge.`);
-      }
+      );
 
-      // Check existing ERC-20 allowance to avoid redundant approvals and unnecessary wallet popups
-      let currentAllowance = 0n;
+      // STEP 4: MINT ON DESTINATION CHAIN
+      setCurrentStep(4);
+
+      let alreadyMinted = false;
+
+      // Extract destination domain directly from the validated Circle message payload
+      const { ethers } = await import('ethers');
+      const msgBytes = ethers.getBytes(message);
+      const parsedDstDomain = ethers.getNumber(ethers.dataSlice(msgBytes, 8, 12));
+      const DOMAIN_TO_CHAIN = {
+        6: 8453,   // Base Mainnet
+        26: 5042,  // Arc Mainnet
+        3: 42161,  // Arbitrum One
+        2: 10,     // Optimism Mainnet
+        0: 1,      // Ethereum Mainnet
+        7: 137,    // Polygon PoS
+      };
+      const actualToChainId = DOMAIN_TO_CHAIN[parsedDstDomain] || toChainId;
+      const actualDstTransmitter = CHAIN_TRANSMITTER_MAP[actualToChainId] || dstTransmitter;
+
+      // 1. Silent Check: Check destination chain RPC to see if nonce is already consumed
       try {
-        const allowanceCallData = encodeFunctionData({
-          abi: ERC20_ABI,
-          functionName: 'allowance',
-          args: [getAddress(userAddress), getAddress(srcMessenger)],
-        });
-        const allowanceHex = await window.ethereum.request({
-          method: 'eth_call',
-          params: [{ to: token.address, data: allowanceCallData }, 'latest'],
-        });
-        if (allowanceHex && allowanceHex !== '0x') {
-          currentAllowance = BigInt(allowanceHex);
+        const destRpc = actualToChainId === 8453 
+          ? 'https://mainnet.base.org' 
+          : (actualToChainId === 5042 ? 'https://rpc.mainnet.arc.io' : (toChain?.rpcUrls?.default?.http?.[0] || 'https://mainnet.base.org'));
+        const destProvider = new ethers.JsonRpcProvider(destRpc);
+        const transmitterContract = new ethers.Contract(actualDstTransmitter, ['function usedNonces(bytes32) view returns (uint256)'], destProvider);
+        const sourceDomain = ethers.getNumber(ethers.dataSlice(msgBytes, 4, 8));
+        const nonce = ethers.toBigInt(ethers.dataSlice(msgBytes, 12, 20));
+        const sourceAndNonce = ethers.keccak256(ethers.solidityPacked(['uint32', 'uint64'], [sourceDomain, nonce]));
+        const isUsed = await transmitterContract.usedNonces(sourceAndNonce);
+        if (Number(isUsed) > 0) {
+          console.log('[BridgeModal] Message already minted on destination!');
+          alreadyMinted = true;
         }
-      } catch (allowanceErr) {
-        console.warn('[BridgeModal] Allowance check fallback:', allowanceErr);
+      } catch (checkErr) {
+        console.warn('[BridgeModal] Destination nonce check notice:', checkErr);
       }
 
-      // STEP 0: APPROVE (only prompted if allowance is insufficient)
-      if (currentAllowance < BigInt(rawAmount)) {
-        setCurrentStep(0);
-        const approveData = encodeApprove(srcMessenger, rawAmount);
-        const approveHash = await window.ethereum.request({
-          method: 'eth_sendTransaction',
-          params: [{ from: userAddress, to: token.address, data: approveData }],
-        });
-        await waitForTxReceipt(approveHash);
-      }
-
-      // STEP 1: BURN (depositForBurn) 
-      setCurrentStep(1);
-      const mintRecipient = addressToBytes32(receiverAddress || userAddress);
-      const burnData = encodeDepositForBurn(rawAmount, destinationDomain, mintRecipient, token.address);
-      const txParams = { from: userAddress, to: srcMessenger, data: burnData, gas: '0x3D0900' };
-
-      const burnHash = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [txParams],
-      });
-      setBurnTxHash(burnHash);
-      await waitForTxReceipt(burnHash);
-
-      // STEP 2: FETCH ATTESTATION (Iris API) 
-      setCurrentStep(2);
-      const { attestation, message } = await pollAttestation(burnHash, fromChainId);
-
-      // STEP 3: MAGIC WITHDRAWAL VIA RELAYER 
-      setCurrentStep(3);
-
-      try {
-        // Send to our Relayer server
-        const relayerRes = await fetch('/api/relayer/bridge', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message,
-            attestation,
-            destinationChainId: toChainId,
-            dstTransmitter
-          })
-        });
-
-        if (!relayerRes.ok) {
-          let errMsg = 'Relayer Server Error';
-          try {
-            const data = await relayerRes.json();
-            if (data.error) errMsg = data.error;
-          } catch(e) {}
-          throw new Error(errMsg);
-        }
-
-        const data = await relayerRes.json();
-        console.log('[BridgeModal] Magic Relayer - Success!', data.txHash);
-        if (data.txHash) setReceiveTxHash(data.txHash);
-        
-      } catch (relayerErr) {
-        console.warn('[BridgeModal] Magic Relayer failure, trying manual fallback...', relayerErr);
-        
-        // --- FALLBACK (Plan B): Manual withdrawal via MetaMask ---
+      if (!alreadyMinted) {
+        // 2. Try backend relayer (production Vercel endpoint)
+        let relayerWorked = false;
         try {
-          await switchChainAsync({ chainId: toChainId });
-        } catch (switchErr) {
-          throw new Error('Server unavailable. To withdraw manually, switch network in MetaMask.');
-        }
+          const relayerRes = await fetch('/api/relayer/bridge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message,
+              attestation,
+              destinationChainId: actualToChainId,
+              dstTransmitter: actualDstTransmitter
+            })
+          });
 
-        await new Promise(r => setTimeout(r, 1500));
+          const data = await relayerRes.json().catch(() => null);
+          if (data?.txHash) {
+            console.log('[BridgeModal] Relayer broadcasted!', data.txHash);
+            setReceiveTxHash(data.txHash);
+            relayerWorked = true;
+            alreadyMinted = true;
+          } else if (data?.alreadyMinted) {
+            relayerWorked = true;
+            alreadyMinted = true;
+          }
+        } catch (_) {}
 
-        try {
+        // 3. Fallback: If relayer is not running (e.g. on localhost), prompt wallet to mint on destination
+        if (!relayerWorked && !alreadyMinted) {
           const receiveData = encodeReceiveMessage(message, attestation);
+
+          // Verify network switch to destination
+          try {
+            await switchChainAsync({ chainId: actualToChainId });
+          } catch (switchErr) {
+            throw new Error(`Please switch network to destination chain in your wallet to complete the mint.`);
+          }
+
+          // Wait until wallet actively reflects destination chain
+          let isCorrectChain = false;
+          for (let attempt = 0; attempt < 10; attempt++) {
+            await new Promise(r => setTimeout(r, 600));
+            const currentChainHex = await window.ethereum?.request({ method: 'eth_chainId' });
+            if (currentChainHex && parseInt(currentChainHex, 16) === actualToChainId) {
+              isCorrectChain = true;
+              break;
+            }
+          }
+
+          if (!isCorrectChain) {
+            throw new Error(`Please switch to destination network in your wallet to finish delivery.`);
+          }
+
+          let gasLimitHex = undefined;
+          try {
+            const estGas = await window.ethereum.request({
+              method: 'eth_estimateGas',
+              params: [{ from: userAddress, to: actualDstTransmitter, data: receiveData }],
+            });
+            if (estGas) {
+              const buffered = (BigInt(estGas) * 125n) / 100n;
+              gasLimitHex = '0x' + buffered.toString(16);
+            }
+          } catch (gasErr) {
+            gasLimitHex = '0x493E0'; // 300,000 gas fallback
+          }
+
+          const txParams = { from: userAddress, to: actualDstTransmitter, data: receiveData };
+          if (gasLimitHex) txParams.gas = gasLimitHex;
+
           const receiveHash = await window.ethereum.request({
             method: 'eth_sendTransaction',
-            params: [{ from: userAddress, to: dstTransmitter, data: receiveData }],
+            params: [txParams],
           });
           setReceiveTxHash(receiveHash);
           await waitForTxReceipt(receiveHash);
-        } catch (receiveErr) {
-          console.error('[BridgeModal receiveMessage error]', receiveErr);
-          if (receiveErr?.code === 4001 || receiveErr?.message?.toLowerCase().includes('user rejected')) {
-            throw new Error('Manual transaction cancelled by user.');
-          }
-          throw new Error(`Relayer and manual withdrawal failed. Please check if you have native ETH on ${toChain?.name || 'destination'} network.`);
         }
       }
 
-      // STEP 4: SUCCESS — restore back to Arc Testnet 
+      // STEP 4: SUCCESS
       setCurrentStep(4);
       setStatus('idle');
-
-      try {
-        await switchChainAsync({ chainId: fromChainId });
-      } catch (_) { /* non-critical */ }
-
-      saveTrade({
-        type: 'Bridge',
-        walletAddress: userAddress,
-        chainId: fromChainId,
-        tokenIn: token?.symbol,
-        tokenOut: token?.symbol,
-        amountIn: amount,
-        amountOut: bridgeAmt,
-        fromChain: fromChain?.name,
-        toChain: toChain?.name,
-        txHash: burnHash,
-        hash: burnHash,
-      });
+      clearPendingBridge(userAddress);
+      updateTradeByHash(activeBurnHash, { status: 'confirmed' });
+      window.dispatchEvent(new Event('aura:bridge-complete'));
 
     } catch (err) {
       console.error('[BridgeModal CCTP]', err);
@@ -413,42 +590,83 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
         setErrorMsg(err.message || 'Unknown error');
       }
       setStatus('error');
+    } finally {
+      isExecutingRef.current = false;
     }
   };
 
   useEffect(() => {
     if (isOpen) {
-      setCurrentStep(0); setStatus('idle'); setErrorMsg(''); setBurnTxHash(''); setReceiveTxHash('');
-      const t = setTimeout(() => {
-        if (amount && Number(amount) > 0) {
+      if (hasStartedRef.current) return;
+      hasStartedRef.current = true;
+
+      setErrorMsg(''); 
+      setReceiveTxHash('');
+      const targetBurn = initialBurnTxHash || null;
+      if (targetBurn) {
+        setBurnTxHash(targetBurn);
+        setCurrentStep(2);
+        setStatus('loading');
+        executeBridge(targetBurn);
+      } else if (amount && Number(amount) > 0) {
+        setBurnTxHash('');
+        setCurrentStep(0); 
+        setStatus('idle');
+        const t = setTimeout(() => {
           executeBridge();
-        } else {
-          setErrorMsg('Please enter an amount greater than 0 to bridge.');
-          setStatus('error');
-        }
-      }, 500);
-      return () => clearTimeout(t);
+        }, 500);
+        return () => clearTimeout(t);
+      } else {
+        setBurnTxHash('');
+        setCurrentStep(0);
+        setStatus('idle');
+        setShowRescueInput(true);
+      }
+    } else {
+      hasStartedRef.current = false;
+      isExecutingRef.current = false;
+      setBurnTxHash('');
     }
-  }, [isOpen, amount]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const amountDisplay = Math.max(0, Number(amount || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  const amtNum = Math.max(0, Number(amount || 0));
+  const hasFee = BRIDGE_FEE > 0 && amtNum > BRIDGE_FEE;
+  const netAmountNum = hasFee ? (amtNum - BRIDGE_FEE) : amtNum;
+  const amountDisplay = amtNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  const netAmountDisplay = netAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+
+  const getEstimatedTime = (fromId) => {
+    if (fromId === 1 || fromId === 11155111) return '12-15 min';
+    if (fromId === 5042 || fromId === 5042002) return '2-5 min';
+    return '1-2 min';
+  };
 
   const steps = [
     { label: `Approve ${token?.symbol || 'USDC'}`, hint: 'Approving in your wallet' },
-    { label: `Burn ${amountDisplay} ${token?.symbol}`, hint: 'Initiating cross-chain transfer' },
-    { label: 'Fetch Attestation',             hint: 'Waiting for Circle validation' },
-    { label: `Mint ~${amountDisplay} ${token?.symbol} on ${toChain?.name || 'Destination'}`, hint: 'Dynamic relayer fee deducted from total' },
-    { label: 'Bridge Complete!', hint: '' },
+    { label: 'Burn', hint: 'Burning on source network' },
+    { label: 'Fetch Attestation', hint: 'Circle validation in progress' },
+    { label: `Wait ~${getEstimatedTime(fromChain?.id)}`, hint: 'Processing cross-chain finality' },
+    { label: `Mint ${netAmountDisplay} ${token?.symbol || 'USDC'} on ${toChain?.name || 'Arc'}`, hint: 'Delivering tokens to recipient' },
   ];
+
+  const handleRescueSubmit = (e) => {
+    e.preventDefault();
+    if (!rescueHashInput || !rescueHashInput.startsWith('0x') || rescueHashInput.length < 32) {
+      setErrorMsg('Please enter a valid transaction hash starting with 0x');
+      return;
+    }
+    setShowRescueInput(false);
+    setBurnTxHash(rescueHashInput.trim());
+    executeBridge(rescueHashInput.trim());
+  };
 
   return (
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-        onClick={handleClose}
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -463,19 +681,40 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
           </button>
 
           <div className="flex flex-col items-center mt-2 mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[#2C2C2E] relative shrink-0 p-[2px]">
+            <div className="relative mb-3">
+              <div className="w-14 h-14 rounded-full bg-[#2775CA]/10 border border-[#2775CA]/20 flex items-center justify-center p-2.5 shadow-[0_0_20px_rgba(39,117,202,0.25)]">
+                <img
+                  src={token?.iconImg || 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png'}
+                  alt={token?.symbol || 'USDC'}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#1C1C1E] border border-white/10 flex items-center justify-center p-0.5">
                 <img src={fromChain?.icon} alt={fromChain?.name} className="w-full h-full rounded-full" />
               </div>
-              <svg className="w-5 h-5 text-dark-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-              <div className="w-12 h-12 rounded-full bg-[#2C2C2E] relative shrink-0 p-[2px]">
-                <img src={toChain?.icon} alt={toChain?.name} className="w-full h-full rounded-full" />
-              </div>
             </div>
-            <h2 className="text-[22px] font-bold text-white tracking-tight mb-1 text-center">
-              Bridge {amount} {token?.symbol}
+
+            <h2 className="text-[22px] font-bold text-white tracking-tight mb-0.5 text-center">
+              Bridge {netAmountDisplay} {token?.symbol || 'USDC'}
             </h2>
-            <span className="text-sm text-dark-muted font-medium">via Circle CCTP v2</span>
+            <div className="flex items-center gap-1.5 text-xs text-dark-muted font-medium mb-3">
+              <span>via Circle CCTP</span>
+              {hasFee ? (
+                <>
+                  <span>•</span>
+                  <span>{BRIDGE_FEE.toFixed(2)} fee</span>
+                </>
+              ) : (
+                <>
+                  <span>•</span>
+                  <span className="text-emerald-400 font-semibold">Zero Fee (1:1)</span>
+                </>
+              )}
+            </div>
+
+            <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-bold text-white/80">
+              Steps
+            </div>
           </div>
 
           <div className="bg-white/[0.02] border border-white/5 shadow-[0_0_20px_rgba(0,0,0,0.3)] backdrop-blur-xl rounded-3xl p-5 relative">
@@ -484,24 +723,33 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
               <div key={i} className={`flex items-center gap-4 relative z-10 ${i < steps.length - 1 ? 'mb-6' : ''}`}>
                 <StepIndicator stepIndex={i} />
                 <div className="flex-1 flex justify-between items-center">
-                  <span className={`font-semibold text-[15px] transition-colors ${currentStep >= i ? (i === 4 && status === 'idle' ? 'text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]') : 'text-white/40'}`}>
-                    {i === 4 && currentStep >= 4 && status === 'idle' ? 'Bridge Successful!' : step.label}
+                  <span className={`font-semibold text-[15px] transition-colors ${currentStep >= i ? (status === 'idle' && currentStep >= 4 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]') : 'text-white/40'}`}>
+                    {step.label}
                   </span>
                   {currentStep === i && status === 'loading' && step.hint && (
                     <span className="text-[13px] text-[#4A90E2] drop-shadow-[0_0_5px_rgba(74,144,226,0.5)] animate-pulse">{step.hint}</span>
                   )}
-                  {i === 4 && currentStep >= 4 && status === 'idle' && <span className="text-[13px] text-green-400">✓ Done</span>}
+                  {((currentStep > i) || (status === 'idle' && currentStep >= 4)) && (
+                    <span className="text-[13px] text-green-400 font-medium">✓ Done</span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
 
-          {(burnTxHash || receiveTxHash) && currentStep >= 4 && (
-            <div className="mt-4 flex flex-col gap-2 items-center text-xs text-dark-muted bg-dark-bg/50 p-3 rounded-xl border border-dark-border/50">
+
+          {/* Transaction Links Display (Visible immediately once burn hash is present) */}
+          {(burnTxHash || receiveTxHash) && (
+            <div className="mt-4 flex flex-col gap-1.5 items-center text-xs text-dark-muted bg-dark-bg/50 p-3 rounded-xl border border-dark-border/50">
               {burnTxHash && (
                 <div>
                   Burn Tx:{' '}
-                  <a href={fromChain?.explorer ? `${fromChain.explorer}/tx/${burnTxHash}` : `https://explorer.arc.io/tx/${burnTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                  <a
+                    href={fromChain?.explorer ? `${fromChain.explorer}/tx/${burnTxHash}` : `https://basescan.org/tx/${burnTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:underline font-medium"
+                  >
                     {burnTxHash.slice(0, 10)}...{burnTxHash.slice(-8)}
                   </a>
                 </div>
@@ -509,10 +757,55 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
               {receiveTxHash && (
                 <div>
                   Receive Tx:{' '}
-                  <a href={toChain?.explorer ? `${toChain.explorer}/tx/${receiveTxHash}` : `#`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                  <a
+                    href={toChain?.explorer ? `${toChain.explorer}/tx/${receiveTxHash}` : `#`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400 hover:underline font-medium"
+                  >
                     {receiveTxHash.slice(0, 10)}...{receiveTxHash.slice(-8)}
                   </a>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Rescue Option: Paste previous Hash if user previously closed the window */}
+          {!burnTxHash && status === 'idle' && currentStep === 0 && (
+            <div className="mt-3 text-center">
+              {!showRescueInput ? (
+                <button
+                  type="button"
+                  onClick={() => setShowRescueInput(true)}
+                  className="text-[11px] text-blue-400 hover:text-blue-300 underline transition-colors"
+                >
+                  Burned tokens before? Paste transaction hash to claim
+                </button>
+              ) : (
+                <form onSubmit={handleRescueSubmit} className="mt-2 space-y-2 p-3 bg-white/[0.02] border border-white/5 rounded-2xl">
+                  <input
+                    type="text"
+                    placeholder="Paste burn transaction hash (0x...)"
+                    value={rescueHashInput}
+                    onChange={(e) => setRescueHashInput(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-blue-400 font-mono"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      className="flex-1 py-1.5 bg-[#4A90E2] hover:bg-[#357ABD] text-white text-xs font-semibold rounded-lg transition-all"
+                    >
+                      Rescue / Claim Tokens
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowRescueInput(false)}
+                      className="px-3 py-1.5 bg-white/10 text-white/70 text-xs rounded-lg hover:bg-white/20"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               )}
             </div>
           )}
@@ -525,10 +818,10 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
               </div>
               <div className="flex items-center justify-center gap-3 mt-3">
                 <button 
-                  onClick={() => { setErrorMsg(''); executeBridge(); }} 
+                  onClick={() => { setErrorMsg(''); executeBridge(burnTxHash); }} 
                   className="px-4 py-1.5 bg-[#4A90E2] hover:bg-[#357ABD] text-white rounded-lg font-semibold transition-all shadow-[0_0_10px_rgba(74,144,226,0.4)]"
                 >
-                  Try again
+                  {burnTxHash ? 'Resume Verification' : 'Try Again'}
                 </button>
                 <button 
                   onClick={handleClose} 

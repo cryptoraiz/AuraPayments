@@ -1,20 +1,27 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChainId } from 'wagmi';
-import { arcMainnet } from '../../config/wagmi';
+import { arcMainnet, arcTestnet } from '../../config/wagmi';
 import { arcGasHeadroom, waitForReceipt, toHexValue } from '../../utils/chainUtils';
 import { saveTrade } from '../../utils/localStorage';
+import {
+  getUniswapAllowance,
+  buildUniswapApproveTx,
+  buildUniswapSwapTx
+} from '../../utils/uniswapArc';
 
 const SYNTHRA_API = import.meta.env.VITE_SYNTHRA_API_BASE || 'https://trading-api.synthra.org';
-const ARC_CHAIN_ID = 5042002;
 const SYNTHRA_KEY_TEST = import.meta.env.VITE_SYNTHRA_API_KEY || '';
 const SYNTHRA_KEY_PRD  = import.meta.env.VITE_SYNTHRA_API_PRD || import.meta.env.VITE_SYNTHRA_API_KEY || '';
 const TOWER_API        = (import.meta.env.VITE_TOWER_API_BASE   || 'https://www.tower.exchange').replace(/\/+$/, '');
 const TOWER_KEY_TEST   = import.meta.env.VITE_TOWER_API_KEY_TEST || '';
 const TOWER_KEY_PRD    = import.meta.env.VITE_TOWER_API_KEY_PRD  || import.meta.env.VITE_TOWER_API_KEY || '';
+const UNISWAP_KEY      = import.meta.env.VITE_UNISWAP_API_KEY || '';
 
-export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn, amountOut, rawAmountIn, userAddress, quote, selectedDEX = 'tower' }) {
+export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn, amountOut, rawAmountIn, userAddress, quote, selectedDEX = 'uniswap', slippage = '0.5' }) {
   const chainId = useChainId();
+  const activeChainId = chainId === arcTestnet.id ? arcTestnet.id : arcMainnet.id;
+  const isMainnet = activeChainId === arcMainnet.id;
   const [currentStep, setCurrentStep] = useState(0); // 0: approve, 1: swap, 2: wait, 3: success
   const [status, setStatus] = useState('idle'); // idle, loading, error
   const [errorMsg, setErrorMsg] = useState('');
@@ -40,6 +47,136 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
     setErrorMsg('');
 
     try {
+      // 0. Uniswap V3 Execution (Only when Uniswap is specifically selected)
+      if (selectedDEX === 'uniswap') {
+        if (isMainnet) {
+          // Direct On-Chain Execution on Arc Mainnet
+          const tokenInAddress = tokenIn.address;
+          const tokenOutAddress = tokenOut.address;
+
+          // Step 0: Check Allowance & Approve if needed
+          setCurrentStep(0);
+          const currentAllowance = await getUniswapAllowance(tokenInAddress, userAddress);
+          if (currentAllowance < BigInt(rawAmountIn)) {
+            const approveTx = buildUniswapApproveTx(tokenInAddress, rawAmountIn);
+            const approveHash = await window.ethereum.request({
+              method: 'eth_sendTransaction',
+              params: [{ from: userAddress, to: approveTx.to, data: approveTx.data }],
+            });
+            await waitForReceipt(approveHash);
+          }
+
+          // Step 1: Execute Swap via Arc SwapRouter02
+          setCurrentStep(1);
+          const swapTx = buildUniswapSwapTx({
+            tokenInAddress,
+            tokenOutAddress,
+            fee: quote?.fee || 500,
+            recipient: userAddress,
+            amountInRaw: rawAmountIn,
+            amountOutRaw: quote?.amountOutRaw,
+            slippage: Number(slippage || 0.5),
+            path: quote?.path,
+            isMultihop: quote?.isMultihop
+          });
+
+          const hash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [{
+              from: userAddress,
+              to: swapTx.to,
+              data: swapTx.data,
+              value: '0x0',
+              gas: arcGasHeadroom(350000)
+            }]
+          });
+          setSwapTxHash(hash);
+
+          // Step 2: Wait confirmation
+          setCurrentStep(2);
+          await waitForReceipt(hash);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          // Step 3: Success
+          setCurrentStep(3);
+          setStatus('idle');
+          saveTrade({
+            type: 'Swap',
+            walletAddress: userAddress,
+            txHash: hash,
+            tokenIn: tokenIn.symbol,
+            tokenOut: tokenOut.symbol,
+            amountIn,
+            amountOut,
+            status: 'Confirmed',
+            chainId: activeChainId,
+            provider: 'Uniswap V3'
+          });
+          return;
+        }
+
+        // Testnet or Cross-Chain fallback using API
+        if (quote?.uniswapQuote) {
+          const buildRes = await fetch('/api/swap/uniswap/build-tx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              quote: quote.uniswapQuote,
+              userAddress
+            })
+          });
+          const buildData = await buildRes.json();
+          if (buildRes.ok && buildData?.success) {
+            const approveTx = buildData.data?.approval;
+            if (approveTx && approveTx.to && approveTx.data) {
+              setCurrentStep(0);
+              const approveHash = await window.ethereum.request({
+                method: 'eth_sendTransaction',
+                params: [{ from: userAddress, to: approveTx.to, data: approveTx.data }],
+              });
+              await waitForReceipt(approveHash);
+            }
+
+            setCurrentStep(1);
+            const swapTx = buildData.data?.swap || buildData.data?.swapTransaction;
+            if (!swapTx || !swapTx.to || !swapTx.data) throw new Error('Uniswap did not return a swap transaction');
+
+            const hash = await window.ethereum.request({
+              method: 'eth_sendTransaction',
+              params: [{
+                from:  userAddress,
+                to:    swapTx.to,
+                data:  swapTx.data,
+                value: swapTx.value ? toHexValue(swapTx.value) : '0x0',
+                gas:   arcGasHeadroom(swapTx.gasLimit),
+              }],
+            });
+            setSwapTxHash(hash);
+
+            setCurrentStep(2);
+            await waitForReceipt(hash);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            setCurrentStep(3);
+            setStatus('idle');
+            saveTrade({
+              type: 'Swap',
+              walletAddress: userAddress,
+              txHash: hash,
+              tokenIn: tokenIn.symbol,
+              tokenOut: tokenOut.symbol,
+              amountIn,
+              amountOut,
+              status: 'Confirmed',
+              chainId: activeChainId,
+              provider: 'Uniswap V3'
+            });
+            return;
+          }
+        }
+
+        throw new Error('Uniswap pool is not available for this pair.');
+      }
       const activeTowerKey   = chainId === arcMainnet.id ? TOWER_KEY_PRD   : TOWER_KEY_TEST;
       const activeSynthraKey = chainId === arcMainnet.id ? SYNTHRA_KEY_PRD : SYNTHRA_KEY_TEST;
       const isSynthraSelected = selectedDEX === 'synthra';
@@ -92,7 +229,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
         await waitForReceipt(hash);
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        setCurrentStep(4);
+        setCurrentStep(3);
         setStatus('idle');
         saveTrade({
           type: 'Swap',
@@ -122,7 +259,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
           'X-API-KEY': activeSynthraKey
         },
         body: JSON.stringify({
-          chainId:      ARC_CHAIN_ID,
+          chainId:      activeChainId,
           tokenIn:      tokenIn.address,
           tokenOut:     tokenOut.address,
           amount:       rawAmountIn,
@@ -178,9 +315,9 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
       saveTrade({
         type: 'Swap',
         walletAddress: userAddress,
-        chainId: ARC_CHAIN_ID,
-        fromChain: 'Arc Testnet',
-        toChain: 'Arc Testnet',
+        chainId: activeChainId,
+        fromChain: isMainnet ? 'Arc Mainnet' : 'Arc Testnet',
+        toChain: isMainnet ? 'Arc Mainnet' : 'Arc Testnet',
         tokenIn: tokenIn.symbol,
         tokenOut: tokenOut.symbol,
         amountIn,
@@ -190,10 +327,13 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
       });
     } catch (err) {
       console.error('[SwapModal]', err);
-      if (err.code === 4001 || err.message?.includes('user rejected')) {
-        setErrorMsg('Transaction rejected by user.');
+      const lower = (err.message || '').toLowerCase();
+      if (err.code === 4001 || lower.includes('user rejected') || lower.includes('cancelled')) {
+        setErrorMsg('Transaction rejected in wallet.');
+      } else if (lower.includes('transfer amount exceeds balance') || lower.includes('simulation failed') || lower.includes('exceeds balance')) {
+        setErrorMsg('Liquidity pool on Arc Mainnet does not have enough reserve for this pair yet. Your funds are 100% safe.');
       } else {
-        setErrorMsg(err.message || 'Unknown error');
+        setErrorMsg(err.message || 'Swap simulation reverted');
       }
       setStatus('error');
     }
@@ -221,7 +361,6 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -257,7 +396,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
             <h2 className="text-[22px] font-bold text-white tracking-tight mb-1 text-center">
               Swap {amountIn} {tokenIn.symbol} to {amountOut} {tokenOut.symbol}
             </h2>
-            <span className="text-sm text-dark-muted font-medium">via Synthra</span>
+            <span className="text-sm text-dark-muted font-medium">via {selectedDEX === 'uniswap' ? 'Uniswap V3' : (selectedDEX === 'synthra' ? 'Synthra DEX' : 'Tower Exchange')}</span>
           </div>
 
           <div className="flex justify-center mb-6">
@@ -291,7 +430,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
              ))}
           </div>
 
-          {swapTxHash && currentStep >= 4 && (
+          {swapTxHash && currentStep >= 3 && (
             <div className="mt-4 flex flex-col gap-2 items-center text-xs text-dark-muted bg-dark-bg/50 p-3 rounded-xl border border-dark-border/50">
               <div>
                 Tx:{' '}
@@ -308,9 +447,9 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
             </div>
           )}
 
-          {currentStep === 4 && (
-            <button onClick={onClose} className="w-full mt-4 bg-[#2C2C2E] hover:bg-[#3C3C3E] text-white py-3 rounded-xl font-bold transition-all">
-              Done
+          {currentStep >= 3 && (
+            <button onClick={onClose} className="w-full mt-4 bg-[#4A90E2] hover:bg-[#357ABD] text-white py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(74,144,226,0.4)]">
+              Completed ✓
             </button>
           )}
         </motion.div>

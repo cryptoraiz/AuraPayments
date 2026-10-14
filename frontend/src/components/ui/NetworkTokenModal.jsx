@@ -4,12 +4,11 @@ import { getAllTokens } from '../../config/tokens';
 import { getAllChains, getChainsByMode } from '../../config/chains';
 import { useAccount, useBalance, useChainId } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
-import { arcMainnet } from '../../config/wagmi';
+import { arcMainnet, arcTestnet } from '../../config/wagmi';
 
 export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedChain, selectedToken }) {
   const chainId = useChainId();
-  const isMainnet = chainId === arcMainnet.id;
-  const chains = getChainsByMode(isMainnet);
+  const chains = getChainsByMode(true);
   const { address } = useAccount();
   const queryClient = useQueryClient();
 

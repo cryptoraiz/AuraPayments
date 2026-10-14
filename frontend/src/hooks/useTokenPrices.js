@@ -43,23 +43,25 @@ export function useTokenPrices() {
       const pythPrices = {};
       if (data && data.parsed) {
         data.parsed.forEach(feed => {
-          // Pyth prices are represented as an integer (price) and an exponent (expo)
+          const normId = feed.id.replace(/^0x/, '').toLowerCase();
           const price = Number(feed.price.price);
           const expo = Number(feed.price.expo);
-          pythPrices[feed.id] = price * Math.pow(10, expo);
+          pythPrices[normId] = price * Math.pow(10, expo);
         });
       }
 
       // Map symbol → Pyth price
       const mapped = {};
       for (const [symbol, pythId] of Object.entries(PYTH_IDS)) {
-        mapped[symbol] = pythPrices[pythId] ?? null;
+        mapped[symbol] = pythPrices[pythId.toLowerCase()] ?? null;
       }
 
-      // Stablecoins fallback (always $1.00 or €1.12 estimate) if Pyth fails to return a specific ID
+      // Stablecoins & known assets fallback
       if (!mapped.USDC)   mapped.USDC  = 1.00;
       if (!mapped.WUSDC)  mapped.WUSDC = 1.00;
       if (!mapped.USDT)   mapped.USDT  = 1.00;
+      if (!mapped.EURC)   mapped.EURC  = 1.08;
+      if (!mapped.cirBTC) mapped.cirBTC = pythPrices['e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43'] || 65000;
 
       cache.data = mapped;
       cache.ts   = Date.now();
@@ -100,8 +102,13 @@ export function useTokenPrices() {
  * e.g. formatUsdValue('USDC', '841.54', prices) → "$841.54"
  */
 export function formatUsdValue(symbol, balance, prices) {
-  if (!prices || !balance || isNaN(Number(balance))) return '--';
-  const price = prices[symbol];
+  if (!balance || isNaN(Number(balance)) || Number(balance) <= 0) return '--';
+  let price = prices?.[symbol];
+  if (price == null) {
+    if (['USDC', 'WUSDC', 'USDT'].includes(symbol)) price = 1.0;
+    else if (symbol === 'EURC') price = 1.08;
+    else if (symbol === 'cirBTC') price = 65000;
+  }
   if (price == null) return '--';
   const value = Number(balance) * price;
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

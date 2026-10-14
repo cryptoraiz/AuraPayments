@@ -29,10 +29,11 @@ export const handleRelayerBridge = async (req, res) => {
             10:       'https://mainnet.optimism.io',                 // Optimism Mainnet
             1:        'https://eth.llamarpc.com',                    // Ethereum Mainnet
             137:      'https://polygon-rpc.com',                     // Polygon PoS
-            5042:     'https://rpc.mainnet.arc.io',                  // Arc Mainnet
+            5042:     'https://5042.rpc.thirdweb.com',               // Arc Mainnet (High-availability RPC)
         };
 
-        const rpcUrl = RPC_MAP[destinationChainId];
+        const chainIdNum = Number(destinationChainId);
+        const rpcUrl = RPC_MAP[chainIdNum] || RPC_MAP[destinationChainId];
         if (!rpcUrl) {
             return res.status(400).json({ error: `Unsupported destination chain ID: ${destinationChainId}` });
         }
@@ -57,8 +58,16 @@ export const handleRelayerBridge = async (req, res) => {
             await transmitterContract.receiveMessage.estimateGas(message, attestation);
         } catch (gasErr) {
             console.error('[Relayer] Pre-flight gas estimation failed:', gasErr);
+            const errStr = (gasErr.message || '').toLowerCase();
+            if (errStr.includes('nonce already used') || errStr.includes('already used') || errStr.includes('already minted') || errStr.includes('-39000')) {
+                return res.status(200).json({ 
+                    success: true, 
+                    alreadyMinted: true, 
+                    message: 'Tokens already minted on destination chain' 
+                });
+            }
             return res.status(400).json({ 
-                error: 'Pre-flight check failed. Message might be invalid or already minted.', 
+                error: 'Pre-flight check failed. Message might be invalid.', 
                 details: gasErr.message 
             });
         }
@@ -69,17 +78,10 @@ export const handleRelayerBridge = async (req, res) => {
         
         console.log(`[Relayer] Transaction sent: ${tx.hash}`);
 
-        // Wait for 1 confirmation to ensure it's mined successfully
-        const receipt = await tx.wait(1);
-
-        if (receipt.status === 0) {
-            throw new Error('Transaction reverted on chain.');
-        }
-
         return res.status(200).json({
             success: true,
-            txHash: receipt.hash,
-            message: 'Bridge completed successfully via Relayer'
+            txHash: tx.hash,
+            message: 'Bridge transaction broadcasted successfully via Relayer'
         });
 
     } catch (error) {

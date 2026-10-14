@@ -177,7 +177,7 @@ export default function Navbar() {
               <button
                 onClick={handleSwitchToMainnet}
                 title="Arc Mainnet"
-                className="px-2.5 sm:px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 hover:border-blue-500/40 hover:bg-white/5 transition-all group cursor-pointer"
+                className="px-2.5 sm:px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 hover:border-blue-500/40 hover:bg-white/5 transition-all group cursor-pointer text-white"
               >
                 <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
                 <span className="hidden sm:inline">Arc Mainnet</span>

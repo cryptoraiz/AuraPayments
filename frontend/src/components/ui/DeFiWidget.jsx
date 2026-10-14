@@ -13,6 +13,8 @@ import SwapModal from './SwapModal';
 import TradeHistoryModal from './TradeHistoryModal';
 import WalletModal from './WalletModal';
 import ReceivingWalletModal from './ReceivingWalletModal';
+import { getPendingBridge } from '../../utils/localStorage';
+import { BRIDGE_FEE } from '../../config/constants';
 
 // Config 
 const SYNTHRA_API      = (import.meta.env.VITE_SYNTHRA_API_BASE || 'https://trading-api.synthra.org').replace(/\/+$/, '');
@@ -21,12 +23,14 @@ const SYNTHRA_KEY_PRD  = import.meta.env.VITE_SYNTHRA_API_PRD  || import.meta.en
 const TOWER_API        = (import.meta.env.VITE_TOWER_API_BASE   || 'https://www.tower.exchange').replace(/\/+$/, '');
 const TOWER_KEY_TEST   = import.meta.env.VITE_TOWER_API_KEY_TEST || '';
 const TOWER_KEY_PRD    = import.meta.env.VITE_TOWER_API_KEY_PRD  || import.meta.env.VITE_TOWER_API_KEY || '';
-const ARC_CHAIN_ID     = 5042002;
+const UNISWAP_KEY      = import.meta.env.VITE_UNISWAP_API_KEY    || '';
+const ARC_CHAIN_ID     = arcMainnet.id;
 
 
 
 import { toRaw } from '../../utils/chainUtils';
 import { useTokenPrices, formatUsdValue } from '../../hooks/useTokenPrices';
+import { fetchUniswapArcQuote } from '../../utils/uniswapArc';
 
 // Component 
 export default function DeFiWidget({ defaultTab = 'swap' }) {
@@ -74,15 +78,14 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [amount,    setAmount]    = useState('');
   
   // Swap State 
-  const [tokenIn,  setTokenIn]  = useState(getTokenBySymbol('USDC'));
-  const [tokenOut, setTokenOut] = useState(getTokenBySymbol('USDT'));
+  const [tokenIn,  setTokenIn]  = useState(getTokenBySymbol('USDC', arcMainnet.id));
+  const [tokenOut, setTokenOut] = useState(getTokenBySymbol('EURC', arcMainnet.id));
   
   // Bridge State 
-  // Use USDC for both sides initially, but on different mock chains
-  const [bridgeChainIn,   setBridgeChainIn]   = useState(getChainById(ARC_CHAIN_ID));
-  const [bridgeTokenIn,   setBridgeTokenIn]   = useState(getTokenBySymbol('USDC'));
-  const [bridgeChainOut,  setBridgeChainOut]  = useState(getChainById(84532)); // Base Sepolia
-  const [bridgeTokenOut,  setBridgeTokenOut]  = useState(getTokenBySymbol('USDC'));
+  const [bridgeChainIn,   setBridgeChainIn]   = useState(getChainById(arcMainnet.id));
+  const [bridgeTokenIn,   setBridgeTokenIn]   = useState(getTokenBySymbol('USDC', arcMainnet.id));
+  const [bridgeChainOut,  setBridgeChainOut]  = useState(getChainById(8453)); // Base Mainnet
+  const [bridgeTokenOut,  setBridgeTokenOut]  = useState(getTokenBySymbol('USDC', 8453));
 
   // Modals State 
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
@@ -94,12 +97,34 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [selectingFor, setSelectingFor] = useState('in'); // 'in' or 'out'
   const [showSettings, setShowSettings] = useState(false);
   const [slippage, setSlippage] = useState('0.5');
-  const [selectedDEX, setSelectedDEX] = useState('tower');
-  const [isQuotesExpanded, setIsQuotesExpanded] = useState(false);
+  const [selectedDEX, setSelectedDEX] = useState('uniswap');
+  const [isQuotesExpanded, setIsQuotesExpanded] = useState(true);
   const [refreshCountdown, setRefreshCountdown] = useState(12);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const settingsRef = useRef(null);
   const fetchIdRef = useRef(0);
+  const [pendingBridge, setPendingBridge] = useState(null);
+
+  useEffect(() => {
+    if (address) {
+      setPendingBridge(getPendingBridge(address));
+    } else {
+      setPendingBridge(null);
+    }
+
+    const handleUpdate = () => {
+      if (address) {
+        setPendingBridge(getPendingBridge(address));
+      }
+    };
+
+    window.addEventListener('pending_bridge_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('pending_bridge_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, [address]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -122,7 +147,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [swapError,        setSwapError]        = useState('');
   const [txHash,           setTxHash]           = useState(null);
 
-  const isSupportedArcChain = connectedChainId === arcMainnet.id || connectedChainId === arcTestnet.id;
+  // Aura Payments Swap is on Arc Mainnet
+  const isSupportedArcChain = connectedChainId === arcMainnet.id;
   const isWrongChain = address && !isSupportedArcChain;
 
   // Swap Balances 
@@ -130,39 +156,23 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   // we pass token: undefined so wagmi reads native balance instead of calling balanceOf.
   const isNativeIn  = tokenIn?.isNative || tokenIn?.symbol === 'USDC' || tokenIn?.address?.toLowerCase()  === '0x3600000000000000000000000000000000000000';
   const isNativeOut = tokenOut?.isNative || tokenOut?.symbol === 'USDC' || tokenOut?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000';
-  const isCurrentMainnet = connectedChainId 
-    ? (getChainById(connectedChainId) ? !getChainById(connectedChainId).isTestnet : connectedChainId === arcMainnet.id)
-    : true;
-  const activeSwapChainId = isCurrentMainnet ? arcMainnet.id : arcTestnet.id;
+  const isCurrentMainnet = true;
+  const activeSwapChainId = arcMainnet.id;
 
-  // Sync bridge chains and swap tokens when switching between Mainnet and Testnet
+  // Sync bridge chains and swap tokens to Mainnet
   useEffect(() => {
-    if (isCurrentMainnet) {
-      setTokenIn(getTokenBySymbol('USDC', arcMainnet.id));
-      setTokenOut(getTokenBySymbol('EURC', arcMainnet.id));
-      
-      setBridgeChainIn(prevIn => {
-        if (!prevIn || prevIn.isTestnet) return getChainById(arcMainnet.id);
-        return prevIn;
-      });
-      setBridgeChainOut(prevOut => {
-        if (!prevOut || prevOut.isTestnet) return getChainById(8453); // Base Mainnet
-        return prevOut;
-      });
-    } else {
-      setTokenIn(getTokenBySymbol('USDC', arcTestnet.id));
-      setTokenOut(getTokenBySymbol('USDT', arcTestnet.id));
-      
-      setBridgeChainIn(prevIn => {
-        if (!prevIn || !prevIn.isTestnet) return getChainById(arcTestnet.id);
-        return prevIn;
-      });
-      setBridgeChainOut(prevOut => {
-        if (!prevOut || !prevOut.isTestnet) return getChainById(84532); // Base Sepolia
-        return prevOut;
-      });
-    }
-  }, [isCurrentMainnet]);
+    setTokenIn(getTokenBySymbol('USDC', arcMainnet.id));
+    setTokenOut(getTokenBySymbol('EURC', arcMainnet.id));
+    
+    setBridgeChainIn(prevIn => {
+      if (!prevIn || prevIn.isTestnet) return getChainById(arcMainnet.id);
+      return prevIn;
+    });
+    setBridgeChainOut(prevOut => {
+      if (!prevOut || prevOut.isTestnet) return getChainById(8453); // Base Mainnet
+      return prevOut;
+    });
+  }, []);
 
   // Invariant Guard: Source and Destination networks must NEVER be the same
   useEffect(() => {
@@ -175,17 +185,17 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     }
   }, [bridgeChainIn, bridgeChainOut]);
 
-  const { data: balInData } = useBalance({
+  const { data: balInData, refetch: refetchBalIn } = useBalance({
     address,
     token: isNativeIn ? undefined : tokenIn?.address,
     chainId: activeSwapChainId,
-    query: { enabled: !!address, refetchInterval: 5_000, staleTime: 0 }
+    query: { enabled: !!address, refetchInterval: 3_000, staleTime: 0 }
   });
-  const { data: balOutData } = useBalance({
+  const { data: balOutData, refetch: refetchBalOut } = useBalance({
     address,
     token: isNativeOut ? undefined : tokenOut?.address,
     chainId: activeSwapChainId,
-    query: { enabled: !!address, refetchInterval: 5_000, staleTime: 0 }
+    query: { enabled: !!address, refetchInterval: 3_000, staleTime: 0 }
   });
   const formatBalance = (balData) => {
     if (!balData) return '0.00';
@@ -209,20 +219,36 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const isBridgeNativeIn  = actualTokenIn?.address?.toLowerCase()  === '0x3600000000000000000000000000000000000000';
   const isBridgeNativeOut = actualTokenOut?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000';
 
-  const { data: bridgeBalInData } = useBalance({
+  const { data: bridgeBalInData, refetch: refetchBridgeBalIn } = useBalance({
     address,
     token: (actualTokenIn?.isNative || isBridgeNativeIn) ? undefined : actualTokenIn?.address,
     chainId: bridgeChainIn?.id,
-    query: { enabled: !!address, refetchInterval: 5_000, staleTime: 0 }
+    query: { enabled: !!address, refetchInterval: 3_000, staleTime: 0 }
   });
-  const { data: bridgeBalOutData } = useBalance({
+  const { data: bridgeBalOutData, refetch: refetchBridgeBalOut } = useBalance({
     address,
     token: (actualTokenOut?.isNative || isBridgeNativeOut) ? undefined : actualTokenOut?.address,
     chainId: bridgeChainOut?.id,
-    query: { enabled: !!address, refetchInterval: 5_000, staleTime: 0 }
+    query: { enabled: !!address, refetchInterval: 3_000, staleTime: 0 }
   });
   const fmtInBridge  = formatBalance(bridgeBalInData);
   const fmtOutBridge = formatBalance(bridgeBalOutData);
+
+  // Auto-refresh balances on window focus or when bridge completes
+  useEffect(() => {
+    const handleRefreshAllBalances = () => {
+      refetchBridgeBalIn?.();
+      refetchBridgeBalOut?.();
+      refetchBalIn?.();
+      refetchBalOut?.();
+    };
+    window.addEventListener('focus', handleRefreshAllBalances);
+    window.addEventListener('aura:bridge-complete', handleRefreshAllBalances);
+    return () => {
+      window.removeEventListener('focus', handleRefreshAllBalances);
+      window.removeEventListener('aura:bridge-complete', handleRefreshAllBalances);
+    };
+  }, [refetchBridgeBalIn, refetchBridgeBalOut, refetchBalIn, refetchBalOut]);
 
   const activeBalData = activeTab === 'bridge' ? bridgeBalInData : balInData;
   const currentBalance = activeBalData ? Number(activeBalData.formatted || 0) : 0;
@@ -235,8 +261,9 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   );
 
   // Quote Logic (Swap only for now) 
-  const fetchQuote = useCallback(async (isSilent = false) => {
+  const fetchQuote = useCallback(async (isSilent = false, targetDEX = null) => {
     const currentFetchId = ++fetchIdRef.current;
+    const activeDEX = targetDEX || selectedDEX;
 
     if (activeTab === 'bridge') {
       // Bridge mockup: 1:1 quote for visual purposes
@@ -273,9 +300,85 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     setQuoteError(null);
 
     if (isCurrentMainnet) {
+      // 1. Guard for upcoming / non-deployed tokens
+      if (tokenIn.comingSoon || tokenOut.comingSoon) {
+        if (currentFetchId !== fetchIdRef.current) return;
+        setQuote(null);
+        setQuoteError(`${tokenIn.comingSoon ? tokenIn.symbol : tokenOut.symbol} will be enabled on Arc Mainnet soon.`);
+        setQuoteLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
 
-      // 1. Try Tower Multi-DEX Aggregator on Mainnet if key available
-      if (TOWER_KEY_PRD) {
+      // 2. Try Uniswap V3 on Arc Mainnet directly via on-chain Quoter
+      if (activeDEX === 'uniswap') {
+        try {
+          const arcUniQuote = await fetchUniswapArcQuote({
+            tokenIn,
+            tokenOut,
+            amountInRaw: rawAmount,
+            slippage: Number(slippage || 0.5)
+          });
+          if (arcUniQuote && arcUniQuote.success) {
+            if (currentFetchId !== fetchIdRef.current) return;
+            setQuote({
+              amountOutDecimals: arcUniQuote.amountOutFormatted,
+              amountOutRaw: arcUniQuote.amountOutRaw,
+              routeString: arcUniQuote.routeString,
+              priceImpact: arcUniQuote.priceImpact,
+              fee: arcUniQuote.fee,
+              path: arcUniQuote.path,
+              isMultihop: arcUniQuote.isMultihop,
+              provider: 'uniswap'
+            });
+            setQuoteLoading(false);
+            setIsRefreshing(false);
+            setRefreshCountdown(12);
+            return;
+          }
+        } catch (uniErr) {
+          console.warn('[Uniswap On-Chain Quote Fallback]', uniErr);
+        }
+
+        try {
+          const res = await fetch('/api/swap/uniswap/quote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tokenIn: tokenIn.address,
+              tokenOut: tokenOut.address,
+              tokenInChainId: activeSwapChainId,
+              tokenOutChainId: activeSwapChainId,
+              amount: rawAmount,
+              swapper: address || '0x0000000000000000000000000000000000000000',
+              slippageTolerance: Number(slippage || 0.5)
+            })
+          });
+          const resData = await res.json();
+          if (resData?.success && resData?.data?.quote) {
+            const outUnits = resData.data.quote.amount || resData.data.quote.output?.amount;
+            if (outUnits) {
+              const formattedOut = (Number(outUnits) / (10 ** tokenOut.decimals)).toFixed(isStableOut ? 2 : (tokenOut.symbol === 'cirBTC' ? 6 : 4));
+              if (currentFetchId !== fetchIdRef.current) return;
+              setQuote({
+                amountOutDecimals: formattedOut,
+                amountOutRaw: outUnits,
+                routeString: 'Uniswap Universal Router (V3)',
+                priceImpact: (resData.data.quote.priceImpact || 0).toFixed(2),
+                uniswapQuote: resData.data,
+                provider: 'uniswap'
+              });
+              setQuoteLoading(false);
+              return;
+            }
+          }
+        } catch (uniErr) {
+          console.warn('[Uniswap Quote Fallback]', uniErr);
+        }
+      }
+
+      // 3. Try Tower Multi-DEX Aggregator on Mainnet if Tower selected
+      if (activeDEX === 'tower' && TOWER_KEY_PRD) {
         try {
           const res = await fetch(`${TOWER_API}/api/public/swap/quote`, {
             method: 'POST',
@@ -316,22 +419,40 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         }
       }
 
-      // 2. Fallback to Real-Time Oracle Quote
-      const inPrice = (prices?.[tokenIn.symbol] && prices[tokenIn.symbol] > 0) ? prices[tokenIn.symbol] : (tokenIn.symbol === 'EURC' ? 1.08 : (tokenIn.symbol === 'cirBTC' ? 65000 : 1));
-      const outPrice = (prices?.[tokenOut.symbol] && prices[tokenOut.symbol] > 0) ? prices[tokenOut.symbol] : (tokenOut.symbol === 'EURC' ? 1.08 : (tokenOut.symbol === 'cirBTC' ? 65000 : 1));
-      const numericAmount = Number(String(amount).replace(',', '.'));
-      const calculatedOut = ((numericAmount * inPrice) / outPrice).toFixed(tokenOut.symbol === 'cirBTC' ? 6 : 4);
+      // 4. Fallback to Uniswap V3 on-chain quoter if selected DEX didn't return
+      try {
+        const arcUniQuote = await fetchUniswapArcQuote({
+          tokenIn,
+          tokenOut,
+          amountInRaw: rawAmount,
+          slippage: Number(slippage || 0.5)
+        });
+        if (arcUniQuote && arcUniQuote.success) {
+          if (currentFetchId !== fetchIdRef.current) return;
+          setQuote({
+            amountOutDecimals: arcUniQuote.amountOutFormatted,
+            amountOutRaw: arcUniQuote.amountOutRaw,
+            routeString: arcUniQuote.routeString,
+            priceImpact: arcUniQuote.priceImpact,
+            fee: arcUniQuote.fee,
+            path: arcUniQuote.path,
+            isMultihop: arcUniQuote.isMultihop,
+            provider: 'uniswap'
+          });
+          setQuoteLoading(false);
+          setIsRefreshing(false);
+          setRefreshCountdown(12);
+          return;
+        }
+      } catch (uniErr) {
+        console.warn('[Uniswap Final Fallback]', uniErr);
+      }
+
       if (currentFetchId !== fetchIdRef.current) return;
-      setQuote({
-        amountOutDecimals: calculatedOut,
-        routeString: 'Tower DEX Engine (Pyth Oracle)',
-        priceImpact: '0.00',
-        provider: 'oracle'
-      });
-      setQuoteError(null);
+      setQuote(null);
+      setQuoteError(`No liquidity pool found on Uniswap V3 for ${tokenIn.symbol}/${tokenOut.symbol}`);
       setQuoteLoading(false);
       setIsRefreshing(false);
-      setRefreshCountdown(12);
       return;
     }
 
@@ -368,7 +489,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         setRefreshCountdown(12);
       }
     }
-  }, [amount, tokenIn, tokenOut, activeTab, bridgeChainIn, bridgeChainOut, bridgeTokenIn, bridgeTokenOut, isCurrentMainnet, prices]);
+  }, [amount, tokenIn, tokenOut, activeTab, bridgeChainIn, bridgeChainOut, bridgeTokenIn, bridgeTokenOut, isCurrentMainnet, prices, selectedDEX]);
 
   useEffect(() => {
     if (activeTab === 'bridge') {
@@ -380,9 +501,15 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       }
       return;
     }
-    const t = setTimeout(() => fetchQuote(false), 400);
+    if (!amount || Number(String(amount).replace(',', '.')) <= 0) {
+      setQuote(null);
+      setQuoteLoading(false);
+      return;
+    }
+    setQuoteLoading(true);
+    const t = setTimeout(() => fetchQuote(false), 200);
     return () => clearTimeout(t);
-  }, [fetchQuote, activeTab, amount]);
+  }, [fetchQuote, activeTab, amount, tokenIn.symbol, tokenOut.symbol]);
 
   // Real-time auto-refresh every 12 seconds with countdown
   useEffect(() => {
@@ -423,7 +550,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       }
       setTokenOut(token);
     }
-    setQuote(null);
+    if (amount && Number(amount) > 0) {
+      setQuoteLoading(true);
+    } else {
+      setQuote(null);
+    }
   };
 
   const handleBridgeSelection = (selection) => {
@@ -507,10 +638,16 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   };
 
   const getEstimatedTime = (fromId, toId) => {
-    // 11155111 = Ethereum Sepolia | 1 = Ethereum Mainnet
-    if (fromId === 11155111 || fromId === 1) return '10-15 minutes'; 
-    // Fast networks (Arc, Solana, Avalanche, Linea, Base, Opt, etc)
-    return '1-3 minutes';
+    // Ethereum L1 / Sepolia
+    if (fromId === 1 || fromId === 11155111) {
+      return '12-15 minutes';
+    }
+    // Arc (Mainnet or Testnet) requires additional blocks for finality
+    if (fromId === 5042 || fromId === 5042002 || fromId === arcMainnet?.id || fromId === arcTestnet?.id) {
+      return '2-5 minutes';
+    }
+    // Fast L2s (Base, Arbitrum, Optimism, Polygon, Avalanche)
+    return '1-2 minutes';
   };
 
   // UI Helpers 
@@ -518,9 +655,15 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const activeTokenOut = activeTab === 'bridge' ? bridgeTokenOut : tokenOut;
   const isStableOut = ['USDC', 'USDT', 'EURC', 'WUSDC'].includes(activeTokenOut.symbol);
   
+  const netBridgeAmount = (activeTab === 'bridge' && amount && Number(amount) > 0) 
+    ? (BRIDGE_FEE > 0 && Number(amount) > BRIDGE_FEE ? (Number(amount) - BRIDGE_FEE) : Number(amount)) 
+    : 0;
+
   const outputAmount = activeTab === 'bridge'
     ? (amount && Number(amount) > 0 
-        ? Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6, useGrouping: false }) 
+        ? (netBridgeAmount > 0 
+            ? netBridgeAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6, useGrouping: false }) 
+            : '0.00')
         : '')
     : (quote 
         ? Number(quote.amountOutDecimals).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: isStableOut ? 2 : 6, useGrouping: false }) 
@@ -554,52 +697,80 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
     const outPrice = prices?.[activeTokenOut.symbol] || (activeTokenOut.symbol === 'EURC' ? 1.08 : (activeTokenOut.symbol === 'cirBTC' ? 65000 : 1));
 
-    if (isCurrentMainnet) {
-      return [
-        {
-          id: 'tower',
-          name: 'Tower DEX',
-          badge: 'Best Price',
-          badgeColor: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
-          amountOut: outputAmount,
-          usdValue: `~$ ${(baseOut * outPrice).toFixed(2)}`,
-          logo: '/dex-icons/tower.svg'
-        },
-        {
-          id: 'synthra',
-          name: 'Synthra DEX',
-          badge: null,
-          badgeColor: '',
-          amountOut: (baseOut * 0.9994).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
-          usdValue: `~$ ${(baseOut * 0.9994 * outPrice).toFixed(2)}`,
-          logo: '/dex-icons/synthra.png'
-        }
-      ];
-    } else {
-      return [
-        {
-          id: 'tower',
-          name: 'Tower Testnet',
-          badge: 'Best Price',
-          badgeColor: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30',
-          amountOut: outputAmount,
-          usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
-          logo: '/dex-icons/tower.svg'
-        },
-        {
-          id: 'synthra',
-          name: 'Synthra Testnet',
-          badge: null,
-          badgeColor: '',
-          amountOut: (baseOut * 0.9992).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
-          usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
-          logo: '/dex-icons/synthra.png'
-        }
-      ];
-    }
+    const rawList = isCurrentMainnet ? [
+      {
+        id: 'uniswap',
+        name: 'Uniswap V3',
+        rawNumeric: baseOut,
+        amountOut: outputAmount,
+        usdValue: `~$ ${(baseOut * outPrice).toFixed(2)}`,
+        logo: '/dex-icons/uniswap.svg'
+      },
+      {
+        id: 'tower',
+        name: 'Tower DEX',
+        rawNumeric: baseOut * 0.9997,
+        amountOut: (baseOut * 0.9997).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
+        usdValue: `~$ ${(baseOut * 0.9997 * outPrice).toFixed(2)}`,
+        logo: '/dex-icons/tower.svg'
+      },
+      {
+        id: 'synthra',
+        name: 'Synthra DEX',
+        rawNumeric: baseOut * 0.9994,
+        amountOut: (baseOut * 0.9994).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
+        usdValue: `~$ ${(baseOut * 0.9994 * outPrice).toFixed(2)}`,
+        logo: '/dex-icons/synthra.png'
+      }
+    ] : [
+      {
+        id: 'uniswap',
+        name: 'Uniswap (Universal)',
+        rawNumeric: baseOut,
+        amountOut: outputAmount,
+        usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
+        logo: '/dex-icons/uniswap.svg'
+      },
+      {
+        id: 'tower',
+        name: 'Tower Testnet',
+        rawNumeric: baseOut * 0.9996,
+        amountOut: (baseOut * 0.9996).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
+        usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
+        logo: '/dex-icons/tower.svg'
+      },
+      {
+        id: 'synthra',
+        name: 'Synthra Testnet',
+        rawNumeric: baseOut * 0.9992,
+        amountOut: (baseOut * 0.9992).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
+        usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
+        logo: '/dex-icons/synthra.png'
+      }
+    ];
+
+    const sorted = [...rawList].sort((a, b) => b.rawNumeric - a.rawNumeric);
+
+    return sorted.map((item, index) => ({
+      ...item,
+      badge: index === 0 ? 'Best Price' : null,
+      badgeColor: index === 0 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : ''
+    }));
   }, [amount, outputAmount, isCurrentMainnet, prices, activeTokenOut, isStableOut]);
 
+  // Keep system automatically locked to the Best Price DEX if current is invalid or unset
+  useEffect(() => {
+    if (dexQuotes.length > 0) {
+      const hasCurrent = dexQuotes.some(q => q.id === selectedDEX);
+      if (!hasCurrent) {
+        setSelectedDEX(dexQuotes[0].id);
+      }
+    }
+  }, [dexQuotes, selectedDEX]);
+
   const isBridgeWrongChain = activeTab === 'bridge' && address && connectedChainId && bridgeChainIn && connectedChainId !== bridgeChainIn.id;
+
+  const isBelowMinBridge = activeTab === 'bridge' && BRIDGE_FEE > 0 && amount && Number(amount) > 0 && Number(amount) <= BRIDGE_FEE;
 
   let btnLabel = activeTab === 'swap' ? 'Swap Tokens' : 'Bridge Assets';
   if (!address)                                        btnLabel = 'Connect Wallet';
@@ -610,20 +781,22 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   else if (swapStatus === 'success')                   btnLabel = '✅ Completed!';
   else if (swapStatus === 'error')                     btnLabel = '❌ Failed - Try Again';
   else if (!amount || Number(amount) <= 0)             btnLabel = 'Enter an Amount';
+  else if (isBelowMinBridge)                           btnLabel = `Min. bridge is ${(BRIDGE_FEE + 0.20).toFixed(2)} ${activeTokenIn?.symbol || 'USDC'}`;
   else if (isInsufficientBalance)                      btnLabel = `Insufficient ${activeTokenIn?.symbol || 'USDC'} balance`;
   else if (quoteLoading)                               btnLabel = 'Fetching route...';
+  else if (activeTab === 'swap' && (tokenIn.comingSoon || tokenOut.comingSoon)) btnLabel = `${tokenIn.comingSoon ? tokenIn.symbol : tokenOut.symbol} Coming Soon`;
   else if (quoteError)                                 btnLabel = 'No Route Available';
 
   // Only disable the button if connected AND missing info/wrong chain or insufficient balance
   const btnDisabled = address && (
     (activeTab === 'swap' && isWrongChain) || isBridgeWrongChain
       ? false 
-      : (swapLoading || quoteLoading || !quote || !amount || Number(amount) <= 0 || isInsufficientBalance || swapStatus === 'success')
+      : (swapLoading || quoteLoading || !quote || !amount || Number(amount) <= 0 || isBelowMinBridge || isInsufficientBalance || swapStatus === 'success')
   );
 
   return (
-    <div className="w-full max-w-[480px] mx-auto">
-      <div className="bg-dark-card border border-dark-border rounded-3xl p-5 shadow-2xl">
+    <div className={`flex flex-col lg:flex-row items-center lg:items-start justify-center gap-5 w-full mx-auto transition-all ${activeTab === 'swap' && (quote || quoteLoading || quoteError) ? 'max-w-5xl' : 'max-w-[480px]'}`}>
+      <div className="bg-dark-card border border-dark-border rounded-3xl p-5 shadow-2xl w-full max-w-[480px] shrink-0">
 
         {/* Tabs */}
         <div className="flex items-center justify-between mb-5">
@@ -681,11 +854,34 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           </div>
         </div>
 
+        {/* Pending Bridge Banner */}
+        {pendingBridge && (
+          <div className="mb-4 p-3 bg-gradient-to-r from-blue-900/40 via-sky-900/30 to-blue-900/40 border border-blue-500/30 rounded-2xl flex items-center justify-between gap-3 shadow-lg animate-fadeIn">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-ping shrink-0" />
+              <div className="truncate">
+                <div className="text-white text-xs font-bold truncate">
+                  Pending Bridge: {pendingBridge.amount} {pendingBridge.tokenSymbol}
+                </div>
+                <div className="text-blue-300 text-[11px] truncate">
+                  {pendingBridge.fromChainName} ➔ {pendingBridge.toChainName} (Circle CCTP)
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsBridgeExecutionModalOpen(true)}
+              className="px-3 py-1.5 bg-[#4A90E2] hover:bg-[#357ABD] text-white text-xs font-bold rounded-xl transition-all shrink-0 shadow-[0_0_10px_rgba(74,144,226,0.5)]"
+            >
+              Resume / Track
+            </button>
+          </div>
+        )}
+
         {/* Swap Interface */}
         {activeTab === 'swap' && (
           <div className="flex flex-col gap-1">
             {/* From */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-7 flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-6 min-h-[136px] flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>You pay</span>
               </div>
@@ -694,7 +890,9 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                   <input type="number" placeholder="0" value={amount}
                     onChange={(e) => { setAmount(e.target.value); setSwapStatus('idle'); setSwapError(''); }}
                     className="w-full bg-transparent text-left text-4xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
-                  {inputUsd && inputUsd !== '--' && <div className="text-xs font-medium text-dark-muted mt-1">~$ {inputUsd}</div>}
+                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
+                    {inputUsd && inputUsd !== '--' ? `~$ ${inputUsd}` : <span className="invisible">~$ 0.00</span>}
+                  </div>
                 </div>
                 <div className="flex flex-col items-end shrink-0">
                   <button onClick={() => { setSelectingFor('in'); setIsSwapModalOpen(true); }}
@@ -720,7 +918,12 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                   } else {
                     setAmount('');
                   }
-                  setQuote(null); setSwapStatus('idle'); 
+                  if (amount && Number(amount) > 0) {
+                    setQuoteLoading(true);
+                  } else {
+                    setQuote(null);
+                  }
+                  setSwapStatus('idle'); 
                 }}
                 className="absolute w-10 h-10 bg-dark-card border-4 border-dark-bg rounded-xl flex items-center justify-center text-dark-muted hover:text-white transition-all hover:bg-dark-border cursor-pointer shadow-lg hover:rotate-180 duration-500">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
@@ -728,28 +931,28 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* To */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-7 flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-6 min-h-[136px] flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>You receive</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col items-start w-full">
-                  <div className="w-full text-left text-4xl font-black tracking-tight min-w-0">
+                  <div className="w-full text-left text-4xl font-black tracking-tight min-w-0 h-10 flex items-center">
                     {quoteLoading
-                      ? <span className="text-dark-muted text-2xl animate-pulse">...</span>
+                      ? <span className="text-dark-muted text-4xl animate-pulse">...</span>
                       : outputAmount
-                        ? <span className="text-white">{outputAmount}</span>
+                        ? <span className="text-white truncate">{outputAmount}</span>
                         : <span className="text-dark-border">0</span>}
                   </div>
-                  {quoteLoading && amount && amount > 0 ? (
-                    <div className="text-xs font-medium flex items-center gap-1.5 mt-1">
+                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
+                    {quoteLoading && amount && Number(amount) > 0 ? (
                       <span className="text-dark-muted animate-pulse">~$ ...</span>
-                    </div>
-                  ) : outputUsd && outputUsd !== '--' && (
-                    <div className="text-xs font-medium flex items-center gap-1.5 mt-1">
+                    ) : outputUsd && outputUsd !== '--' ? (
                       <span className="text-dark-muted">~$ {outputUsd}</span>
-                    </div>
-                  )}
+                    ) : (
+                      <span className="invisible">~$ 0.00</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col items-end shrink-0">
                   <button onClick={() => { setSelectingFor('out'); setIsSwapModalOpen(true); }}
@@ -771,7 +974,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {activeTab === 'bridge' && (
           <div className="flex flex-col gap-1">
             {/* From */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-7 flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-6 min-h-[136px] flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>Bridge from</span>
               </div>
@@ -790,7 +993,9 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                       }
                     }}
                     className="w-full bg-transparent text-left text-4xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
-                  {inputUsd && inputUsd !== '--' && <div className="text-xs font-medium text-dark-muted mt-1">~$ {inputUsd}</div>}
+                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
+                    {inputUsd && inputUsd !== '--' ? `~$ ${inputUsd}` : <span className="invisible">~$ 0.00</span>}
+                  </div>
                 </div>
                 <div className="flex flex-col items-end shrink-0">
                   <button onClick={() => { setSelectingFor('in'); setIsBridgeModalOpen(true); }}
@@ -836,22 +1041,24 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* To */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-7 flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-6 min-h-[136px] flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>Bridge to</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col items-start w-full">
-                  <div className="w-full text-left text-4xl font-black tracking-tight min-w-0">
+                  <div className="w-full text-left text-4xl font-black tracking-tight min-w-0 h-10 flex items-center">
                     {outputAmount
-                      ? <span className="text-white">{outputAmount}</span>
+                      ? <span className="text-white truncate">{outputAmount}</span>
                       : <span className="text-dark-border">0</span>}
                   </div>
-                  {outputUsd && outputUsd !== '--' && (
-                    <div className="text-xs font-medium flex items-center gap-1.5 mt-1">
+                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
+                    {outputUsd && outputUsd !== '--' ? (
                       <span className="text-dark-muted">~$ {outputUsd}</span>
-                    </div>
-                  )}
+                    ) : (
+                      <span className="invisible">~$ 0.00</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col items-end shrink-0">
                   <button onClick={() => { setSelectingFor('out'); setIsBridgeModalOpen(true); }}
@@ -874,90 +1081,6 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           </div>
         )}
 
-        {/* Swap Multi-DEX Quotes Comparison */}
-        {activeTab === 'swap' && (quote || quoteLoading || quoteError) && (
-          <div className="mt-4 mb-2 bg-[#0B111E]/90 border border-dark-border/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 backdrop-blur-md transition-all">
-
-
-            {/* Content */}
-            {quoteLoading && !quote ? (
-              <div className="py-5 flex flex-col items-center justify-center gap-2 text-dark-muted">
-                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs font-medium animate-pulse">Calculating best route...</span>
-              </div>
-            ) : quoteError ? (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center justify-between">
-                <span>{quoteError}</span>
-                <span className="text-[10px] text-dark-muted">Check token liquidity</span>
-              </div>
-            ) : dexQuotes.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {dexQuotes.map((q) => {
-                  const isSelected = selectedDEX === q.id;
-                  return (
-                    <div
-                      key={q.id}
-                      onClick={() => setSelectedDEX(q.id)}
-                      className={`p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
-                        isSelected
-                          ? 'border-blue-500/60 bg-blue-500/10 shadow-[0_0_12px_rgba(59,130,246,0.1)]'
-                          : 'border-dark-border/60 bg-dark-bg/40 hover:border-dark-border/80'
-                      }`}
-                    >
-                      {/* Left: Brand Logo + Name + Best Price Badge */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-[#0E1525] border border-white/10 p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
-                          <img
-                            src={q.logo}
-                            alt={q.name}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-white">
-                            {q.name}
-                          </span>
-                          {q.badge && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${q.badgeColor}`}>
-                              {q.badge}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right: Output Amount + USD */}
-                      <div className="flex flex-col items-end">
-                        <span className="text-sm font-black font-mono tracking-tight text-white">
-                          {q.amountOut} {tokenOut.symbol}
-                        </span>
-                        <span className="text-[11px] text-dark-muted font-medium">
-                          {q.usdValue}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Transparency Footer */}
-                <div className="pt-2 px-1 flex items-center justify-between text-[11px] text-dark-muted border-t border-dark-border/40">
-                  <span className="flex items-center gap-1">
-                    <span>Slippage:</span>
-                    <strong className="text-white font-mono">{slippage}%</strong>
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span>Est. Gas:</span>
-                    <strong className="text-green-400 font-mono">&lt;0.001 USDC</strong>
-                  </span>
-                  <span className="text-blue-400 font-medium">
-                    Arc Native L1
-                  </span>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        )}
-
         {/* Bridge Detailed Info */}
         {activeTab === 'bridge' && (
           <div className="mt-5 mb-2 px-1 flex flex-col gap-6">
@@ -976,26 +1099,38 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                  )}
                </button>
             </div>
-            {Number(amount) > 0 && (
-              <div className="flex flex-col gap-3 px-1">
-                 <div className="flex items-center justify-between text-sm">
-                   <span className="text-dark-muted font-medium">Bridge Fee</span>
-                   {quoteLoading ? (
-                      <span className="text-dark-muted animate-pulse">Calculating...</span>
-                   ) : (
-                      <span className="text-white font-bold">{quote ? `0.20 ${bridgeTokenIn.symbol}` : '--'}</span>
-                   )}
-                 </div>
-                 <div className="flex items-center justify-between text-sm">
-                   <span className="text-dark-muted font-medium">Estimated Time</span>
-                   {quoteLoading ? (
-                      <span className="text-dark-muted animate-pulse">Calculating...</span>
-                   ) : (
-                      <span className="text-white font-bold">{quote ? getEstimatedTime(bridgeChainIn.id, bridgeChainOut.id) : '--'}</span>
-                   )}
-                 </div>
-              </div>
-            )}
+            <div className="flex flex-col gap-3 px-1">
+               <div className="flex items-center justify-between text-sm">
+                 <span className="text-dark-muted font-medium">Bridge Fee</span>
+                 <span className="text-emerald-400 font-bold">{BRIDGE_FEE > 0 ? `${BRIDGE_FEE.toFixed(2)} ${bridgeTokenIn.symbol}` : 'Free (0.00 USDC)'}</span>
+               </div>
+               <div className="flex items-center justify-between text-sm">
+                 <span className="text-dark-muted font-medium">Estimated Time</span>
+                 <span className="text-white font-bold">{getEstimatedTime(bridgeChainIn?.id, bridgeChainOut?.id)}</span>
+               </div>
+               <div className="flex items-center justify-between text-sm">
+                 <span className="text-dark-muted font-medium">You Receive</span>
+                 <span className="text-white font-bold">{Number(amount) > 0 && netBridgeAmount > 0 ? `${netBridgeAmount.toFixed(4)} ${bridgeTokenOut.symbol}` : '--'}</span>
+               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Swap Transparency Info */}
+        {activeTab === 'swap' && (
+          <div className="mt-4 pt-3 px-1 flex flex-col gap-2 border-t border-dark-border/40 text-xs text-dark-muted">
+            <div className="flex items-center justify-between">
+              <span>Slippage Tolerance</span>
+              <strong className="text-white font-mono">{slippage}%</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Est. Network Fee</span>
+              <strong className="text-emerald-400 font-mono">&lt;0.001 USDC</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Routing Execution</span>
+              <span className="text-blue-400 font-medium">Arc Native L1</span>
+            </div>
           </div>
         )}
 
@@ -1026,8 +1161,138 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           </div>
         )}
 
+        {/* Rescue Pending Bridge Link */}
+        {activeTab === 'bridge' && (
+          <div className="mt-3 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setPendingBridge(null);
+                setAmount('');
+                setIsBridgeExecutionModalOpen(true);
+              }}
+              className="text-xs text-blue-400/90 hover:text-blue-300 underline transition-colors cursor-pointer"
+            >
+              Previously sent and didn't receive? Rescue tokens via transaction hash
+            </button>
+          </div>
+        )}
+
+
 
       </div>
+
+      {/* Route Selection Side Panel (Desktop Beside / Mobile Stacked) */}
+      {activeTab === 'swap' && Boolean(amount && Number(String(amount).replace(',', '.')) > 0) && (
+        <div className="w-full max-w-[480px] lg:w-[360px] bg-dark-card border border-dark-border rounded-3xl p-5 shadow-2xl flex flex-col justify-between transition-all shrink-0">
+          <div>
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-dark-border/40">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-wider text-white">Route Selection</span>
+              </div>
+              <span className="text-[11px] font-mono text-dark-muted font-medium">{refreshCountdown}s</span>
+            </div>
+
+            {/* Content */}
+            {quoteLoading && !quote ? (
+              <div className="py-10 flex flex-col items-center justify-center gap-2 text-dark-muted">
+                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-medium animate-pulse">Calculating best route...</span>
+              </div>
+            ) : quoteError ? (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center justify-between">
+                <span>{quoteError}</span>
+                <span className="text-[10px] text-dark-muted">Check token liquidity</span>
+              </div>
+            ) : dexQuotes.length > 0 ? (
+              <div className="flex flex-col gap-2.5">
+                {(isQuotesExpanded
+                  ? dexQuotes
+                  : (dexQuotes.find(q => q.id === selectedDEX) ? [dexQuotes.find(q => q.id === selectedDEX)] : dexQuotes.slice(0, 1))
+                ).map((q) => {
+                  const isSelected = selectedDEX === q.id;
+                  return (
+                    <div
+                      key={q.id}
+                      onClick={() => {
+                        setSelectedDEX(q.id);
+                        fetchQuote(false, q.id);
+                      }}
+                      className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-blue-500/60 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.12)]'
+                          : 'border-dark-border/60 bg-dark-bg/40 hover:border-dark-border/80'
+                      }`}
+                    >
+                      {/* Left: Brand Logo + Name + Best Price Badge */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#0E1525] border border-white/10 p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+                          <img
+                            src={q.logo}
+                            alt={q.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-white">
+                              {q.name}
+                            </span>
+                            {q.badge && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${q.badgeColor}`}>
+                                {q.badge}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-dark-muted font-medium">
+                            {q.id === 'uniswap' ? 'On-Chain Pool' : 'Multi-DEX'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Right: Output Amount + USD */}
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm font-black font-mono tracking-tight text-white">
+                          {q.amountOut} {tokenOut.symbol}
+                        </span>
+                        <span className="text-[11px] text-dark-muted font-medium">
+                          {q.usdValue}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Collapsible toggle for remaining routes */}
+                {dexQuotes.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsQuotesExpanded(prev => !prev)}
+                    className="w-full py-2 px-3 rounded-xl bg-dark-bg/40 hover:bg-dark-bg/70 border border-dark-border/40 hover:border-dark-border/80 flex items-center justify-center gap-1.5 text-xs font-semibold text-dark-muted hover:text-white transition-all group"
+                  >
+                    <span>
+                      {isQuotesExpanded
+                        ? 'Show less routes'
+                        : `View other routes (${dexQuotes.length - 1})`}
+                    </span>
+                    <svg
+                      className={`w-3.5 h-3.5 text-dark-muted group-hover:text-white transition-transform duration-200 ${isQuotesExpanded ? 'rotate-180' : ''}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
 
       <TokenSelectorModal
         isOpen={isSwapModalOpen}
@@ -1046,16 +1311,24 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       
       <BridgeModal
         isOpen={isBridgeExecutionModalOpen}
-        onClose={() => setIsBridgeExecutionModalOpen(false)}
-        amount={amount}
-        fromChain={bridgeChainIn}
-        toChain={bridgeChainOut}
+        onClose={() => {
+          setIsBridgeExecutionModalOpen(false);
+          refetchBridgeBalIn?.();
+          refetchBridgeBalOut?.();
+        }}
+        amount={pendingBridge?.amount || amount}
+        fromChain={pendingBridge?.fromChainId ? getChainById(pendingBridge.fromChainId) : bridgeChainIn}
+        toChain={pendingBridge?.toChainId ? getChainById(pendingBridge.toChainId) : bridgeChainOut}
         token={actualTokenIn}
         userAddress={address}
         receiverAddress={receiverAddress}
+        initialBurnTxHash={pendingBridge?.burnHash}
         onComplete={() => {
           setIsBridgeExecutionModalOpen(false);
           setAmount('');
+          setPendingBridge(null);
+          refetchBridgeBalIn?.();
+          refetchBridgeBalOut?.();
         }}
       />
 
@@ -1070,6 +1343,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         isOpen={isSwapExecutionModalOpen}
         onClose={() => {
           setIsSwapExecutionModalOpen(false);
+          refetchBalIn?.();
+          refetchBalOut?.();
         }}
         tokenIn={tokenIn}
         tokenOut={tokenOut}

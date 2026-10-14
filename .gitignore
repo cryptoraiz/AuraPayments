@@ -37,16 +37,12 @@ lerna-debug.log*
 *.sln
 *.sw?
 
-.vercel
-.env*.local
-.env*
-
 .agents/
 *.bat
 
 .vercel
 .env*
+!.env.example
 
 Thumbs.db
 img/
-

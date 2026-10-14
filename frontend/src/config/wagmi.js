@@ -1,4 +1,4 @@
-import { http, createConfig } from 'wagmi'
+import { http, createConfig, fallback } from 'wagmi'
 import { mainnet, arbitrum, polygon, optimism, base, sepolia, baseSepolia, arbitrumSepolia, optimismSepolia } from 'wagmi/chains'
 import { walletConnect, injected, coinbaseWallet } from 'wagmi/connectors'
 
@@ -12,8 +12,8 @@ export const arcMainnet = {
     symbol: 'USDC',
   },
   rpcUrls: {
-    default: { http: ['https://rpc.mainnet.arc.io'] },
-    public: { http: ['https://rpc.mainnet.arc.io'] },
+    default: { http: ['https://5042.rpc.thirdweb.com', 'https://rpc.mainnet.arc.io'] },
+    public: { http: ['https://5042.rpc.thirdweb.com', 'https://rpc.mainnet.arc.io'] },
   },
   blockExplorers: {
     default: { name: 'Arc Explorer', url: 'https://explorer.arc.io' },
@@ -64,20 +64,51 @@ export const config = createConfig({
     coinbaseWallet({ appName: 'Aura Payments' }),
   ],
   transports: {
-    // Arc Mainnet transport
-    [arcMainnet.id]: http('https://rpc.mainnet.arc.io'),
+    // Arc Mainnet transport with resilient fallback
+    [arcMainnet.id]: fallback([
+      http('https://rpc.mainnet.arc.io'),
+      http('https://5042.rpc.thirdweb.com'),
+    ]),
 
     // Use our Vercel proxy to avoid CORS - the proxy forwards to rpc.testnet.arc.network server-side
     [arcTestnet.id]: http(import.meta.env.PROD ? '/api/rpc' : 'https://rpc.testnet.arc.network'),
 
-    [mainnet.id]: http(),
-    [arbitrum.id]: http(),
-    [polygon.id]: http(),
-    [optimism.id]: http(),
-    [base.id]: http(),
-    [sepolia.id]: http(),
-    [baseSepolia.id]: http(),
-    [arbitrumSepolia.id]: http(),
-    [optimismSepolia.id]: http(),
+    [mainnet.id]: fallback([
+      http('https://ethereum-rpc.publicnode.com'),
+      http('https://1rpc.io/eth'),
+      http('https://rpc.payload.de'),
+    ]),
+    [arbitrum.id]: fallback([
+      http('https://arb1.arbitrum.io/rpc'),
+      http('https://arbitrum-one-rpc.publicnode.com'),
+    ]),
+    [polygon.id]: fallback([
+      http('https://polygon-bor-rpc.publicnode.com'),
+      http('https://1rpc.io/matic'),
+    ]),
+    [optimism.id]: fallback([
+      http('https://mainnet.optimism.io'),
+      http('https://optimism-rpc.publicnode.com'),
+    ]),
+    [base.id]: fallback([
+      http('https://mainnet.base.org'),
+      http('https://base-rpc.publicnode.com'),
+    ]),
+    [sepolia.id]: fallback([
+      http('https://ethereum-sepolia-rpc.publicnode.com'),
+      http('https://1rpc.io/sepolia'),
+    ]),
+    [baseSepolia.id]: fallback([
+      http('https://sepolia.base.org'),
+      http('https://base-sepolia-rpc.publicnode.com'),
+    ]),
+    [arbitrumSepolia.id]: fallback([
+      http('https://sepolia-rollup.arbitrum.io/rpc'),
+      http('https://arbitrum-sepolia-rpc.publicnode.com'),
+    ]),
+    [optimismSepolia.id]: fallback([
+      http('https://sepolia.optimism.io'),
+      http('https://optimism-sepolia-rpc.publicnode.com'),
+    ]),
   },
 })

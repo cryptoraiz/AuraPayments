@@ -8,8 +8,8 @@ export default function TokenSelectorModal({ isOpen, onClose, onSelect, selected
   const tokens = getAllTokens();
   const { address } = useAccount();
   const chainId = useChainId();
-  const isMainnet = chainId === arcMainnet.id;
-  const activeArcChainId = isMainnet ? arcMainnet.id : arcTestnet.id;
+  const isMainnet = true;
+  const activeArcChainId = arcMainnet.id;
   const [search, setSearch] = useState('');
 
   if (!isOpen) return null;
@@ -140,11 +140,15 @@ function TokenRow({ token, onSelect, isSelected, userAddress, activeArcChainId, 
         <div className="flex flex-col items-start">
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-white text-base tracking-wide">{token.symbol}</span>
-            {token.noSwap && (
+            {token.comingSoon ? (
+              <span className="text-[10px] px-2 py-0.5 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-full font-semibold">
+                Coming Soon
+              </span>
+            ) : token.noSwap ? (
               <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full font-medium">
                 Balance only
               </span>
-            )}
+            ) : null}
           </div>
           <span className="text-xs text-dark-muted font-medium">{token.name}</span>
         </div>

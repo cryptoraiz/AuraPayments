@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAccount, useBalance, useChainId } from 'wagmi';
-import { useQueryClient } from '@tanstack/react-query';
 import { arcMainnet, arcTestnet } from '../config/wagmi';
 import { getAllTokens } from '../config/tokens';
 import { motion } from 'framer-motion';
@@ -23,7 +22,6 @@ const getExplorerUrl = (txHash, chain, currentChainId) => {
 export const MAINNET_TOKENS = [
   { symbol: 'USDC',   name: 'USD Coin (Arc)',       address: null,                                         decimals: 6, color: 'bg-blue-400',    iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png', isNative: true },
   { symbol: 'EURC',   name: 'Euro Coin (Circle)',   address: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1', decimals: 6, color: 'bg-indigo-500',  iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c/logo.png' },
-  { symbol: 'cirBTC', name: 'Circle Bitcoin',       address: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', decimals: 8, color: 'bg-orange-500',  iconImg: '/cirbtc.svg' },
 ];
 
 // Portfolio tokens on Arc Testnet
@@ -88,62 +86,65 @@ const getTokenIcon = (symbol) => {
   return token ? token.iconImg : 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png';
 };
 
-// Balance Hook using Wagmi
+// LocalStorage Cache Helper for instant display with 0ms delay
+function getCachedPortfolio(address, isMainnet) {
+  if (!address || typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(`aura_portfolio_${address.toLowerCase()}_${isMainnet ? 'main' : 'test'}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedPortfolio(address, isMainnet, data) {
+  if (!address || typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`aura_portfolio_${address.toLowerCase()}_${isMainnet ? 'main' : 'test'}`, JSON.stringify(data));
+  } catch {}
+}
+
+// Balance Hook using Wagmi with Instant Cache & Seamless Background Polling
 function usePortfolioBalances(address, chainId) {
-  const isMainnet = chainId === arcMainnet.id;
-  const activeChainId = isMainnet ? arcMainnet.id : arcTestnet.id;
+  const activeChainId = arcMainnet.id;
 
-  // USDC = native currency on Arc (Mainnet and Testnet)
-  const usdc        = useBalance({ address, chainId: activeChainId, query: { enabled: !!address, refetchInterval: 5_000, staleTime: 0 } });
-  const eurcMainnet = useBalance({ address, token: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1', chainId: arcMainnet.id, query: { enabled: !!address && isMainnet, refetchInterval: 5_000, staleTime: 0 } });
-  const cirBtcMainnet = useBalance({ address, token: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', chainId: arcMainnet.id, query: { enabled: !!address && isMainnet, refetchInterval: 5_000, staleTime: 0 } });
+  const cached = useMemo(() => getCachedPortfolio(address, true), [address]);
+  const hasLoadedRef = useRef(!!cached);
 
-  // Testnet tokens
-  const usdt   = useBalance({ address, token: '0x175CdB1D338945f0D851A741ccF787D343E57952', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 5_000, staleTime: 0 } });
-  const eurc   = useBalance({ address, token: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 5_000, staleTime: 0 } });
-  const wusdc  = useBalance({ address, token: '0x911b4000D3422F482F4062a913885f7b035382Df', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 5_000, staleTime: 0 } });
-  const cirBtc = useBalance({ address, token: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', chainId: arcTestnet.id, query: { enabled: !!address && !isMainnet, refetchInterval: 5_000, staleTime: 0 } });
-
-  const firstLoad = isMainnet
-    ? !!(address && (usdc.isLoading || eurcMainnet.isLoading || cirBtcMainnet.isLoading))
-    : !!(address && (usdc.isLoading || usdt.isLoading || eurc.isLoading || wusdc.isLoading || cirBtc.isLoading));
+  // USDC = native currency on Arc Mainnet
+  const usdc        = useBalance({ address, chainId: activeChainId, query: { enabled: !!address, refetchInterval: 12_000, staleTime: 10_000 } });
+  const eurcMainnet = useBalance({ address, token: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1', chainId: arcMainnet.id, query: { enabled: !!address, refetchInterval: 12_000, staleTime: 10_000 } });
 
   const balances = useMemo(() => {
-    if (isMainnet) {
-      return [
-        usdc.data ? Number(usdc.data.formatted) : 0,
-        eurcMainnet.data ? Number(eurcMainnet.data.formatted) : 0,
-        cirBtcMainnet.data ? Number(cirBtcMainnet.data.formatted) : 0,
-      ];
-    }
-    return [
-      usdc.data   ? Number(usdc.data.formatted)   : 0,
-      usdt.data   ? Number(usdt.data.formatted)   : 0,
-      eurc.data   ? Number(eurc.data.formatted)   : 0,
-      wusdc.data  ? Number(wusdc.data.formatted)  : 0,
-      cirBtc.data ? Number(cirBtc.data.formatted) : 0,
+    const freshBalances = [
+      usdc.data ? Number(usdc.data.formatted) : (cached?.[0] ?? 0),
+      eurcMainnet.data ? Number(eurcMainnet.data.formatted) : (cached?.[1] ?? 0),
     ];
-  }, [isMainnet, usdc.data, eurcMainnet.data, cirBtcMainnet.data, usdt.data, eurc.data, wusdc.data, cirBtc.data]);
 
-  return { loading: firstLoad, balances };
+    if (usdc.data || eurcMainnet.data) {
+      setCachedPortfolio(address, true, freshBalances);
+      hasLoadedRef.current = true;
+    }
+
+    return freshBalances;
+  }, [usdc.data, eurcMainnet.data, cached, address]);
+
+  // Loading is ONLY true if we have zero cached data AND the initial query has not returned yet
+  const isInitialLoading = !hasLoadedRef.current && usdc.isPending;
+
+  return { loading: isInitialLoading, balances };
 }
 
 export default function ProfilePage() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
-  const isMainnet = chainId === arcMainnet.id;
-  const currentTokens = isMainnet ? MAINNET_TOKENS : TESTNET_TOKENS;
+  const isMainnet = true;
+  const currentTokens = MAINNET_TOKENS;
 
   const [activeTab, setActiveTab] = useState('assets');
   const [avatarUrl, setAvatarUrl] = useState(null);
   const { prices } = useTokenPrices();
-  const queryClient = useQueryClient();
   const { loading: balancesLoading, balances } = usePortfolioBalances(address, chainId);
-
-  // Invalidate balance caches on network switch
-  useEffect(() => {
-    queryClient.invalidateQueries();
-  }, [chainId, queryClient]);
 
   // Compute total portfolio value
   const totalValueNum = useMemo(() => {

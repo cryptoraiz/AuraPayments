@@ -27,7 +27,7 @@ export const TOKENS = [
     symbol:   'cirBTC',
     name:     'Circle Bitcoin',
     iconImg:  '/cirbtc.svg',
-    address:  '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF',
+    address:  '0x171A4217b86A807A64eB94757Db6849fb4bDbAA0',
     decimals: 8,
     color:    'bg-orange-500',
     chainId:  5042,

@@ -38,11 +38,11 @@ export default async function handler(req, res) {
             genAI = new GoogleGenerativeAI(apiKey);
         }
 
-        // 1. Definição das Ferramentas (Function Calling - Bilingue EN/PT)
+        // 1. Tool Definitions (Function Calling)
         const tools = [
             {
                 name: "generate_invoice",
-                description: "Generates a B2B payment invoice link. Trigger for requests about creating invoices, bills, or payment links (gerar cobrança, criar fatura, invoice, bill).",
+                description: "Generates a B2B payment invoice link. Trigger for requests about creating invoices, bills, or payment links (create invoice, billing, payment link).",
                 parameters: {
                     type: "object",
                     properties: {
@@ -55,7 +55,7 @@ export default async function handler(req, res) {
             },
             {
                 name: "prepare_swap",
-                description: "Prepares a token swap/trade transaction. Trigger for requests about swapping, trading, or converting tokens (trocar moedas, fazer swap, comprar token, trade). Supported tokens on Arc: USDC, EURC, USDT, cirBTC.",
+                description: "Prepares a token swap/trade transaction. Trigger for requests about swapping, trading, or converting tokens (swap tokens, trade, buy token). Supported tokens on Arc: USDC, EURC, USDT, cirBTC.",
                 parameters: {
                     type: "object",
                     properties: {
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
             },
             {
                 name: "prepare_bridge",
-                description: "Prepares a CCTP cross-chain bridge transaction. Trigger for requests about bridging, sending, or transferring USDC across blockchains (fazer ponte, transferir para outra rede, bridge).",
+                description: "Prepares a CCTP cross-chain bridge transaction. Trigger for requests about bridging, sending, or transferring USDC across blockchains (bridge tokens, transfer across networks).",
                 parameters: {
                     type: "object",
                     properties: {
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
             },
             {
                 name: "find_yields",
-                description: "Searches top DeFi yield pools and APY opportunities. Trigger whenever user asks about yield, yields, income, returns, pools, staking, APY, interest, where to invest, or Portuguese terms (rendimento, rendimentos, pools, apy, onde investir, quanto rende).",
+                description: "Searches top DeFi yield pools and APY opportunities. Trigger whenever user asks about yield, yields, income, returns, pools, staking, APY, interest, where to invest.",
                 parameters: {
                     type: "object",
                     properties: {
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
             },
             {
                 name: "get_portfolio_stats",
-                description: "Retrieves portfolio performance, historical 7d revenue stats, and gas savings summary. Trigger ONLY when user explicitly asks for portfolio overview, past revenue stats, invoice history, or portfolio status (desempenho do portfólio, faturamento passado, estatísticas).",
+                description: "Retrieves portfolio performance, historical 7d revenue stats, and gas savings summary. Trigger ONLY when user explicitly asks for portfolio overview, past revenue stats, invoice history, or portfolio status.",
                 parameters: {
                     type: "object",
                     properties: {
@@ -124,18 +124,17 @@ SYSTEM RULES:
    - CCTP Cross-chain Bridge (Arc, Base, Arbitrum, Sepolia)
    - Invoice 2.0 (Instant B2B decentralized on-chain billing in USDC/EURC)
 6. TOOL MAPPING:
-   - "invoice", "bill", "payment link", "fatura", "cobrança" -> Call \`generate_invoice\`.
-   - "swap", "trade", "exchange", "trocar", "comprar", "por" -> Call \`prepare_swap\`.
-   - "bridge", "cross-chain", "transfer network", "ponte" -> Call \`prepare_bridge\`.
-   - "portfolio", "history", "stats", "desempenho", "estatísticas" -> Call \`get_portfolio_stats\`.
+   - "invoice", "bill", "payment link" -> Call `generate_invoice`.
+   - "swap", "trade", "exchange" -> Call `prepare_swap`.
+   - "bridge", "cross-chain", "transfer network" -> Call `prepare_bridge`.
+   - "portfolio", "history", "stats" -> Call `get_portfolio_stats`.
 7. You NEVER execute transactions autonomously. You only prepare the transaction parameters for MetaMask confirmation.
 8. YIELD & LIQUIDITY DEPOSITS MAINTENANCE RULE:
    - If the user asks to deposit, stake, or invest funds into Aura DEX, Vaults, or any yield pool, apologize and state clearly that the Yield Vaults & Staking module is currently under scheduled maintenance / testnet upgrades for the next phase.
-   - Example in PT: "Pedimos desculpas, mas o módulo de depósitos e cofres de rendimento (Aura DEX Vaults) está temporariamente em manutenção para atualizações de contratos. No momento, você pode utilizar normalmente os módulos de Swap, Ponte CCTP e Faturas B2B!"
-   - Example in EN: "We apologize, but the Aura DEX Yield Vaults & Staking module is currently undergoing scheduled maintenance for smart contract upgrades. You can freely use Swaps, CCTP Bridges, and B2B Invoices!"
+   - Example: "We apologize, but the Aura DEX Yield Vaults & Staking module is currently undergoing scheduled maintenance for smart contract upgrades. You can freely use Swaps, CCTP Bridges, and B2B Invoices!"
 9. RESPONSE FORMATTING: Structure cleanly with bullet points (•), bold text (**bold**), and line breaks (\\n\\n).`;
 
-        // 3. Formatar o Histórico de Mensagens para o Formato do Gemini
+        // 3. Format message history for Gemini
         let formattedHistory = messages.map(msg => {
             let role = msg.role === 'assistant' ? 'model' : msg.role;
             return {
@@ -144,7 +143,7 @@ SYSTEM RULES:
             };
         });
 
-        // Gemini exige que os papéis se alternem estritamente (user, model, user, model).
+        // Gemini requires strict alternating roles (user, model).
         let mergedHistory = [];
         for (let msg of formattedHistory) {
             if (mergedHistory.length > 0 && mergedHistory[mergedHistory.length - 1].role === msg.role) {
@@ -163,18 +162,16 @@ SYSTEM RULES:
              chatHistory = mergedHistory.slice(0, lastMessageIndex);
              promptText = mergedHistory[lastMessageIndex].parts[0].text;
         } else {
-             return res.status(400).json({ error: "Nenhuma mensagem do usuário encontrada." });
+             return res.status(400).json({ error: "No user message found in history." });
         }
 
-        // Sanitização estrita do chatHistory: deve começar com 'user' e terminar com 'model'
+        // Strict chatHistory sanitization: must start with 'user' and end with 'model'
         while (chatHistory.length > 0 && chatHistory[0].role !== 'user') {
             chatHistory.shift();
         }
         while (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].role !== 'model') {
             chatHistory.pop();
         }
-
-        const isPt = /[ãáàâéêíóôõúç]/i.test(promptText) || /\b(rendimento|rendimentos|fatura|faturas|troca|trocar|ponte|ajuda|quero|preciso|mostrar|carteira|quanto|como|por)\b/i.test(promptText);
 
         const candidateModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
         let result = null;
@@ -227,13 +224,7 @@ SYSTEM RULES:
                         invoiceId: `INV-${shortId}`
                     }
                 };
-                displayMessage = isPt 
-                  ? `✅ **Fatura B2B Gerada com Sucesso!**\n\n` +
-                    `• **Valor:** ${args.amount} USDC\n` +
-                    `• **Cliente:** ${args.clientName}\n` +
-                    `• **Código:** INV-${shortId}\n\n` +
-                    `O link de pagamento seguro já foi preparado para você compartilhar!`
-                  : `✅ **B2B Invoice Successfully Generated!**\n\n` +
+                displayMessage = `✅ **B2B Invoice Successfully Generated!**\n\n` +
                     `• **Amount:** ${args.amount} USDC\n` +
                     `• **Client:** ${args.clientName}\n` +
                     `• **Invoice ID:** INV-${shortId}\n\n` +
@@ -248,13 +239,7 @@ SYSTEM RULES:
                         to: args.toToken
                     }
                 };
-                displayMessage = isPt 
-                  ? `🔄 **Transação de Swap Preparada:**\n\n` +
-                    `• **Trocar:** ${args.amount} ${args.fromToken}\n` +
-                    `• **Receber:** ${args.toToken}\n` +
-                    `• **Rede:** Arc Testnet\n\n` +
-                    `Aguarde a janela da MetaMask para assinar e concluir a troca com segurança.`
-                  : `🔄 **Swap Transaction Prepared:**\n\n` +
+                displayMessage = `🔄 **Swap Transaction Prepared:**\n\n` +
                     `• **Swap:** ${args.amount} ${args.fromToken}\n` +
                     `• **Receive:** ${args.toToken}\n` +
                     `• **Network:** Arc Testnet\n\n` +
@@ -268,12 +253,7 @@ SYSTEM RULES:
                         destination: args.destinationNetwork
                     }
                 };
-                displayMessage = isPt 
-                  ? `🌉 **Ponte Cross-Chain (CCTP) Preparada:**\n\n` +
-                    `• **Valor:** ${args.amount} USDC\n` +
-                    `• **Destino:** Rede ${args.destinationNetwork}\n\n` +
-                    `Por favor, aprove a transação em sua carteira para iniciar a transferência de liquidez.`
-                  : `🌉 **Cross-Chain Bridge (CCTP) Prepared:**\n\n` +
+                displayMessage = `🌉 **Cross-Chain Bridge (CCTP) Prepared:**\n\n` +
                     `• **Amount:** ${args.amount} USDC\n` +
                     `• **Destination:** ${args.destinationNetwork} Network\n\n` +
                     `Please approve the transaction in your wallet to initiate cross-chain token transfer.`;
@@ -282,7 +262,6 @@ SYSTEM RULES:
                 const tokenUpper = (args.token || 'USDC').toUpperCase();
                 let pools = [];
 
-                // O foco atual do projeto é puramente Testnet, então usamos mocks de pools reais em redes Sepolia/Testnet
                 if (tokenUpper.includes('ETH')) {
                     pools = [
                         { protocol: "Aura Staking", network: "Arc Testnet", apy: "5.40%" },
@@ -302,7 +281,6 @@ SYSTEM RULES:
                         { protocol: "Uniswap V3", network: "Sepolia", apy: "2.90%" }
                     ];
                 } else {
-                    // Default para USDC ou outros
                     pools = [
                         { protocol: "Aura DEX", network: "Arc Testnet", apy: "12.50%" },
                         { protocol: "Aave V3", network: "Base Sepolia", apy: "8.15%" },
@@ -310,13 +288,9 @@ SYSTEM RULES:
                     ];
                 }
 
-                displayMessage = isPt 
-                    ? `📊 **Oportunidades de Rendimento (APY) para ${tokenUpper}:**\n\n` +
-                      pools.map((p, i) => `• ${i === 0 ? '🚀' : i === 1 ? '🔹' : '🟢'} **${p.protocol} (${p.network}):** ${p.apy}${i === 0 ? ' *(Nativo)*' : ''}`).join('\n') +
-                      `\n\n⚠️ *Nota: Pedimos desculpas, mas o módulo de depósitos e cofres de rendimento está temporariamente em manutenção para atualizações de contratos da próxima fase.*`
-                    : `📊 **Top Yield Opportunities (APY) for ${tokenUpper}:**\n\n` +
-                      pools.map((p, i) => `• ${i === 0 ? '🚀' : i === 1 ? '🔹' : '🟢'} **${p.protocol} (${p.network}):** ${p.apy}${i === 0 ? ' *(Native)*' : ''}`).join('\n') +
-                      `\n\n⚠️ *Note: We apologize, but direct yield deposits and vaults are temporarily under maintenance for smart contract upgrades.*`;
+                displayMessage = `📊 **Top Yield Opportunities (APY) for ${tokenUpper}:**\n\n` +
+                    pools.map((p, i) => `• ${i === 0 ? '🚀' : i === 1 ? '🔹' : '🟢'} **${p.protocol} (${p.network}):** ${p.apy}${i === 0 ? ' *(Native)*' : ''}`).join('\n') +
+                    `\n\n⚠️ *Note: We apologize, but direct yield deposits and vaults are temporarily under maintenance for smart contract upgrades.*`;
 
                 actionResponse = {
                     action: "SHOW_YIELDS",
@@ -331,12 +305,7 @@ SYSTEM RULES:
                     action: "SHOW_STATS",
                     payload: { period: args.period }
                 };
-                displayMessage = isPt 
-                  ? `📈 **Resumo de Desempenho do Portfólio:**\n\n` +
-                    `• **Faturamento 7d:** 1.450 USDC (5 faturas integradas)\n` +
-                    `• **Economia em Taxas:** ~$12,40 USD em relação à Ethereum\n` +
-                    `• **Status:** Carteira Ativa e Protegida`
-                  : `📈 **Portfolio Performance Summary:**\n\n` +
+                displayMessage = `📈 **Portfolio Performance Summary:**\n\n` +
                     `• **7d Revenue:** 1,450 USDC (5 paid invoices)\n` +
                     `• **Gas Saved:** ~$12.40 USD vs Ethereum\n` +
                     `• **Status:** Active & Protected Wallet`;
@@ -417,7 +386,7 @@ SYSTEM RULES:
             });
         } catch (deterministicError) {
             return res.status(500).json({ 
-                error: "Erro no processamento da Inteligência Artificial.", 
+                error: "AI processing error.", 
                 details: geminiError.message 
             });
         }
@@ -434,7 +403,7 @@ Your goal is to help users execute swaps, cross-chain CCTP bridges, and create i
 
 SYSTEM RULES:
 1. Always be concise, helpful, objective, and professional.
-2. LANGUAGE RULE: Default is ENGLISH. If the user writes in Portuguese (or any other language), match their language immediately with 100% natural fluency.
+2. LANGUAGE RULE: All messages must be in English.
 3. OFFICIAL KNOWLEDGE & LINKS (NEVER INVENT FAKE URLS):
    - Official Website: https://www.aurapayments.xyz
    - Official X / Twitter: https://x.com/danilo_schrute
@@ -445,7 +414,7 @@ SYSTEM RULES:
    - Note: USDC is the native gas asset on Arc Network.
    - ETH, WETH, or BTC do NOT exist on Arc Testnet (only cirBTC exists). NEVER suggest ETH in examples or swap parameters. Always use USDC, EURC, USDT, or cirBTC.
 5. FUNCTION CALLING RULE (CRITICAL):
-   - When the user asks to swap, bridge, or create an invoice, or confirms an action with "sim", "yes", "confirm", "proceed", YOU MUST CALL the corresponding function (\`prepare_swap\`, \`prepare_bridge\`, \`generate_invoice\`).
+   - When the user asks to swap, bridge, or create an invoice, or confirms an action with "yes", "confirm", "proceed", YOU MUST CALL the corresponding function (\`prepare_swap\`, \`prepare_bridge\`, \`generate_invoice\`).
    - Do NOT just write out the parameters in text; invoke the tool call!
 6. YIELD & LIQUIDITY DEPOSITS MAINTENANCE RULE:
    - If user asks about yield opportunities or to deposit into pools/Aura DEX, explain clearly:
@@ -458,7 +427,7 @@ SYSTEM RULES:
             type: "function",
             function: {
                 name: "prepare_swap",
-                description: "Prepares a token swap/trade transaction on Arc Testnet. Trigger whenever the user wants to swap, trade, or exchange tokens (trocar moedas, fazer swap, comprar token) or confirms an ongoing swap request.",
+                description: "Prepares a token swap/trade transaction on Arc Testnet. Trigger whenever the user wants to swap, trade, or exchange tokens or confirms an ongoing swap request.",
                 parameters: {
                     type: "object",
                     properties: {
@@ -474,7 +443,7 @@ SYSTEM RULES:
             type: "function",
             function: {
                 name: "generate_invoice",
-                description: "Generates a B2B payment invoice link on Arc Testnet. Trigger for requests about creating invoices, bills, or payment links (gerar cobrança, criar fatura).",
+                description: "Generates a B2B payment invoice link on Arc Testnet. Trigger for requests about creating invoices, bills, or payment links.",
                 parameters: {
                     type: "object",
                     properties: {
@@ -549,7 +518,6 @@ SYSTEM RULES:
     const data = await response.json();
     const choice = data.choices?.[0]?.message;
     const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || "";
-    const isPt = /[ãáàâéêíóôõúç]/i.test(lastUserMsg) || /\b(rendimento|rendimentos|fatura|faturas|troca|trocar|ponte|ajuda|quero|preciso|mostrar|carteira|quanto|como|por|para|sim)\b/i.test(lastUserMsg);
 
     // 1. Check Tool Calls
     if (choice?.tool_calls && choice.tool_calls.length > 0) {
@@ -567,9 +535,7 @@ SYSTEM RULES:
             const from = (args.fromToken || "USDC").toUpperCase();
             const to = (args.toToken || "USDT").toUpperCase();
             return {
-                content: isPt 
-                    ? `🔄 **Transação de Swap Preparada:**\n\n• **Trocar:** ${amount} ${from}\n• **Receber:** ${to}\n• **Rede:** Arc Testnet\n\nPor favor, confirme na MetaMask abaixo para concluir a troca com segurança.`
-                    : `🔄 **Swap Transaction Prepared:**\n\n• **Swap:** ${amount} ${from}\n• **Receive:** ${to}\n• **Network:** Arc Testnet\n\nPlease confirm in MetaMask below to complete the swap securely.`,
+                content: `🔄 **Swap Transaction Prepared:**\n\n• **Swap:** ${amount} ${from}\n• **Receive:** ${to}\n• **Network:** Arc Testnet\n\nPlease confirm in MetaMask below to complete the swap securely.`,
                 action: {
                     action: "UI_PREPARE_SWAP",
                     payload: { amount, from, to }
@@ -578,9 +544,7 @@ SYSTEM RULES:
         } else if (fnName === "generate_invoice") {
             const shortId = Math.random().toString(36).substring(2, 6).toUpperCase();
             return {
-                content: isPt 
-                    ? `✅ **Fatura B2B Gerada com Sucesso!**\n\n• **Valor:** ${args.amount || 100} USDC\n• **Cliente:** ${args.clientName || 'Cliente Web3'}\n• **Código:** INV-${shortId}\n\nO link de pagamento seguro já foi preparado para você compartilhar!`
-                    : `✅ **B2B Invoice Successfully Generated!**\n\n• **Amount:** ${args.amount || 100} USDC\n• **Client:** ${args.clientName || 'Web3 Client'}\n• **Invoice ID:** INV-${shortId}\n\nThe secure payment link is ready to share below!`,
+                content: `✅ **B2B Invoice Successfully Generated!**\n\n• **Amount:** ${args.amount || 100} USDC\n• **Client:** ${args.clientName || 'Web3 Client'}\n• **Invoice ID:** INV-${shortId}\n\nThe secure payment link is ready to share below!`,
                 action: {
                     action: "UI_GENERATE_INVOICE",
                     payload: {
@@ -593,9 +557,7 @@ SYSTEM RULES:
             };
         } else if (fnName === "prepare_bridge") {
             return {
-                content: isPt 
-                    ? `🌉 **Ponte Cross-Chain (CCTP) Preparada:**\n\n• **Valor:** ${args.amount || 50} USDC\n• **Destino:** Rede ${args.destinationNetwork || 'Base Sepolia'}\n\nPor favor, aprove a transação abaixo para iniciar a transferência de liquidez.`
-                    : `🌉 **Cross-Chain Bridge (CCTP) Prepared:**\n\n• **Amount:** ${args.amount || 50} USDC\n• **Destination:** ${args.destinationNetwork || 'Base Sepolia'} Network\n\nPlease approve the transaction below to initiate liquidity transfer.`,
+                content: `🌉 **Cross-Chain Bridge (CCTP) Prepared:**\n\n• **Amount:** ${args.amount || 50} USDC\n• **Destination:** ${args.destinationNetwork || 'Base Sepolia'} Network\n\nPlease approve the transaction below to initiate liquidity transfer.`,
                 action: {
                     action: "UI_PREPARE_BRIDGE",
                     payload: {
@@ -608,14 +570,14 @@ SYSTEM RULES:
     }
 
     // 2. Text response fallback with smart regex matching across whole chat context
-    const content = choice?.content || "Desculpe, não consegui processar a resposta.";
+    const content = choice?.content || "Sorry, I could not process that request.";
     let action = null;
 
     // Search for swap parameters in current prompt or recent message history
     const allRecentText = messages.slice(-3).map(m => m.content).join("\n") + "\n" + content;
-    const swapMatch = allRecentText.match(/(\d+(?:\.\d+)?)\s*(usdc|eurc|usdt|cirbtc)?\s*(?:para|por|to|for|in|swap of)\s*(usdc|eurc|usdt|cirbtc)/i);
+    const swapMatch = allRecentText.match(/(\d+(?:\.\d+)?)\s*(usdc|eurc|usdt|cirbtc)?\s*(?:to|for|in|swap of)\s*(usdc|eurc|usdt|cirbtc)/i);
     
-    if (swapMatch && (lastUserMsg.toLowerCase().includes("sim") || lastUserMsg.toLowerCase().includes("yes") || lastUserMsg.toLowerCase().includes("confirm") || content.toLowerCase().includes("metamask"))) {
+    if (swapMatch && (lastUserMsg.toLowerCase().includes("yes") || lastUserMsg.toLowerCase().includes("confirm") || content.toLowerCase().includes("metamask"))) {
         action = {
             action: "UI_PREPARE_SWAP",
             payload: {
@@ -632,7 +594,6 @@ SYSTEM RULES:
 function handleDeterministicIntent(messages, userAddress) {
     const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || "";
     const prompt = lastUserMsg.trim().toLowerCase();
-    const isPt = /[ãáàâéêíóôõúç]/i.test(prompt) || /\b(rendimento|rendimentos|fatura|faturas|troca|trocar|ponte|ajuda|quero|preciso|mostrar|carteira|quanto|como|por|para)\b/i.test(prompt);
 
     // 1. Swap Intent Detection
     const swapFullMatch = prompt.match(/(\d+(?:\.\d+)?)\s*(usdc|eurc|usdt|cirbtc)?\s*(?:para|por|to|for|in|swap to)\s*(usdc|eurc|usdt|cirbtc)/i);
@@ -642,9 +603,7 @@ function handleDeterministicIntent(messages, userAddress) {
         const to = swapFullMatch[3].toUpperCase();
 
         return {
-            content: isPt 
-                ? `🔄 **Transação de Swap Preparada:**\n\n• **Trocar:** ${amount} ${from}\n• **Receber:** ${to}\n• **Rede:** Arc Testnet\n\nPor favor, confirme na MetaMask abaixo para concluir a troca com segurança.`
-                : `🔄 **Swap Transaction Prepared:**\n\n• **Swap:** ${amount} ${from}\n• **Receive:** ${to}\n• **Network:** Arc Testnet\n\nPlease confirm in MetaMask below to complete the swap securely.`,
+            content: `🔄 **Swap Transaction Prepared:**\n\n• **Swap:** ${amount} ${from}\n• **Receive:** ${to}\n• **Network:** Arc Testnet\n\nPlease confirm in MetaMask below to complete the swap securely.`,
             action: {
                 action: "UI_PREPARE_SWAP",
                 payload: { amount, from, to }
@@ -652,11 +611,9 @@ function handleDeterministicIntent(messages, userAddress) {
         };
     }
 
-    if (prompt.includes("swap") || prompt.includes("trocar") || prompt.includes("troca") || prompt.includes("comprar")) {
+    if (prompt.includes("swap") || prompt.includes("trocar") || prompt.includes("troca") || prompt.includes("trade")) {
         return {
-            content: isPt 
-                ? `Para preparar sua troca de tokens na Arc Testnet, por favor especifique os detalhes:\n\n• **Quantidade** (ex: 50)\n• **Token de Origem** (USDC, EURC, USDT, cirBTC)\n• **Token de Destino** (USDC, EURC, USDT, cirBTC)\n\n*Exemplo:* "Trocar 50 USDC por EURC"`
-                : `To prepare your token swap on Arc Testnet, please specify the details:\n\n• **Amount to swap** (e.g. 50)\n• **From token** (USDC, EURC, USDT, cirBTC)\n• **To token** (USDC, EURC, USDT, cirBTC)\n\n*Example:* "Swap 50 USDC to EURC"`,
+            content: `To prepare your token swap on Arc Testnet, please specify the details:\n\n• **Amount to swap** (e.g. 50)\n• **From token** (USDC, EURC, USDT, cirBTC)\n• **To token** (USDC, EURC, USDT, cirBTC)\n\n*Example:* "Swap 50 USDC to EURC"`,
             action: null
         };
     }
@@ -669,9 +626,7 @@ function handleDeterministicIntent(messages, userAddress) {
         const shortId = Math.random().toString(36).substring(2, 6).toUpperCase();
 
         return {
-            content: isPt 
-                ? `✅ **Fatura B2B Gerada com Sucesso!**\n\n• **Valor:** ${amount} USDC\n• **Cliente:** ${clientName}\n• **Código:** INV-${shortId}\n\nO link de pagamento seguro já foi preparado para você compartilhar!`
-                : `✅ **B2B Invoice Successfully Generated!**\n\n• **Amount:** ${amount} USDC\n• **Client:** ${clientName}\n• **Invoice ID:** INV-${shortId}\n\nThe secure payment link is ready to share below!`,
+            content: `✅ **B2B Invoice Successfully Generated!**\n\n• **Amount:** ${amount} USDC\n• **Client:** ${clientName}\n• **Invoice ID:** INV-${shortId}\n\nThe secure payment link is ready to share below!`,
             action: {
                 action: "UI_GENERATE_INVOICE",
                 payload: {
@@ -684,25 +639,21 @@ function handleDeterministicIntent(messages, userAddress) {
         };
     }
 
-    if (prompt.includes("invoice") || prompt.includes("fatura") || prompt.includes("cobrança") || prompt.includes("cobranca")) {
+    if (prompt.includes("invoice") || prompt.includes("fatura") || prompt.includes("bill")) {
         return {
-            content: isPt 
-                ? `Para gerar uma fatura corporativa (Invoice 2.0), informe:\n\n• **Valor em USDC** (ex: 250)\n• **Nome do Cliente / Empresa**\n\n*Exemplo:* "Criar fatura de 200 USDC para Empresa Alpha"`
-                : `To generate a corporate invoice (Invoice 2.0), please provide:\n\n• **Amount in USDC** (e.g. 250)\n• **Client / Company Name**\n\n*Example:* "Create an invoice for 200 USDC for Alpha Corp"`,
+            content: `To generate a corporate invoice (Invoice 2.0), please provide:\n\n• **Amount in USDC** (e.g. 250)\n• **Client / Company Name**\n\n*Example:* "Create an invoice for 200 USDC for Alpha Corp"`,
             action: null
         };
     }
 
     // 3. Bridge Intent Detection
-    const bridgeMatch = prompt.match(/(?:bridge|ponte|transferir)\s+(?:de\s+)?(\d+(?:\.\d+)?)\s*(?:usdc)?(?:\s+(?:para|to)\s+(.+))?/i);
+    const bridgeMatch = prompt.match(/(?:bridge|ponte|transferir|transfer)\s+(?:de\s+)?(\d+(?:\.\d+)?)\s*(?:usdc)?(?:\s+(?:para|to)\s+(.+))?/i);
     if (bridgeMatch) {
         const amount = parseFloat(bridgeMatch[1]);
         const destinationNetwork = (bridgeMatch[2] || "Base Sepolia").trim();
 
         return {
-            content: isPt 
-                ? `🌉 **Ponte Cross-Chain (CCTP) Preparada:**\n\n• **Valor:** ${amount} USDC\n• **Destino:** Rede ${destinationNetwork}\n\nPor favor, aprove a transação abaixo para iniciar a transferência nativa de liquidez.`
-                : `🌉 **Cross-Chain Bridge (CCTP) Prepared:**\n\n• **Amount:** ${amount} USDC\n• **Destination:** ${destinationNetwork} Network\n\nPlease approve the transaction below to initiate native liquidity transfer.`,
+            content: `🌉 **Cross-Chain Bridge (CCTP) Prepared:**\n\n• **Amount:** ${amount} USDC\n• **Destination:** ${destinationNetwork} Network\n\nPlease approve the transaction below to initiate native liquidity transfer.`,
             action: {
                 action: "UI_PREPARE_BRIDGE",
                 payload: { amount, destination: destinationNetwork }
@@ -711,11 +662,9 @@ function handleDeterministicIntent(messages, userAddress) {
     }
 
     // 4. Yields Intent Detection
-    if (prompt.includes("yield") || prompt.includes("rendimento") || prompt.includes("pool") || prompt.includes("apy") || prompt.includes("investir")) {
+    if (prompt.includes("yield") || prompt.includes("rendimento") || prompt.includes("pool") || prompt.includes("apy")) {
         return {
-            content: isPt 
-                ? `📊 **Oportunidades de Rendimento (APY):**\n\n• 🚀 **Aura DEX (Arc Testnet):** 12.50% *(Nativo)*\n• 🔹 **Aave V3 (Base Sepolia):** 8.15%\n• 🟢 **Compound (Arbitrum Sepolia):** 6.40%\n\n⚠️ *Nota: Pedimos desculpas, mas o módulo de depósitos e cofres de rendimento (Aura DEX Vaults) está temporariamente em manutenção para atualizações de contratos da próxima fase.*`
-                : `📊 **Top Yield Opportunities (APY):**\n\n• 🚀 **Aura DEX (Arc Testnet):** 12.50% *(Native)*\n• 🔹 **Aave V3 (Base Sepolia):** 8.15%\n• 🟢 **Compound (Arbitrum Sepolia):** 6.40%\n\n⚠️ *Note: We apologize, but direct yield deposits and vaults are temporarily under maintenance for smart contract upgrades.*`,
+            content: `📊 **Top Yield Opportunities (APY):**\n\n• 🚀 **Aura DEX (Arc Testnet):** 12.50% *(Native)*\n• 🔹 **Aave V3 (Base Sepolia):** 8.15%\n• 🟢 **Compound (Arbitrum Sepolia):** 6.40%\n\n⚠️ *Note: Direct yield deposits and vaults are temporarily under maintenance for smart contract upgrades.*`,
             action: {
                 action: "SHOW_YIELDS",
                 payload: { token: "USDC" }
@@ -725,9 +674,7 @@ function handleDeterministicIntent(messages, userAddress) {
 
     // Default Fallback
     return {
-        content: isPt 
-            ? `Olá! Sou o **Aura AI**, seu copiloto financeiro na **Arc Testnet**.\n\nPosso ajudar você a:\n• 🔄 **Fazer Swaps** entre USDC, EURC, USDT e cirBTC\n• 🌉 **Realizar Pontes Cross-chain** via Circle CCTP\n• 🧾 **Gerar Faturas B2B** (Invoice 2.0) com liquidação instantânea\n\nComo posso ajudar você agora?`
-            : `Hello! I am **Aura AI**, your financial co-pilot on **Arc Testnet**.\n\nI can assist you with:\n• 🔄 **Token Swaps** between USDC, EURC, USDT, and cirBTC\n• 🌉 **Cross-chain Bridges** via Circle CCTP\n• 🧾 **B2B Invoicing** (Invoice 2.0) with instant settlement\n\nHow can I help you today?`,
+        content: `Hello! I am **Aura AI**, your financial co-pilot on **Arc Testnet**.\n\nI can assist you with:\n• 🔄 **Token Swaps** between USDC, EURC, USDT, and cirBTC\n• 🌉 **Cross-chain Bridges** via Circle CCTP\n• 🧾 **B2B Invoicing** (Invoice 2.0) with instant settlement\n\nHow can I help you today?`,
         action: null
     };
 }
@@ -790,7 +737,7 @@ SYSTEM RULES:
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "Desculpe, não consegui processar a resposta.";
+    const content = data.choices?.[0]?.message?.content || "Sorry, I could not process the response.";
 
     // Simple intent extractor fallback for Groq
     const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || "";
