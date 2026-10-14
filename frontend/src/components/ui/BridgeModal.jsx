@@ -637,17 +637,17 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
   const amountDisplay = amtNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
   const netAmountDisplay = netAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
 
-  const getEstimatedTime = (fromId) => {
-    if (fromId === 1 || fromId === 11155111) return '12-15 min';
-    if (fromId === 5042 || fromId === 5042002) return '2-5 min';
-    return '1-2 min';
+  const getEstimatedTime = (fromId, toId) => {
+    const isEthL1 = fromId === 1 || fromId === 11155111 || toId === 1 || toId === 11155111;
+    if (isEthL1) return '1-2 min';
+    return '20-30 sec';
   };
 
   const steps = [
     { label: `Approve ${token?.symbol || 'USDC'}`, hint: 'Approving in your wallet' },
     { label: 'Burn', hint: 'Burning on source network' },
     { label: 'Fetch Attestation', hint: 'Circle validation in progress' },
-    { label: `Wait ~${getEstimatedTime(fromChain?.id)}`, hint: 'Processing cross-chain finality' },
+    { label: `Wait ~${getEstimatedTime(fromChain?.id, toChain?.id)}`, hint: 'Processing cross-chain finality' },
     { label: `Mint ${netAmountDisplay} ${token?.symbol || 'USDC'} on ${toChain?.name || 'Arc'}`, hint: 'Delivering tokens to recipient' },
   ];
 

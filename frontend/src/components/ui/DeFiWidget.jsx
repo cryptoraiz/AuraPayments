@@ -638,16 +638,13 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   };
 
   const getEstimatedTime = (fromId, toId) => {
-    // Ethereum L1 / Sepolia
-    if (fromId === 1 || fromId === 11155111) {
-      return '12-15 minutes';
+    // Ethereum L1 requires standard block confirmations (~1-2 minutes via CCTP v2)
+    const isEthL1 = fromId === 1 || fromId === 11155111 || toId === 1 || toId === 11155111;
+    if (isEthL1) {
+      return '~1-2 minutes';
     }
-    // Arc (Mainnet or Testnet) requires additional blocks for finality
-    if (fromId === 5042 || fromId === 5042002 || fromId === arcMainnet?.id || fromId === arcTestnet?.id) {
-      return '2-5 minutes';
-    }
-    // Fast L2s (Base, Arbitrum, Optimism, Polygon, Avalanche)
-    return '1-2 minutes';
+    // Arc Network (sub-second finality) and fast L2s (Base, Arbitrum, Optimism, Polygon)
+    return '~20-30 seconds';
   };
 
   // UI Helpers 
