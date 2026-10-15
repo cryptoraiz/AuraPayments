@@ -33,23 +33,33 @@ export const invoiceAPI = {
      * Get invoices for a wallet address
      */
     async getByWallet(walletAddress) {
+        if (!walletAddress) return [];
         try {
-            const response = await fetch(
-                `${API_BASE_URL}/api/invoices/${walletAddress}`,
-                {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                }
+            const addrsToTry = Array.from(new Set([
+                walletAddress,
+                walletAddress.toLowerCase()
+            ]));
+
+            const responses = await Promise.all(
+                addrsToTry.map(async (addr) => {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/invoices/${addr}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                        });
+                        if (!response.ok) return [];
+                        const data = await response.json();
+                        return data.invoices || [];
+                    } catch {
+                        return [];
+                    }
+                })
             );
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return data.invoices || [];
+            const allInvoices = responses.flat();
+            return Array.from(new Map(allInvoices.map(inv => [inv.id, inv])).values());
         } catch (error) {
             console.error('Error fetching invoices:', error);
             return [];

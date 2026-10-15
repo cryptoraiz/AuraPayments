@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccount, useChainId } from 'wagmi';
 import { invoiceAPI } from '../services/invoiceService';
 import { arcMainnet, arcTestnet } from '../config/wagmi';
-import { getBlacklist } from '../utils/localStorage';
+import { getBlacklist, isTestnetInvoice } from '../utils/localStorage';
 
 /**
  * Hook to manage invoice notifications for the connected wallet
@@ -39,10 +39,11 @@ export const useInvoiceNotifications = () => {
             // Must not be in blacklist (deleted by user)
             if (blacklist.includes(inv.id)) return false;
 
-            // Network segregation: only show invoices for active network
-            const isMainnet = chainId === arcMainnet.id;
-            const isInvMainnet = inv.chainId === 5042 || (inv.network && inv.network.toLowerCase().includes('mainnet'));
-            if (isMainnet ? !isInvMainnet : isInvMainnet) return false;
+            // Network segregation: strictly isolate Mainnet vs Testnet
+            const isMainnet = Number(chainId) === arcMainnet.id;
+            const isTestnet = isTestnetInvoice(inv);
+            const isMatch = isMainnet ? !isTestnet : isTestnet;
+            if (!isMatch) return false;
 
             // Must not be expired (24-hour production rule)
             // This is the "Real-Time" part: as 'now' advances, items drop automatically

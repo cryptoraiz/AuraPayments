@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import { useAccount, useSwitchChain, useChainId, useReadContract, useConnect } from 'wagmi'
+import { useAccount, useSwitchChain, useChainId, useReadContract, useConnect, useWriteContract } from 'wagmi'
 import { getPaymentLinkById, updatePaymentLink, saveSentPayment } from '../utils/localStorage'
 import { generatePaymentReceipt } from '../utils/generateReceipt'
 import { invoiceAPI } from '../services/invoiceService'
@@ -9,13 +9,12 @@ import WalletModal from '../components/ui/WalletModal'
 import { toast } from 'sonner'
 import { parseUnits, formatUnits } from 'viem'
 import { ERC20_ABI } from '../utils/abis'
-import { arcTestnet, arcMainnet } from '../config/wagmi'
-import { getAppKit, createCircleAdapter } from '../config/circleKit'
+import { arcMainnet } from '../config/wagmi'
 import SelfPayModal from '../components/ui/SelfPayModal'
 
-// Official Arc Testnet Addresses
+// Official Arc Mainnet Token Addresses
 const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
-const EURC_ADDRESS = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
+const EURC_ADDRESS = "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1";
 
 export default function PayPage() {
     const { linkId } = useParams()
@@ -45,17 +44,19 @@ export default function PayPage() {
 
     // Wagmi Hooks
     const chainId = useChainId()
-    const { switchChain } = useSwitchChain()
+    const { switchChain, switchChainAsync } = useSwitchChain()
+    const { writeContractAsync } = useWriteContract()
 
-    // Check token balance
+    // Check token balance on Arc Mainnet
     const tokenAddress = paymentData?.currency === 'EURC' ? EURC_ADDRESS : USDC_ADDRESS;
     const { data: balance } = useReadContract({
         address: tokenAddress,
         abi: ERC20_ABI,
         functionName: 'balanceOf',
         args: [address],
+        chainId: arcMainnet.id,
         query: {
-            enabled: !!(address && paymentData?.amount && isConnected && (chainId === arcTestnet.id || chainId === arcMainnet.id))
+            enabled: !!(address && paymentData?.amount && isConnected)
         }
     })
 
@@ -160,7 +161,7 @@ export default function PayPage() {
 
         // 2. Storage Event (Instant same-browser sync)
         const handleStorageChange = (e) => {
-            if (e.key === 'payment_links') {
+            if (e.key === 'arc_invoice_payment_links' || e.key === 'payment_links') {
                 pollStatus(); // Force check immediately
             }
         };
@@ -208,11 +209,16 @@ export default function PayPage() {
             return
         }
 
-        if (chainId !== arcTestnet.id && chainId !== arcMainnet.id) {
+        if (chainId !== arcMainnet.id) {
             try {
-                await switchChain({ chainId: arcMainnet.id })
+                if (switchChainAsync) {
+                    await switchChainAsync({ chainId: arcMainnet.id })
+                } else if (switchChain) {
+                    await switchChain({ chainId: arcMainnet.id })
+                }
             } catch (err) {
-                toast.error('You need to be on an Arc Network to pay')
+                console.error('[Payment] Switch chain error:', err)
+                toast.error('Please switch to Arc Mainnet in your wallet to pay')
                 return
             }
         }
@@ -220,32 +226,27 @@ export default function PayPage() {
         setIsPaying(true)
 
         try {
-            const kit = getAppKit()
-            // createCircleAdapter is async (official documentation)
-            const adapter = await createCircleAdapter()
-            const targetChainName = chainId === arcMainnet.id ? 'Arc' : 'Arc_Testnet';
-            const result = await kit.send({
-                from: { adapter, chain: targetChainName },
-                to: paymentData.recipientWallet,
-                amount: paymentData.amount.toString(),
-                token: paymentData.currency || 'USDC',
+            // Direct on-chain ERC20 transfer strictly on Arc Mainnet
+            const confirmedHash = await writeContractAsync({
+                address: tokenAddress,
+                abi: ERC20_ABI,
+                functionName: 'transfer',
+                args: [paymentData.recipientWallet, requiredAmount],
+                chainId: arcMainnet.id,
             })
-            const confirmedHash = result?.txHash || result?.hash || ''
             await handlePaymentSuccess(confirmedHash, address)
         } catch (err) {
-            console.error('[AppKit] kit.send() error:', err)
+            console.error('[Payment] transfer error:', err)
             setIsPaying(false)
             const msg = (err.message || '').toLowerCase()
             const code = String(err.code || err.name || '').toLowerCase()
 
-            if (msg.includes('rejected') || msg.includes('denied') || msg.includes('cancel') || msg.includes('user rejected')) {
+            if (msg.includes('rejected') || msg.includes('denied') || msg.includes('cancel') || msg.includes('user rejected') || code.includes('4001')) {
                 toast.info('Transaction cancelled')
-            } else if (msg.includes('different address than the sender') || msg.includes('invalid_address') || code.includes('invalid_address')) {
-                setShowSelfPayModal(true)
-            } else if (msg.includes('insufficient') || msg.includes('balance')) {
+            } else if (msg.includes('insufficient') || msg.includes('balance') || msg.includes('exceeds balance')) {
                 toast.error('💰 Insufficient USDC balance')
             } else {
-                toast.error('Payment Error: ' + (err.message || 'Please try again'))
+                toast.error('Payment Error: ' + (err.shortMessage || err.message || 'Please try again'))
             }
         }
     }
@@ -253,7 +254,6 @@ export default function PayPage() {
     const handlePaymentSuccess = async (confirmedHash, payerAddress) => {
         setTxHash(confirmedHash)
         setConfirmedPayer(payerAddress)
-        // console.log('✅ Payment Success. Hash:', confirmedHash, 'Payer:', payerAddress);
 
         // Update localStorage if link exists (for receiver)
         if (paymentData?.id) {
@@ -276,8 +276,7 @@ export default function PayPage() {
             console.error('Failed to sync payment status:', err)
         }
 
-        // Save sent payment
-        const isMainnet = chainId === arcMainnet.id;
+        // Save sent payment strictly on Arc Mainnet
         saveSentPayment({
             id: paymentData?.id || linkId,
             recipientName: paymentData.recipientName,
@@ -287,8 +286,8 @@ export default function PayPage() {
             description: paymentData.description,
             txHash: confirmedHash,
             payer: address,
-            chainId: chainId || (isMainnet ? 5042 : 5042002),
-            network: isMainnet ? 'Arc Mainnet' : 'Arc Testnet'
+            chainId: arcMainnet.id,
+            network: 'Arc Mainnet'
         })
 
         setIsPaying(false)
@@ -613,45 +612,12 @@ export default function PayPage() {
                                     </div>
                                 </div>
 
-                                {/* Network Status & Action Area */}
-                                {isConnected && chainId && chainId !== arcTestnet.id && chainId !== arcMainnet.id ? (
-                                    <div className="space-y-3">
-                                        {/* Compact Error Message */}
-                                        <div className="flex items-center justify-center gap-2 text-amber-500 bg-amber-500/10 py-2 px-3 rounded-lg border border-amber-500/20">
-                                            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                            </svg>
-                                            <span className="text-xs font-medium">Wrong Network</span>
-                                        </div>
-
-                                        {/* Switch Network Button */}
-                                        <button
-                                            onClick={() => {
-                                                switchChain({ chainId: arcMainnet.id }).catch(err => {
-                                                    console.error('Error switching network:', err)
-                                                    toast.error('Error switching network')
-                                                })
-                                            }}
-                                            className="w-full px-6 py-3 rounded-xl font-bold text-base bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-4 group overflow-hidden relative"
-                                        >
-                                            {/* Left Arrow - Points Right (Inwards) */}
-                                            <svg className="w-5 h-5 animate-bounce-right" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                            </svg>
-
-                                            <span className="relative z-10 uppercase tracking-wide">Switch to Arc</span>
-
-                                            {/* Right Arrow - Points Left (Inwards) */}
-                                            <svg className="w-5 h-5 animate-bounce-left" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" transform="scale(-1, 1) translate(-24, 0)" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                ) : !isConnected ? (
+                                {/* Action Area */}
+                                {!isConnected ? (
                                     <div className="text-center p-4 rounded-xl bg-white/[0.02] border border-white/10">
                                         <button
                                             onClick={() => setIsWalletModalOpen(true)}
-                                            className="w-full py-4 rounded-2xl transition-all active:scale-[0.98] bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold text-lg flex items-center justify-center"
+                                            className="w-full py-4 rounded-2xl transition-all active:scale-[0.98] bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold text-lg flex items-center justify-center cursor-pointer"
                                         >
                                             Connect Wallet to Pay
                                         </button>
@@ -708,17 +674,6 @@ export default function PayPage() {
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    {chainId === arcTestnet.id && (
-                                                        <a
-                                                            href="/faucet"
-                                                            className="px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 text-sm font-semibold hover:bg-blue-500/20 transition-all flex items-center gap-2 whitespace-nowrap"
-                                                        >
-                                                            Get testnet tokens
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                                            </svg>
-                                                        </a>
-                                                    )}
                                                 </div>
                                             </div>
                                         )}

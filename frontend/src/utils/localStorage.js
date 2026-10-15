@@ -10,7 +10,20 @@ const STORAGE_KEY = 'arc_invoice_payment_links';
 export const getPaymentLinks = () => {
     try {
         const links = localStorage.getItem(STORAGE_KEY);
-        return links ? JSON.parse(links) : [];
+        if (!links) return [];
+        const parsed = JSON.parse(links);
+        let changed = false;
+        const normalized = parsed.map(link => {
+            if (Number(link.createdAt) >= ARC_MAINNET_LAUNCH && link.chainId !== 5042) {
+                changed = true;
+                return { ...link, chainId: 5042, network: 'Arc Mainnet' };
+            }
+            return link;
+        });
+        if (changed) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+        }
+        return normalized;
     } catch (error) {
         console.error('Error reading payment links:', error);
         return [];
@@ -26,7 +39,9 @@ export const savePaymentLink = (linkData) => {
         links.push({
             ...linkData,
             createdAt: Date.now(),
-            status: 'pending'
+            status: 'pending',
+            chainId: 5042,
+            network: 'Arc Mainnet'
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
         return true;
@@ -56,6 +71,40 @@ export const updatePaymentLink = (linkId, updates) => {
     }
 };
 
+// Arc Network Mainnet Launch Timestamp (Oct 13, 2026, 00:00:00 UTC)
+// Invoices, payments, and trades created before this timestamp belong strictly to Arc Testnet
+export const ARC_MAINNET_LAUNCH = 1791849600000;
+
+/**
+ * Check if an invoice belongs strictly to testnet
+ */
+export const isTestnetInvoice = (item) => {
+    if (!item) return false;
+    // Items created on or after Mainnet launch date (Oct 13, 2026) are strictly Mainnet
+    const createdAtNum = Number(item.createdAt || 0);
+    if (createdAtNum >= ARC_MAINNET_LAUNCH) {
+        return false;
+    }
+    const chainIdNum = Number(item.chainId);
+    // Explicit Testnet Chain IDs
+    if (chainIdNum === 5042002 || chainIdNum === 11155111 || chainIdNum === 84532 || chainIdNum === 421614 || chainIdNum === 11155420 || chainIdNum === 80002) {
+        return true;
+    }
+    const net = (item.network || '').toLowerCase();
+    if (net.includes('testnet') || net.includes('sepolia')) {
+        return true;
+    }
+    // Items created before Mainnet launch date (Oct 13, 2026) are 100% testnet
+    if (createdAtNum > 0 && createdAtNum < ARC_MAINNET_LAUNCH) {
+        return true;
+    }
+    // Explicit Mainnet markers
+    if (chainIdNum === 5042 || net.includes('mainnet')) {
+        return false;
+    }
+    return false;
+};
+
 /**
  * Get payment links filtered by wallet address
  */
@@ -65,15 +114,9 @@ export const getPaymentLinksByWallet = (walletAddress, chainId) => {
         link => {
             if (!link || link.creatorAddress?.toLowerCase() !== walletAddress?.toLowerCase()) return false;
             if (!chainId) return true;
-            const isMainnetRequest = chainId === 5042;
-            const mentionsTestnet = 
-                (link.network && (link.network.toLowerCase().includes('testnet') || link.network.toLowerCase().includes('sepolia'))) ||
-                link.chainId === 5042002;
-            const isLinkMainnet = !mentionsTestnet && (
-                link.chainId === 5042 ||
-                (link.network && link.network.toLowerCase().includes('mainnet'))
-            );
-            return isMainnetRequest ? isLinkMainnet : !isLinkMainnet;
+            const isMainnetRequest = Number(chainId) === 5042;
+            const isTestnet = isTestnetInvoice(link);
+            return isMainnetRequest ? !isTestnet : isTestnet;
         }
     );
 };
@@ -213,15 +256,9 @@ export const getSentPaymentsByWallet = (walletAddress, chainId) => {
         payment => {
             if (!payment || payment.payer?.toLowerCase() !== walletAddress?.toLowerCase()) return false;
             if (!chainId) return true;
-            const isMainnetRequest = chainId === 5042;
-            const mentionsTestnet = 
-                (payment.network && (payment.network.toLowerCase().includes('testnet') || payment.network.toLowerCase().includes('sepolia'))) ||
-                payment.chainId === 5042002;
-            const isPaymentMainnet = !mentionsTestnet && (
-                payment.chainId === 5042 ||
-                (payment.network && payment.network.toLowerCase().includes('mainnet'))
-            );
-            return isMainnetRequest ? isPaymentMainnet : !isPaymentMainnet;
+            const isMainnetRequest = Number(chainId) === 5042;
+            const isTestnet = isTestnetInvoice(payment);
+            return isMainnetRequest ? !isTestnet : isTestnet;
         }
     );
 };

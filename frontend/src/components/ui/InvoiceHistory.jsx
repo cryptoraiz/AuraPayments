@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAccount, useConnect, useChainId } from 'wagmi';
 import { arcMainnet } from '../../config/wagmi';
-import { getPaymentLinksByWallet, getSentPaymentsByWallet, clearPaymentLinksByScope, clearSentPaymentsByScope, getBlacklist, syncLocalLinks } from '../../utils/localStorage';
+import { getPaymentLinksByWallet, getSentPaymentsByWallet, clearPaymentLinksByScope, clearSentPaymentsByScope, getBlacklist, syncLocalLinks, isTestnetInvoice } from '../../utils/localStorage';
 import { invoiceAPI } from '../../services/invoiceService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateBatchReceipts } from '../../utils/generateReceipt';
@@ -89,9 +89,46 @@ export default function InvoiceHistory({ onUpdateStats }) {
                 isBackend: true
             }));
 
-            // Merge Logic (Backend Priority)
-            const allReceived = [...receivedLocal, ...backendReceivedItems].filter(Boolean);
-            let uniqueReceived = Array.from(new Map(allReceived.map(item => [item.id, item])).values());
+            // Merge Logic (Backend Priority with Property Preservation)
+            const itemMap = new Map();
+
+            // 1. Add local items first
+            receivedLocal.forEach(loc => {
+                if (loc && loc.id) {
+                    itemMap.set(loc.id, {
+                        ...loc,
+                        recipientName: loc.recipientName || loc.name || 'Payment Request',
+                        chainId: loc.chainId || (chainId || 5042),
+                        network: loc.network || (chainId === 5042002 ? 'Arc Testnet' : 'Arc Mainnet')
+                    });
+                }
+            });
+
+            // 2. Merge backend items (updating status/txHash/paidAt/payer, but preserving missing properties)
+            backendReceivedItems.forEach(bItem => {
+                if (!bItem || !bItem.id) return;
+                const existing = itemMap.get(bItem.id);
+                if (existing) {
+                    itemMap.set(bItem.id, {
+                        ...existing,
+                        ...bItem,
+                        recipientName: (bItem.recipientName && bItem.recipientName !== 'Payment Received')
+                            ? bItem.recipientName 
+                            : (existing.recipientName || existing.name || 'Payment Request'),
+                        chainId: bItem.chainId || existing.chainId || (chainId || 5042),
+                        network: bItem.network || existing.network || (chainId === 5042002 ? 'Arc Testnet' : 'Arc Mainnet')
+                    });
+                } else {
+                    itemMap.set(bItem.id, {
+                        ...bItem,
+                        recipientName: bItem.recipientName || 'Payment Request',
+                        chainId: bItem.chainId || (chainId || 5042),
+                        network: bItem.network || (chainId === 5042002 ? 'Arc Testnet' : 'Arc Mainnet')
+                    });
+                }
+            });
+
+            let uniqueReceived = Array.from(itemMap.values());
 
             // Filter out blacklisted (locally deleted) items
             const blacklist = getBlacklist();
@@ -99,12 +136,11 @@ export default function InvoiceHistory({ onUpdateStats }) {
                 uniqueReceived = uniqueReceived.filter(item => !blacklist.includes(item.id));
             }
 
-            // Network segregation: only show invoices belonging to current network (Mainnet vs Testnet)
-            const isCurrentMainnet = chainId === arcMainnet.id;
+            // Network segregation: strictly isolate Mainnet vs Testnet
+            const isCurrentMainnet = Number(chainId) === arcMainnet.id;
             uniqueReceived = uniqueReceived.filter(item => {
-                const isItemMainnet = item.chainId === 5042 || 
-                                      (item.network && item.network.toLowerCase().includes('mainnet'));
-                return isCurrentMainnet ? isItemMainnet : !isItemMainnet;
+                const isTestnet = isTestnetInvoice(item);
+                return isCurrentMainnet ? !isTestnet : isTestnet;
             });
 
             // CRITICAL FIX: Ghost Transaction Prevention
@@ -152,13 +188,31 @@ export default function InvoiceHistory({ onUpdateStats }) {
         }
     }, [address, isConnected, chainId]);
 
-    // Polling Effect
+    // Polling Effect + Immediate Event Listener
     useEffect(() => {
         setIsLoading(true); // Reset load on mount/address change
         fetchHistory(); // Initial fetch
         const interval = setInterval(fetchHistory, 5000); // 5s Poll
-        return () => clearInterval(interval);
+
+        const handleInvoiceUpdated = () => {
+            fetchHistory();
+        };
+        window.addEventListener('invoice_updated', handleInvoiceUpdated);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('invoice_updated', handleInvoiceUpdated);
+        };
     }, [fetchHistory]);
+
+    // Helper to check if expired (older than 24h)
+    const isExpired = (item) => {
+        if (!item || item.status === 'paid') return false;
+        const created = safeDate(item.createdAt).getTime();
+        const now = Date.now();
+        const expirationTime = 24 * 60 * 60 * 1000; // 24h Production expiration
+        return (now - created) > expirationTime;
+    };
 
     // --- Stats Computation ---
     const totalReceived = receivedLinks
@@ -171,7 +225,8 @@ export default function InvoiceHistory({ onUpdateStats }) {
     const formattedTotalReceived = totalReceived.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const formattedTotalSent = totalSent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const pendingCount = receivedLinks.filter(i => i.status === 'pending').length;
+    // ONLY active (non-expired) pending invoices count towards the badge, perfectly matching the list!
+    const pendingCount = receivedLinks.filter(i => i.status === 'pending' && !isExpired(i)).length;
     const completedCount = receivedLinks.filter(i => i.status === 'paid').length;
 
     useEffect(() => {
@@ -182,15 +237,6 @@ export default function InvoiceHistory({ onUpdateStats }) {
 
     // --- Filtering Logic ---
     let displayedItems = [];
-
-    // Helper to check if expired (older than 24h)
-    const isExpired = (item) => {
-        if (item.status === 'paid') return false;
-        const created = safeDate(item.createdAt).getTime();
-        const now = Date.now();
-        const expirationTime = 24 * 60 * 60 * 1000; // 24h Production expiration
-        return (now - created) > expirationTime;
-    };
 
     // Helper for countdown display
     const getTimeRemaining = (createdAt) => {
