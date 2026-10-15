@@ -393,8 +393,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
               inputAmount: rawAmount,
               slippageTolerance: Math.round(Number(slippage || 0.5) * 100),
               chainId: 5042
-            }),
-            signal: AbortSignal.timeout(3000)
+            })
           });
           const resData = await res.json();
           if (resData?.success && resData?.data?.outputAmount) {
@@ -422,35 +421,33 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         }
       }
 
-      // 4. Fallback to Uniswap V3 on-chain quoter if selected DEX didn't return (skip if already checked)
-      if (activeDEX !== 'uniswap') {
-        try {
-          const arcUniQuote = await fetchUniswapArcQuote({
-            tokenIn,
-            tokenOut,
-            amountInRaw: rawAmount,
-            slippage: Number(slippage || 0.5)
+      // 4. Fallback to Uniswap V3 on-chain quoter if selected DEX didn't return
+      try {
+        const arcUniQuote = await fetchUniswapArcQuote({
+          tokenIn,
+          tokenOut,
+          amountInRaw: rawAmount,
+          slippage: Number(slippage || 0.5)
+        });
+        if (arcUniQuote && arcUniQuote.success) {
+          if (currentFetchId !== fetchIdRef.current) return;
+          setQuote({
+            amountOutDecimals: arcUniQuote.amountOutFormatted,
+            amountOutRaw: arcUniQuote.amountOutRaw,
+            routeString: arcUniQuote.routeString,
+            priceImpact: arcUniQuote.priceImpact,
+            fee: arcUniQuote.fee,
+            path: arcUniQuote.path,
+            isMultihop: arcUniQuote.isMultihop,
+            provider: 'uniswap'
           });
-          if (arcUniQuote && arcUniQuote.success) {
-            if (currentFetchId !== fetchIdRef.current) return;
-            setQuote({
-              amountOutDecimals: arcUniQuote.amountOutFormatted,
-              amountOutRaw: arcUniQuote.amountOutRaw,
-              routeString: arcUniQuote.routeString,
-              priceImpact: arcUniQuote.priceImpact,
-              fee: arcUniQuote.fee,
-              path: arcUniQuote.path,
-              isMultihop: arcUniQuote.isMultihop,
-              provider: 'uniswap'
-            });
-            setQuoteLoading(false);
-            setIsRefreshing(false);
-            setRefreshCountdown(12);
-            return;
-          }
-        } catch (uniErr) {
-          console.warn('[Uniswap Final Fallback]', uniErr);
+          setQuoteLoading(false);
+          setIsRefreshing(false);
+          setRefreshCountdown(12);
+          return;
         }
+      } catch (uniErr) {
+        console.warn('[Uniswap Final Fallback]', uniErr);
       }
 
       if (currentFetchId !== fetchIdRef.current) return;
@@ -511,12 +508,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       setQuoteLoading(false);
       return;
     }
-    setQuote(prev => (prev ? prev : null));
-    setQuoteLoading(prev => (!quote ? true : false));
-    setIsRefreshing(prev => (quote ? true : false));
+    setQuote(null);
+    setQuoteLoading(true);
     const t = setTimeout(() => fetchQuote(false), 200);
     return () => clearTimeout(t);
-  }, [fetchQuote, activeTab, amount, tokenIn.symbol, tokenOut.symbol, quote]);
+  }, [fetchQuote, activeTab, amount, tokenIn.symbol, tokenOut.symbol]);
 
   // Real-time auto-refresh every 12 seconds with countdown
   useEffect(() => {
