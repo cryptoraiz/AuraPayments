@@ -13,6 +13,8 @@ export default function HistoryPage() {
     const [trades, setTrades] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [historyTab, setHistoryTab] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 5;
 
     const handleWalletSelect = (connector) => {
         connect({ connector });
@@ -47,6 +49,20 @@ export default function HistoryPage() {
         if (historyTab === 'bridge') return trades.filter(t => t.type?.toLowerCase() === 'bridge');
         return trades;
     }, [trades, historyTab]);
+
+    const totalPages = Math.max(1, Math.ceil(displayedTrades.length / ITEMS_PER_PAGE));
+    const paginatedTrades = useMemo(() => {
+        return displayedTrades.slice(
+            (currentPage - 1) * ITEMS_PER_PAGE,
+            currentPage * ITEMS_PER_PAGE
+        );
+    }, [displayedTrades, currentPage, ITEMS_PER_PAGE]);
+
+    useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
 
     const HistorySkeleton = () => (
         <div className="group relative bg-white/[0.02] border border-white/5 rounded-xl p-4 animate-pulse">
@@ -122,7 +138,10 @@ export default function HistoryPage() {
                     ].map(t => (
                         <button
                             key={t.id}
-                            onClick={() => setHistoryTab(t.id)}
+                            onClick={() => {
+                                setHistoryTab(t.id);
+                                setCurrentPage(1);
+                            }}
                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                                 historyTab === t.id
                                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
@@ -155,7 +174,7 @@ export default function HistoryPage() {
                         </div>
                     ) : (
                         <div className="grid gap-3">
-                            {displayedTrades.map(item => (
+                            {paginatedTrades.map(item => (
                                 <div key={item.id} className="group relative bg-gradient-to-br from-white/[0.07] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl p-4 transition-all hover:bg-white/[0.04]">
                                     <div className="flex items-center justify-between gap-4">
                                         
@@ -257,6 +276,41 @@ export default function HistoryPage() {
                             ))}
                         </div>
                     )}
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="mt-3 flex items-center justify-between px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl">
+                            <span className="text-xs font-semibold text-zinc-400">
+                                Page <strong className="text-white">{currentPage}</strong> of <strong className="text-white">{totalPages}</strong>
+                                <span className="ml-2 text-zinc-500">({displayedTrades.length} total)</span>
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white text-xs font-bold hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+                                    title="Previous Page"
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                    Prev
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white text-xs font-bold hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+                                    title="Next Page"
+                                >
+                                    Next
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
         </section>

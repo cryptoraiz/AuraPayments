@@ -41,7 +41,7 @@ export default function InvoiceHistory({ onUpdateStats }) {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 4;
+    const ITEMS_PER_PAGE = 5;
 
     // Notification State
     const [toasts, setToasts] = useState([]);
@@ -292,8 +292,18 @@ export default function InvoiceHistory({ onUpdateStats }) {
         );
     }
 
-    // Apply Pagination
-    const paginatedItems = displayedItems.slice(0, 5);
+    // Apply Pagination (5 items per page)
+    const totalPages = Math.max(1, Math.ceil(displayedItems.length / ITEMS_PER_PAGE));
+    const paginatedItems = displayedItems.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
+    useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
 
 
     const [copiedId, setCopiedId] = useState(null);
@@ -749,6 +759,40 @@ export default function InvoiceHistory({ onUpdateStats }) {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="mt-3 flex items-center justify-between px-3 py-2.5 bg-dark-card/60 border border-dark-border/50 rounded-xl">
+                            <span className="text-xs font-semibold text-zinc-400">
+                                Page <strong className="text-white">{currentPage}</strong> of <strong className="text-white">{totalPages}</strong>
+                                <span className="ml-2 text-zinc-500">({displayedItems.length} total)</span>
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-1.5 rounded-lg border border-dark-border bg-dark-input text-white text-xs font-bold hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+                                    title="Previous Page"
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                    Prev
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-1.5 rounded-lg border border-dark-border bg-dark-input text-white text-xs font-bold hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer"
+                                    title="Next Page"
+                                >
+                                    Next
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     )}
 
