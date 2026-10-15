@@ -4,7 +4,7 @@ import { arcMainnet, arcTestnet } from '../config/wagmi';
 import { getAllTokens } from '../config/tokens';
 import { motion } from 'framer-motion';
 import { useTokenPrices, formatUsdValue } from '../hooks/useTokenPrices';
-import { getTradeHistoryByWallet } from '../utils/localStorage';
+import { getTradeHistoryByWallet, deleteTrade } from '../utils/localStorage';
 
 const getExplorerUrl = (txHash, chain, currentChainId) => {
   if (!txHash || txHash === 'undefined' || txHash === 'null') return null;
@@ -201,25 +201,64 @@ export default function ProfilePage() {
     if (file) setAvatarUrl(URL.createObjectURL(file));
   };
 
-  const activities = (getTradeHistoryByWallet(address, chainId) || []).map(t => {
-    const timestamp = t.createdAt ? Number(t.createdAt) : Date.now();
-    const d = new Date(isNaN(timestamp) ? Date.now() : timestamp);
-    return {
-      ...t,
-      dateFormatted: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
-      timeFormatted: d.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-      time: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
-      status: 'Completed'
-    };
-  }).sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activitiesList, setActivitiesList] = useState([]);
+
+  const loadActivities = () => {
+    if (!address) {
+      setActivitiesList([]);
+      return;
+    }
+    const list = (getTradeHistoryByWallet(address, chainId) || []).map(t => {
+      const timestamp = t.createdAt ? Number(t.createdAt) : Date.now();
+      const d = new Date(isNaN(timestamp) ? Date.now() : timestamp);
+      return {
+        ...t,
+        dateFormatted: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+        timeFormatted: d.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        time: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
+        status: 'Completed'
+      };
+    }).sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+    setActivitiesList(list);
+  };
+
+  useEffect(() => {
+    loadActivities();
+    window.addEventListener('storage', loadActivities);
+    return () => window.removeEventListener('storage', loadActivities);
+  }, [address, chainId]);
+
+  const handleDeleteActivity = (tradeId) => {
+    deleteTrade(tradeId);
+    setActivitiesList(prev => prev.filter(t => t.id !== tradeId));
+  };
+
+  const filteredActivities = useMemo(() => {
+    if (!searchQuery.trim()) return activitiesList;
+    const q = searchQuery.toLowerCase().trim();
+    return activitiesList.filter(act => 
+      (act.tokenIn && act.tokenIn.toLowerCase().includes(q)) ||
+      (act.tokenOut && act.tokenOut.toLowerCase().includes(q)) ||
+      (act.currency && act.currency.toLowerCase().includes(q)) ||
+      (act.fromChain && act.fromChain.toLowerCase().includes(q)) ||
+      (act.toChain && act.toChain.toLowerCase().includes(q)) ||
+      (act.type && act.type.toLowerCase().includes(q)) ||
+      (act.txHash && act.txHash.toLowerCase().includes(q)) ||
+      (act.hash && act.hash.toLowerCase().includes(q))
+    );
+  }, [activitiesList, searchQuery]);
 
   // Pagination Logic
   const activitiesPerPage = 4;
   const [activityPage, setActivityPage] = useState(1);
 
-  const totalActivityPages = Math.ceil(activities.length / activitiesPerPage);
-  
-  const paginatedActivities = activities.slice((activityPage - 1) * activitiesPerPage, activityPage * activitiesPerPage);
+  useEffect(() => {
+    setActivityPage(1);
+  }, [searchQuery]);
+
+  const totalActivityPages = Math.max(1, Math.ceil(filteredActivities.length / activitiesPerPage));
+  const paginatedActivities = filteredActivities.slice((activityPage - 1) * activitiesPerPage, activityPage * activitiesPerPage);
 
   // If wallet is not connected
   if (!isConnected) {
@@ -377,6 +416,8 @@ export default function ProfilePage() {
                   </svg>
                   <input 
                     type="text" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search by token hash/symbol/chain" 
                     className="w-full bg-dark-input border border-dark-border/50 rounded-xl py-2 pl-9 pr-4 text-sm text-white placeholder-dark-muted outline-none focus:border-blue-500/50 transition-colors"
                   />
@@ -393,8 +434,12 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {paginatedActivities.length === 0 ? <div className="p-6 text-center text-dark-muted">No recent activities found for this wallet</div> : paginatedActivities.map((act, idx) => (
-                <div key={idx} className="flex flex-col md:grid md:grid-cols-12 md:items-center px-6 py-4 border-b border-dark-border/30 hover:bg-dark-input/30 transition-colors gap-4 md:gap-4">
+              {paginatedActivities.length === 0 ? (
+                <div className="p-8 text-center text-dark-muted">
+                  {searchQuery ? 'No activities match your search' : 'No recent activities found for this wallet'}
+                </div>
+              ) : paginatedActivities.map((act, idx) => (
+                <div key={act.id || idx} className="flex flex-col md:grid md:grid-cols-12 md:items-center px-6 py-4 border-b border-dark-border/30 hover:bg-dark-input/30 transition-colors gap-4 md:gap-4">
                   
                   {/* Left Side: Icon and Type */}
                   <div className="md:col-span-2 flex items-center justify-between md:justify-start w-full">
@@ -413,11 +458,11 @@ export default function ProfilePage() {
                   <div className="md:col-span-3 flex items-center gap-3">
                     <div className="relative">
                       <img src={getTokenIcon(act.tokenIn || act.currency)} alt="token" className="w-8 h-8 rounded-full" />
-                      <NetworkBadge chain={act.type === 'Receive' ? 'Invoice' : defaultArcLabel} />
+                      <NetworkBadge chain={act.type === 'Receive' ? 'Invoice' : (act.fromChain || defaultArcLabel)} />
                     </div>
                     <div className="flex flex-col">
                       <div className="font-bold text-white text-sm">{act.amountIn || act.amount} {act.tokenIn || act.currency}</div>
-                      <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.type === 'Receive' ? 'Invoice' : defaultArcLabel}</div>
+                      <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.type === 'Receive' ? 'Invoice' : (act.fromChain || defaultArcLabel)}</div>
                     </div>
                   </div>
 
@@ -469,7 +514,7 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Action */}
-                  <div className="md:col-span-1 flex justify-end items-center mt-2 md:mt-0">
+                  <div className="md:col-span-1 flex justify-end items-center gap-2 mt-2 md:mt-0">
                     {(() => {
                       const hash = act.txHash || act.hash;
                       const chain = act.type === 'Bridge' ? (act.fromChain || defaultArcLabel) : defaultArcLabel;
@@ -479,16 +524,25 @@ export default function ProfilePage() {
                           href={url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-4 py-1.5 rounded-full border border-dark-border bg-white text-black hover:bg-zinc-200 text-xs font-bold transition-all shadow-md active:scale-95 whitespace-nowrap w-full md:w-auto text-center"
+                          className="px-3 py-1.5 rounded-full border border-dark-border bg-white text-black hover:bg-zinc-200 text-xs font-bold transition-all shadow-md active:scale-95 whitespace-nowrap text-center"
                         >
                           View Details
                         </a>
                       ) : (
-                        <span className="px-4 py-1.5 rounded-full border border-dark-border bg-dark-input text-dark-muted text-xs font-bold whitespace-nowrap w-full md:w-auto text-center opacity-50 cursor-not-allowed">
+                        <span className="px-3 py-1.5 rounded-full border border-dark-border bg-dark-input text-dark-muted text-xs font-bold whitespace-nowrap text-center opacity-50 cursor-not-allowed">
                           No Hash
                         </span>
                       );
                     })()}
+                    <button
+                      onClick={() => handleDeleteActivity(act.id)}
+                      title="Delete activity"
+                      className="p-1.5 rounded-lg text-dark-muted hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))}

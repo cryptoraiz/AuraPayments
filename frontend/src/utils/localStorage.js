@@ -312,16 +312,39 @@ export const getTradeHistory = () => {
     try {
         const raw = localStorage.getItem(TRADE_HISTORY_KEY);
         let trades = raw ? JSON.parse(raw) : [];
-        // Auto-purge legacy simulation test trades (e.g. 10 EURC from tests 70+ days ago)
-        const hasLegacy = trades.some(t => 
-            (t.tokenIn === 'EURC' && Number(t.amountIn) === 10) ||
-            (!t.walletAddress && !t.txHash)
+        let hasChanges = false;
+
+        // Auto-purge legacy simulation test trades (e.g. 10 EURC from mock tests)
+        const initialLen = trades.length;
+        trades = trades.filter(t => 
+            !(t.tokenIn === 'EURC' && Number(t.amountIn) === 10) &&
+            !(!t.walletAddress && !t.txHash && !t.hash)
         );
-        if (hasLegacy) {
-            trades = trades.filter(t => 
-                !(t.tokenIn === 'EURC' && Number(t.amountIn) === 10) &&
-                !(!t.walletAddress && !t.txHash)
-            );
+        if (trades.length !== initialLen) hasChanges = true;
+
+        // Auto-correct any legacy testnet trades that were stored with 'Arc Mainnet'
+        trades = trades.map(t => {
+            const tokenIn = (t.tokenIn || '').toUpperCase();
+            const tokenOut = (t.tokenOut || '').toUpperCase();
+            const isTestnetToken = ['USDT', 'WUSDC'].includes(tokenIn) || ['USDT', 'WUSDC'].includes(tokenOut);
+            const isTestnetChain = [5042002, 84532, 11155111, 421614, 11155420, 80002].includes(Number(t.chainId));
+            const isPreMainnet = t.createdAt && Number(t.createdAt) < 1791849600000; // Before Oct 13, 2026
+
+            if (isTestnetToken || isTestnetChain || isPreMainnet) {
+                if (Number(t.chainId) === 5042 || t.fromChain === 'Arc Mainnet' || t.toChain === 'Arc Mainnet') {
+                    hasChanges = true;
+                    return {
+                        ...t,
+                        chainId: 5042002,
+                        fromChain: t.fromChain === 'Arc Mainnet' ? 'Arc Testnet' : t.fromChain,
+                        toChain: t.toChain === 'Arc Mainnet' ? 'Arc Testnet' : t.toChain,
+                    };
+                }
+            }
+            return t;
+        });
+
+        if (hasChanges) {
             localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(trades));
         }
         return trades;
@@ -336,6 +359,7 @@ export const deleteTrade = (tradeId) => {
         const trades = getTradeHistory();
         const filtered = trades.filter(t => t.id !== tradeId);
         localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(filtered));
+        window.dispatchEvent(new Event('storage'));
         return true;
     } catch (error) {
         console.error('Error deleting trade:', error);
@@ -348,6 +372,7 @@ export const clearTradeHistoryByWallet = (walletAddress) => {
         const trades = getTradeHistory();
         const filtered = trades.filter(t => t.walletAddress?.toLowerCase() !== walletAddress?.toLowerCase());
         localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(filtered));
+        window.dispatchEvent(new Event('storage'));
         return true;
     } catch (error) {
         console.error('Error clearing trade history:', error);
@@ -364,6 +389,7 @@ export const saveTrade = (tradeData) => {
             ...tradeData
         });
         localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(trades));
+        window.dispatchEvent(new Event('storage'));
         return true;
     } catch (error) {
         console.error('Error saving trade:', error);
@@ -373,23 +399,55 @@ export const saveTrade = (tradeData) => {
 
 export const getTradeHistoryByWallet = (walletAddress, chainId) => {
     const trades = getTradeHistory();
+    const reqChainId = Number(chainId);
+    const isMainnetRequest = reqChainId === 5042;
+
     return trades.filter(
         trade => {
             if (!trade || trade.walletAddress?.toLowerCase() !== walletAddress?.toLowerCase()) return false;
             if (!chainId) return true;
-            const isMainnetRequest = chainId === 5042;
-            const mentionsTestnet = 
-                (trade.fromChain && (trade.fromChain.toLowerCase().includes('sepolia') || trade.fromChain.toLowerCase().includes('testnet'))) ||
-                (trade.toChain && (trade.toChain.toLowerCase().includes('sepolia') || trade.toChain.toLowerCase().includes('testnet'))) ||
-                (trade.network && (trade.network.toLowerCase().includes('sepolia') || trade.network.toLowerCase().includes('testnet'))) ||
-                trade.chainId === 5042002 || trade.chainId === 84532 || trade.chainId === 11155111 || trade.chainId === 421614;
 
-            const isTradeMainnet = !mentionsTestnet && (
-                trade.chainId === 5042 ||
-                trade.fromChain === 'Arc Mainnet' ||
-                (trade.network && trade.network.toLowerCase().includes('mainnet'))
+            const tChainId = Number(trade.chainId);
+            const tokenIn = (trade.tokenIn || '').toUpperCase();
+            const tokenOut = (trade.tokenOut || '').toUpperCase();
+
+            // 1. Strict testnet token check: USDT and WUSDC only exist on Arc Testnet
+            const hasTestnetToken = ['USDT', 'WUSDC'].includes(tokenIn) || ['USDT', 'WUSDC'].includes(tokenOut);
+
+            // 2. Strict testnet chain IDs
+            const testnetChainIds = [5042002, 84532, 11155111, 421614, 11155420, 80002];
+            const isTestnetChain = testnetChainIds.includes(tChainId);
+
+            // 3. String keywords indicating testnet
+            const stringsToCheck = [
+                trade.fromChain,
+                trade.toChain,
+                trade.network,
+                trade.chain
+            ].filter(Boolean).map(s => s.toLowerCase());
+
+            const mentionsTestnet = stringsToCheck.some(s => 
+                s.includes('testnet') || 
+                s.includes('sepolia') || 
+                s.includes('amoy') || 
+                s.includes('mumbai') || 
+                s.includes('goerli')
             );
-            return isMainnetRequest ? isTradeMainnet : !isTradeMainnet;
+
+            // 4. Any trade created before Arc Mainnet launch date (Oct 13, 2026) is testnet
+            const isPreMainnet = trade.createdAt && Number(trade.createdAt) < 1791849600000;
+
+            const isTestnet = hasTestnetToken || isTestnetChain || mentionsTestnet || isPreMainnet;
+
+            if (isMainnetRequest) {
+                if (isTestnet) return false;
+                return tChainId === 5042 ||
+                    trade.fromChain === 'Arc Mainnet' ||
+                    trade.fromChain === 'Arc' ||
+                    (trade.network && trade.network.toLowerCase().includes('mainnet'));
+            } else {
+                return isTestnet || tChainId === 5042002;
+            }
         }
     );
 };

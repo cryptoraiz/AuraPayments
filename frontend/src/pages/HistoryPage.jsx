@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useConnect, useChainId } from 'wagmi';
 import { arcMainnet } from '../config/wagmi';
-import { getTradeHistoryByWallet } from '../utils/localStorage';
+import { getTradeHistoryByWallet, deleteTrade } from '../utils/localStorage';
 import WalletModal from '../components/ui/WalletModal';
 import { motion } from 'framer-motion';
 
@@ -18,20 +18,28 @@ export default function HistoryPage() {
         setShowWalletModal(false);
     };
 
-    useEffect(() => {
-        setIsLoading(true);
+    const loadHistory = () => {
         if (isConnected && address) {
             const history = getTradeHistoryByWallet(address, chainId);
-            // Sort by newest first
             history.sort((a, b) => b.createdAt - a.createdAt);
             setTrades(history);
         } else {
             setTrades([]);
         }
-        
-        // Remove artificial loading delay
         setIsLoading(false);
+    };
+
+    useEffect(() => {
+        setIsLoading(true);
+        loadHistory();
+        window.addEventListener('storage', loadHistory);
+        return () => window.removeEventListener('storage', loadHistory);
     }, [address, isConnected, chainId]);
+
+    const handleDelete = (tradeId) => {
+        deleteTrade(tradeId);
+        setTrades(prev => prev.filter(t => t.id !== tradeId));
+    };
 
     const HistorySkeleton = () => (
         <div className="group relative bg-white/[0.02] border border-white/5 rounded-xl p-4 animate-pulse">
@@ -173,24 +181,46 @@ export default function HistoryPage() {
                                                 else if (chain.includes('optimism')) explorerBase = 'https://sepolia-optimism.etherscan.io';
                                                 else if (chain.includes('arbitrum')) explorerBase = 'https://sepolia.arbiscan.io';
                                                 return (
-                                                    <a
-                                                        href={`${explorerBase}/tx/${tx}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors text-xs font-bold w-max"
-                                                    >
-                                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                                        View Tx
-                                                    </a>
+                                                    <div className="flex items-center gap-2">
+                                                        <a
+                                                            href={`${explorerBase}/tx/${tx}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors text-xs font-bold w-max"
+                                                        >
+                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                                            View Tx
+                                                        </a>
+                                                        <button
+                                                            onClick={() => handleDelete(item.id)}
+                                                            title="Delete from history"
+                                                            className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
                                                 );
                                             })()}
                                         </div>
 
                                         {/* Right Side: Status */}
-                                        <div className="text-right pl-4">
+                                        <div className="text-right pl-4 flex flex-col items-end gap-2">
                                             <span className="text-xs font-bold px-2 py-1.5 rounded-lg inline-block bg-green-500/10 text-green-400 border border-green-500/20">
                                                 Completed
                                             </span>
+                                            {!(item.txHash || item.hash) && (
+                                                <button
+                                                    onClick={() => handleDelete(item.id)}
+                                                    title="Delete from history"
+                                                    className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
