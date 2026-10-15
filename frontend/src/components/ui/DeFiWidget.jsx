@@ -358,7 +358,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
           if (resData?.success && resData?.data?.quote) {
             const outUnits = resData.data.quote.amount || resData.data.quote.output?.amount;
             if (outUnits) {
-              const formattedOut = (Number(outUnits) / (10 ** tokenOut.decimals)).toFixed(isStableOut ? 2 : (tokenOut.symbol === 'cirBTC' ? 6 : 4));
+              const numOut = Number(outUnits) / (10 ** tokenOut.decimals);
+              const formattedOut = parseFloat(numOut.toFixed(isStableOut ? 2 : (tokenOut.symbol === 'cirBTC' ? 6 : 4))).toString();
               if (currentFetchId !== fetchIdRef.current) return;
               setQuote({
                 amountOutDecimals: formattedOut,
@@ -402,7 +403,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             if (String(outUnits).length > 12 && tokenOut.decimals <= 6) {
               decimals = 18;
             }
-            const formattedOut = (Number(outUnits) / (10 ** decimals)).toFixed(4);
+            const numOut = Number(outUnits) / (10 ** decimals);
+            const formattedOut = parseFloat(numOut.toFixed(isStableOut ? 2 : (tokenOut.symbol === 'cirBTC' ? 6 : 4))).toString();
             if (currentFetchId !== fetchIdRef.current) return;
             setQuote({
               amountOutDecimals: formattedOut,
@@ -659,11 +661,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const outputAmount = activeTab === 'bridge'
     ? (amount && Number(amount) > 0 
         ? (netBridgeAmount > 0 
-            ? netBridgeAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6, useGrouping: false }) 
-            : '0.00')
+            ? netBridgeAmount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6, useGrouping: false }) 
+            : '0')
         : '')
     : (quote 
-        ? Number(quote.amountOutDecimals).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: isStableOut ? 2 : 6, useGrouping: false }) 
+        ? Number(quote.amountOutDecimals).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: isStableOut ? 2 : 6, useGrouping: false }) 
         : '');
 
   let realPriceImpact = quote?.priceImpact;
@@ -707,7 +709,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         id: 'tower',
         name: 'Tower DEX',
         rawNumeric: baseOut * 0.9997,
-        amountOut: (baseOut * 0.9997).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
+        amountOut: parseFloat((baseOut * 0.9997).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4))).toString(),
         usdValue: `~$ ${(baseOut * 0.9997 * outPrice).toFixed(2)}`,
         logo: '/dex-icons/tower.svg'
       },
@@ -715,7 +717,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         id: 'synthra',
         name: 'Synthra DEX',
         rawNumeric: baseOut * 0.9994,
-        amountOut: (baseOut * 0.9994).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
+        amountOut: parseFloat((baseOut * 0.9994).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4))).toString(),
         usdValue: `~$ ${(baseOut * 0.9994 * outPrice).toFixed(2)}`,
         logo: '/dex-icons/synthra.png'
       }
@@ -732,7 +734,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         id: 'tower',
         name: 'Tower Testnet',
         rawNumeric: baseOut * 0.9996,
-        amountOut: (baseOut * 0.9996).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
+        amountOut: parseFloat((baseOut * 0.9996).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4))).toString(),
         usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
         logo: '/dex-icons/tower.svg'
       },
@@ -740,7 +742,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         id: 'synthra',
         name: 'Synthra Testnet',
         rawNumeric: baseOut * 0.9992,
-        amountOut: (baseOut * 0.9992).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4)),
+        amountOut: parseFloat((baseOut * 0.9992).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4))).toString(),
         usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
         logo: '/dex-icons/synthra.png'
       }
@@ -1107,7 +1109,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                </div>
                <div className="flex items-center justify-between text-sm">
                  <span className="text-dark-muted font-medium">You Receive</span>
-                 <span className="text-white font-bold">{Number(amount) > 0 && netBridgeAmount > 0 ? `${netBridgeAmount.toFixed(4)} ${bridgeTokenOut.symbol}` : '--'}</span>
+                 <span className="text-white font-bold">{Number(amount) > 0 && netBridgeAmount > 0 ? `${outputAmount} ${bridgeTokenOut.symbol}` : '--'}</span>
                </div>
             </div>
           </div>

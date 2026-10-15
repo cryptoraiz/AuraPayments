@@ -634,8 +634,8 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
   const amtNum = Math.max(0, Number(amount || 0));
   const hasFee = BRIDGE_FEE > 0 && amtNum > BRIDGE_FEE;
   const netAmountNum = hasFee ? (amtNum - BRIDGE_FEE) : amtNum;
-  const amountDisplay = amtNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
-  const netAmountDisplay = netAmountNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  const amountDisplay = amtNum.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
+  const netAmountDisplay = netAmountNum.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
 
   const getEstimatedTime = (fromId, toId) => {
     const isEthL1 = fromId === 1 || fromId === 11155111 || toId === 1 || toId === 11155111;
