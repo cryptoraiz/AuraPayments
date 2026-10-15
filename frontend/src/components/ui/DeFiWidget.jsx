@@ -359,7 +359,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             const outUnits = resData.data.quote.amount || resData.data.quote.output?.amount;
             if (outUnits) {
               const numOut = Number(outUnits) / (10 ** tokenOut.decimals);
-              const formattedOut = parseFloat(numOut.toFixed(isStableOut ? 2 : (tokenOut.symbol === 'cirBTC' ? 6 : 4))).toString();
+              const formattedOut = parseFloat(numOut.toFixed(isStableOut ? 2 : (tokenOut.symbol === 'cirBTC' ? 8 : 4))).toString();
               if (currentFetchId !== fetchIdRef.current) return;
               setQuote({
                 amountOutDecimals: formattedOut,
@@ -404,7 +404,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
               decimals = 18;
             }
             const numOut = Number(outUnits) / (10 ** decimals);
-            const formattedOut = parseFloat(numOut.toFixed(isStableOut ? 2 : (tokenOut.symbol === 'cirBTC' ? 6 : 4))).toString();
+            const formattedOut = parseFloat(numOut.toFixed(isStableOut ? 2 : (tokenOut.symbol === 'cirBTC' ? 8 : 4))).toString();
             if (currentFetchId !== fetchIdRef.current) return;
             setQuote({
               amountOutDecimals: formattedOut,
@@ -508,6 +508,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       setQuoteLoading(false);
       return;
     }
+    setQuote(null);
     setQuoteLoading(true);
     const t = setTimeout(() => fetchQuote(false), 200);
     return () => clearTimeout(t);
@@ -539,6 +540,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
   // Smart Selection Handlers 
   const handleSwapTokenSelect = (token) => {
+    setQuote(null);
+    setQuoteError(null);
     if (selectingFor === 'in') {
       if (token.symbol === tokenOut.symbol) {
         // Auto-reverse if same token selected
@@ -554,8 +557,6 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     }
     if (amount && Number(amount) > 0) {
       setQuoteLoading(true);
-    } else {
-      setQuote(null);
     }
   };
 
@@ -665,7 +666,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             : '0')
         : '')
     : (quote 
-        ? Number(quote.amountOutDecimals).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: isStableOut ? 2 : 6, useGrouping: false }) 
+        ? Number(quote.amountOutDecimals).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 8 : 6), useGrouping: false }) 
         : '');
 
   let realPriceImpact = quote?.priceImpact;
@@ -709,7 +710,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         id: 'tower',
         name: 'Tower DEX',
         rawNumeric: baseOut * 0.9997,
-        amountOut: parseFloat((baseOut * 0.9997).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4))).toString(),
+        amountOut: parseFloat((baseOut * 0.9997).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 8 : 4))).toString(),
         usdValue: `~$ ${(baseOut * 0.9997 * outPrice).toFixed(2)}`,
         logo: '/dex-icons/tower.svg'
       },
@@ -717,7 +718,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         id: 'synthra',
         name: 'Synthra DEX',
         rawNumeric: baseOut * 0.9994,
-        amountOut: parseFloat((baseOut * 0.9994).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4))).toString(),
+        amountOut: parseFloat((baseOut * 0.9994).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 8 : 4))).toString(),
         usdValue: `~$ ${(baseOut * 0.9994 * outPrice).toFixed(2)}`,
         logo: '/dex-icons/synthra.png'
       }
@@ -734,7 +735,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         id: 'tower',
         name: 'Tower Testnet',
         rawNumeric: baseOut * 0.9996,
-        amountOut: parseFloat((baseOut * 0.9996).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4))).toString(),
+        amountOut: parseFloat((baseOut * 0.9996).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 8 : 4))).toString(),
         usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
         logo: '/dex-icons/tower.svg'
       },
@@ -742,7 +743,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         id: 'synthra',
         name: 'Synthra Testnet',
         rawNumeric: baseOut * 0.9992,
-        amountOut: parseFloat((baseOut * 0.9992).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 6 : 4))).toString(),
+        amountOut: parseFloat((baseOut * 0.9992).toFixed(isStableOut ? 2 : (activeTokenOut.symbol === 'cirBTC' ? 8 : 4))).toString(),
         usdValue: `~$ ${(baseOut * 1).toFixed(2)}`,
         logo: '/dex-icons/synthra.png'
       }
@@ -911,16 +912,17 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             {/* Arrow */}
             <div className="relative h-2 flex items-center justify-center z-10 -my-3">
               <div onClick={() => { 
-                  setTokenIn(tokenOut); setTokenOut(tokenIn); 
-                  if (quote && quote.amountOutDecimals) {
-                    setAmount(Number(quote.amountOutDecimals).toString());
-                  } else {
-                    setAmount('');
-                  }
-                  if (amount && Number(amount) > 0) {
+                  const prevOut = quote?.amountOutDecimals;
+                  setQuote(null);
+                  setQuoteError(null);
+                  setTokenIn(tokenOut); 
+                  setTokenOut(tokenIn); 
+                  if (prevOut && Number(prevOut) > 0) {
+                    setAmount(Number(prevOut).toString());
                     setQuoteLoading(true);
                   } else {
-                    setQuote(null);
+                    setAmount('');
+                    setQuoteLoading(false);
                   }
                   setSwapStatus('idle'); 
                 }}
@@ -1226,7 +1228,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                       }`}
                     >
                       {/* Left: Brand Logo + Name + Best Price Badge */}
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-xl bg-[#0E1525] border border-white/10 p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
                           <img
                             src={q.logo}
@@ -1235,29 +1237,29 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                           />
                         </div>
 
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-white">
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+                            <span className="text-sm font-bold text-white whitespace-nowrap">
                               {q.name}
                             </span>
                             {q.badge && (
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${q.badgeColor}`}>
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 whitespace-nowrap tracking-wide uppercase ${q.badgeColor}`}>
                                 {q.badge}
                               </span>
                             )}
                           </div>
-                          <span className="text-[11px] text-dark-muted font-medium">
+                          <span className="text-[11px] text-dark-muted font-medium whitespace-nowrap">
                             {q.id === 'uniswap' ? 'On-Chain Pool' : 'Multi-DEX'}
                           </span>
                         </div>
                       </div>
 
                       {/* Right: Output Amount + USD */}
-                      <div className="flex flex-col items-end">
-                        <span className="text-sm font-black font-mono tracking-tight text-white">
-                          {q.amountOut} {tokenOut.symbol}
+                      <div className="flex flex-col items-end shrink-0 text-right pl-2">
+                        <span className="text-sm font-black font-mono tracking-tight text-white whitespace-nowrap">
+                          {q.amountOut} <span className="text-xs font-semibold text-dark-muted">{tokenOut.symbol}</span>
                         </span>
-                        <span className="text-[11px] text-dark-muted font-medium">
+                        <span className="text-[11px] text-dark-muted font-medium whitespace-nowrap">
                           {q.usdValue}
                         </span>
                       </div>

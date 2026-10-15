@@ -82,7 +82,8 @@ export async function fetchUniswapArcQuote({ tokenIn, tokenOut, amountInRaw, sli
       const best = validQuotes[0];
 
       const decimals = tokenOut.decimals || 6;
-      const formatted = (Number(best.rawOut) / (10 ** decimals)).toFixed(decimals <= 6 ? 4 : 6);
+      const maxDec = decimals <= 6 ? 4 : 8;
+      const formatted = parseFloat((Number(best.rawOut) / (10 ** decimals)).toFixed(maxDec)).toString();
 
       return {
         success: true,
@@ -116,7 +117,8 @@ export async function fetchUniswapArcQuote({ tokenIn, tokenOut, amountInRaw, sli
           const rawOut = res?.[0];
           if (rawOut && rawOut > 0n) {
             const decimals = tokenOut.decimals || 6;
-            const formatted = (Number(rawOut) / (10 ** decimals)).toFixed(decimals <= 6 ? 4 : 6);
+            const maxDec = decimals <= 6 ? 4 : 8;
+            const formatted = parseFloat((Number(rawOut) / (10 ** decimals)).toFixed(maxDec)).toString();
             return {
               success: true,
               amountOutRaw: rawOut.toString(),
