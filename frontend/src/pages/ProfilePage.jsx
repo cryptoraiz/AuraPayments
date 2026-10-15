@@ -22,6 +22,7 @@ const getExplorerUrl = (txHash, chain, currentChainId) => {
 export const MAINNET_TOKENS = [
   { symbol: 'USDC',   name: 'USD Coin (Arc)',       address: null,                                         decimals: 6, color: 'bg-blue-400',    iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png', isNative: true },
   { symbol: 'EURC',   name: 'Euro Coin (Circle)',   address: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1', decimals: 6, color: 'bg-indigo-500',  iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c/logo.png' },
+  { symbol: 'cirBTC', name: 'Circle Bitcoin',       address: '0x171A4217b86A807A64eB94757Db6849fb4bDbAA0', decimals: 8, color: 'bg-orange-500', iconImg: '/cirbtc.svg' },
 ];
 
 // Portfolio tokens on Arc Testnet
@@ -106,31 +107,57 @@ function setCachedPortfolio(address, isMainnet, data) {
 
 // Balance Hook using Wagmi with Instant Cache & Seamless Background Polling
 function usePortfolioBalances(address, chainId) {
-  const activeChainId = arcMainnet.id;
+  const isTestnet = chainId === arcTestnet.id;
 
-  const cached = useMemo(() => getCachedPortfolio(address, true), [address]);
+  const cached = useMemo(() => getCachedPortfolio(address, !isTestnet), [address, isTestnet]);
   const hasLoadedRef = useRef(!!cached);
 
-  // USDC = native currency on Arc Mainnet
-  const usdc        = useBalance({ address, chainId: activeChainId, query: { enabled: !!address, refetchInterval: 12_000, staleTime: 10_000 } });
-  const eurcMainnet = useBalance({ address, token: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1', chainId: arcMainnet.id, query: { enabled: !!address, refetchInterval: 12_000, staleTime: 10_000 } });
+  // Mainnet balances
+  const usdcMainnet    = useBalance({ address, chainId: arcMainnet.id, query: { enabled: !!address && !isTestnet, refetchInterval: 8_000, staleTime: 5_000 } });
+  const eurcMainnet    = useBalance({ address, token: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1', chainId: arcMainnet.id, query: { enabled: !!address && !isTestnet, refetchInterval: 8_000, staleTime: 5_000 } });
+  const cirbtcMainnet  = useBalance({ address, token: '0x171A4217b86A807A64eB94757Db6849fb4bDbAA0', chainId: arcMainnet.id, query: { enabled: !!address && !isTestnet, refetchInterval: 8_000, staleTime: 5_000 } });
+
+  // Testnet balances
+  const usdcTestnet    = useBalance({ address, chainId: arcTestnet.id, query: { enabled: !!address && isTestnet, refetchInterval: 8_000, staleTime: 5_000 } });
+  const usdtTestnet    = useBalance({ address, token: '0x175CdB1D338945f0D851A741ccF787D343E57952', chainId: arcTestnet.id, query: { enabled: !!address && isTestnet, refetchInterval: 8_000, staleTime: 5_000 } });
+  const eurcTestnet    = useBalance({ address, token: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', chainId: arcTestnet.id, query: { enabled: !!address && isTestnet, refetchInterval: 8_000, staleTime: 5_000 } });
+  const wusdcTestnet   = useBalance({ address, token: '0x911b4000D3422F482F4062a913885f7b035382Df', chainId: arcTestnet.id, query: { enabled: !!address && isTestnet, refetchInterval: 8_000, staleTime: 5_000 } });
+  const cirbtcTestnet  = useBalance({ address, token: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF', chainId: arcTestnet.id, query: { enabled: !!address && isTestnet, refetchInterval: 8_000, staleTime: 5_000 } });
 
   const balances = useMemo(() => {
-    const freshBalances = [
-      usdc.data ? Number(usdc.data.formatted) : (cached?.[0] ?? 0),
-      eurcMainnet.data ? Number(eurcMainnet.data.formatted) : (cached?.[1] ?? 0),
-    ];
-
-    if (usdc.data || eurcMainnet.data) {
-      setCachedPortfolio(address, true, freshBalances);
-      hasLoadedRef.current = true;
+    let freshBalances;
+    if (!isTestnet) {
+      freshBalances = [
+        usdcMainnet.data ? Number(usdcMainnet.data.formatted) : (cached?.[0] ?? 0),
+        eurcMainnet.data ? Number(eurcMainnet.data.formatted) : (cached?.[1] ?? 0),
+        cirbtcMainnet.data ? Number(cirbtcMainnet.data.formatted) : (cached?.[2] ?? 0),
+      ];
+      if (usdcMainnet.data || eurcMainnet.data || cirbtcMainnet.data) {
+        setCachedPortfolio(address, true, freshBalances);
+        hasLoadedRef.current = true;
+      }
+    } else {
+      freshBalances = [
+        usdcTestnet.data ? Number(usdcTestnet.data.formatted) : (cached?.[0] ?? 0),
+        usdtTestnet.data ? Number(usdtTestnet.data.formatted) : (cached?.[1] ?? 0),
+        eurcTestnet.data ? Number(eurcTestnet.data.formatted) : (cached?.[2] ?? 0),
+        wusdcTestnet.data ? Number(wusdcTestnet.data.formatted) : (cached?.[3] ?? 0),
+        cirbtcTestnet.data ? Number(cirbtcTestnet.data.formatted) : (cached?.[4] ?? 0),
+      ];
+      if (usdcTestnet.data || usdtTestnet.data || eurcTestnet.data || wusdcTestnet.data || cirbtcTestnet.data) {
+        setCachedPortfolio(address, false, freshBalances);
+        hasLoadedRef.current = true;
+      }
     }
-
     return freshBalances;
-  }, [usdc.data, eurcMainnet.data, cached, address]);
+  }, [
+    isTestnet, cached, address,
+    usdcMainnet.data, eurcMainnet.data, cirbtcMainnet.data,
+    usdcTestnet.data, usdtTestnet.data, eurcTestnet.data, wusdcTestnet.data, cirbtcTestnet.data
+  ]);
 
-  // Loading is ONLY true if we have zero cached data AND the initial query has not returned yet
-  const isInitialLoading = !hasLoadedRef.current && usdc.isPending;
+  const activeUsdc = isTestnet ? usdcTestnet : usdcMainnet;
+  const isInitialLoading = !hasLoadedRef.current && activeUsdc.isPending;
 
   return { loading: isInitialLoading, balances };
 }
@@ -138,29 +165,36 @@ function usePortfolioBalances(address, chainId) {
 export default function ProfilePage() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
-  const isMainnet = true;
-  const currentTokens = MAINNET_TOKENS;
+  const isMainnet = chainId !== arcTestnet.id;
+  const currentTokens = isMainnet ? MAINNET_TOKENS : TESTNET_TOKENS;
 
   const [activeTab, setActiveTab] = useState('assets');
   const [avatarUrl, setAvatarUrl] = useState(null);
   const { prices } = useTokenPrices();
   const { loading: balancesLoading, balances } = usePortfolioBalances(address, chainId);
 
+  // Reliable price resolver with rock-solid fallbacks
+  const getTokenPrice = (symbol) => {
+    let p = prices?.[symbol];
+    if (p != null && !isNaN(p) && Number(p) > 0) return Number(p);
+    if (['USDC', 'WUSDC', 'USDT'].includes(symbol)) return 1.0;
+    if (symbol === 'EURC') return 1.08;
+    if (symbol === 'cirBTC') return 65000;
+    return 0;
+  };
+
   // Compute total portfolio value
   const totalValueNum = useMemo(() => {
-    if (!prices) return 0;
     return currentTokens.reduce((sum, token, i) => {
-      const bal = balances[i] || 0;
-      const price = prices[token.symbol] || 0;
-      return sum + bal * price;
+      const bal = Number(balances[i] || 0);
+      const price = getTokenPrice(token.symbol);
+      return sum + (bal * price);
     }, 0);
   }, [currentTokens, balances, prices]);
 
   const defaultArcLabel = isMainnet ? 'Arc' : 'Arc Testnet';
 
-  const totalBalance = prices
-    ? `$${totalValueNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    : '...';
+  const totalBalance = `$${totalValueNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -494,9 +528,13 @@ export default function ProfilePage() {
 
 // AssetRow — receives balance directly from parent (no independent RPC call)
 function AssetRow({ token, balance, prices }) {
+  const isCirBtc = token.symbol === 'cirBTC';
   const displayBalance = balance > 0 
-    ? balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
-    : '0.00';
+    ? balance.toLocaleString('en-US', { 
+        minimumFractionDigits: isCirBtc ? 4 : 2, 
+        maximumFractionDigits: isCirBtc ? 8 : 4 
+      })
+    : (isCirBtc ? '0.0000' : '0.00');
   const usdValue = formatUsdValue(token.symbol, balance > 0 ? balance : 0, prices);
 
   return (

@@ -73,8 +73,8 @@ export function useTokenPrices() {
       }
     } catch (err) {
       console.warn('[useTokenPrices] Pyth Network error, using fallbacks:', err.message);
-      // Fallback: stablecoins = $1, BTC = null
-      const fallback = { USDC: 1.00, WUSDC: 1.00, USDT: 1.00, EURC: null, cirBTC: null };
+      // Fallback: stablecoins = $1, EURC = 1.08, BTC = 65000
+      const fallback = { USDC: 1.00, WUSDC: 1.00, USDT: 1.00, EURC: 1.08, cirBTC: 65000 };
       if (mounted.current) {
         setPrices(fallback);
         setLoading(false);
@@ -99,17 +99,17 @@ export function useTokenPrices() {
 
 /**
  * Convenience: returns the USD value string for a given symbol + balance.
- * e.g. formatUsdValue('USDC', '841.54', prices) → "$841.54"
+ * e.g. formatUsdValue('USDC', '841.54', prices) → "841.54"
  */
 export function formatUsdValue(symbol, balance, prices) {
-  if (!balance || isNaN(Number(balance)) || Number(balance) <= 0) return '--';
+  if (!balance || isNaN(Number(balance)) || Number(balance) <= 0) return '0.00';
   let price = prices?.[symbol];
-  if (price == null) {
+  if (price == null || isNaN(price) || Number(price) <= 0) {
     if (['USDC', 'WUSDC', 'USDT'].includes(symbol)) price = 1.0;
     else if (symbol === 'EURC') price = 1.08;
     else if (symbol === 'cirBTC') price = 65000;
   }
-  if (price == null) return '--';
+  if (price == null) return '0.00';
   const value = Number(balance) * price;
   return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
