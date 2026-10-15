@@ -128,11 +128,39 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
                 />
               ))}
             </div>
+
+            {/* Background preloader for all chains so switching network is instant */}
+            {address && chains.map(c => (
+              <PreloadChainBalance key={c.id} chain={c} userAddress={address} />
+            ))}
           </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
   );
+}
+
+function PreloadChainBalance({ chain, userAddress }) {
+  const isArc = chain?.id === 5042 || chain?.id === 5042002;
+  const token = getAllTokens().find(t => {
+    if (t.symbol !== 'USDC') return false;
+    if (t.chainId) return t.chainId === chain.id;
+    return isArc;
+  });
+  const isNative = token?.isNative || (isArc && (token?.symbol === 'USDC' || token?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000'));
+
+  useBalance({
+    address: userAddress,
+    token: isNative ? undefined : token?.address,
+    chainId: chain?.id,
+    query: {
+      enabled: !!userAddress && !!token,
+      staleTime: 60_000,
+      gcTime: 300_000,
+    }
+  });
+
+  return null;
 }
 
 function NetworkIcon({ chain, size = 'md' }) {
@@ -174,14 +202,15 @@ function TokenRow({ token, chain, onSelect, isSelected, userAddress }) {
   const isArc = chain?.id === 5042 || chain?.id === 5042002;
   const isNative = token?.isNative || (isArc && (token?.symbol === 'USDC' || token?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000'));
 
-  const { data: balanceData } = useBalance({
+  const { data: balanceData, isLoading } = useBalance({
     address: userAddress,
     token:   isNative ? undefined : token?.address,
     chainId: chain?.id,
     query: {
       enabled: !!userAddress,
-      staleTime: 0,
-      refetchInterval: 5000,
+      staleTime: 60_000,
+      gcTime: 300_000,
+      refetchInterval: 10_000,
     }
   });
 
@@ -189,7 +218,9 @@ function TokenRow({ token, chain, onSelect, isSelected, userAddress }) {
     ? Number(balanceData.formatted) < 0.01
       ? Number(balanceData.formatted).toLocaleString('en-US', { maximumFractionDigits: 8 })
       : Number(balanceData.formatted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
-    : '0.00';
+    : (isLoading ? (
+        <span className="text-dark-muted font-mono animate-pulse text-sm">...</span>
+      ) : '0.00');
 
   return (
     <button

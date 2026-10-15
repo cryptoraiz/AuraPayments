@@ -223,13 +223,13 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     address,
     token: (actualTokenIn?.isNative || isBridgeNativeIn) ? undefined : actualTokenIn?.address,
     chainId: bridgeChainIn?.id,
-    query: { enabled: !!address, refetchInterval: 3_000, staleTime: 0 }
+    query: { enabled: !!address, refetchInterval: 5_000, staleTime: 30_000, gcTime: 300_000 }
   });
   const { data: bridgeBalOutData, refetch: refetchBridgeBalOut } = useBalance({
     address,
     token: (actualTokenOut?.isNative || isBridgeNativeOut) ? undefined : actualTokenOut?.address,
     chainId: bridgeChainOut?.id,
-    query: { enabled: !!address, refetchInterval: 3_000, staleTime: 0 }
+    query: { enabled: !!address, refetchInterval: 5_000, staleTime: 30_000, gcTime: 300_000 }
   });
   const fmtInBridge  = formatBalance(bridgeBalInData);
   const fmtOutBridge = formatBalance(bridgeBalOutData);
