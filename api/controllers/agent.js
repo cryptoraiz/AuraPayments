@@ -1,11 +1,12 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 // Cache for the AI model instance
 let genAI = null;
 
 export async function handleAgentChat(req, res) {
     try {
-        const { messages, userAddress } = req.body;
+        const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+        const { messages, userAddress } = body;
 
         if (!messages || !Array.isArray(messages)) {
             return res.status(400).json({ error: "Messages array is required." });
@@ -26,11 +27,11 @@ export async function handleAgentChat(req, res) {
                 name: "generate_invoice",
                 description: "Generates a decentralized B2B payment invoice link on Arc Testnet.",
                 parameters: {
-                    type: "object",
+                    type: SchemaType.OBJECT,
                     properties: {
-                        amount: { type: "number", description: "Invoice amount in USDC" },
-                        clientName: { type: "string", description: "Client or recipient company name" },
-                        description: { type: "string", description: "Service or product description (optional)" }
+                        amount: { type: SchemaType.NUMBER, description: "Invoice amount in USDC" },
+                        clientName: { type: SchemaType.STRING, description: "Client or recipient company name" },
+                        description: { type: SchemaType.STRING, description: "Service or product description (optional)" }
                     },
                     required: ["amount", "clientName"]
                 }
@@ -39,11 +40,11 @@ export async function handleAgentChat(req, res) {
                 name: "prepare_swap",
                 description: "Prepares an on-chain token swap transaction on Arc Testnet. Supported tokens: USDC, EURC, USDT, cirBTC.",
                 parameters: {
-                    type: "object",
+                    type: SchemaType.OBJECT,
                     properties: {
-                        amount: { type: "number", description: "Amount to swap" },
-                        fromToken: { type: "string", description: "Source token symbol (USDC, EURC, USDT, cirBTC)" },
-                        toToken: { type: "string", description: "Destination token symbol (USDC, EURC, USDT, cirBTC)" }
+                        amount: { type: SchemaType.NUMBER, description: "Amount to swap" },
+                        fromToken: { type: SchemaType.STRING, description: "Source token symbol (USDC, EURC, USDT, cirBTC)" },
+                        toToken: { type: SchemaType.STRING, description: "Destination token symbol (USDC, EURC, USDT, cirBTC)" }
                     },
                     required: ["amount", "fromToken", "toToken"]
                 }
@@ -52,10 +53,10 @@ export async function handleAgentChat(req, res) {
                 name: "prepare_bridge",
                 description: "Prepares a Circle CCTP bridge transaction to transfer USDC to connected testnets.",
                 parameters: {
-                    type: "object",
+                    type: SchemaType.OBJECT,
                     properties: {
-                        amount: { type: "number", description: "USDC amount to transfer" },
-                        destinationNetwork: { type: "string", description: "Destination network (e.g., Base, Arbitrum)" }
+                        amount: { type: SchemaType.NUMBER, description: "USDC amount to transfer" },
+                        destinationNetwork: { type: SchemaType.STRING, description: "Destination network (e.g., Base, Arbitrum)" }
                     },
                     required: ["amount", "destinationNetwork"]
                 }
@@ -64,9 +65,9 @@ export async function handleAgentChat(req, res) {
                 name: "find_yields",
                 description: "Searches top DeFi yield pools and APY opportunities on supported networks.",
                 parameters: {
-                    type: "object",
+                    type: SchemaType.OBJECT,
                     properties: {
-                        token: { type: "string", description: "Token to search yield for (default: USDC)" }
+                        token: { type: SchemaType.STRING, description: "Token to search yield for (default: USDC)" }
                     },
                     required: ["token"]
                 }
@@ -75,9 +76,9 @@ export async function handleAgentChat(req, res) {
                 name: "get_portfolio_stats",
                 description: "Retrieves portfolio performance and 7d revenue summary.",
                 parameters: {
-                    type: "object",
+                    type: SchemaType.OBJECT,
                     properties: {
-                        period: { type: "string", description: "Analysis period ('today', 'week', 'month', 'all'). Default 'week'." }
+                        period: { type: SchemaType.STRING, description: "Analysis period ('today', 'week', 'month', 'all'). Default 'week'." }
                     },
                     required: []
                 }

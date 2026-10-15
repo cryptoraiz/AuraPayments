@@ -1,3 +1,6 @@
+import { handleAgentChat } from './controllers/agent.js';
+import { handleUniswapQuote, handleUniswapBuildTx } from './controllers/uniswap.js';
+
 export default async function handler(req, res) {
     // 1. CORS Headers (Manual)
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -56,7 +59,6 @@ export default async function handler(req, res) {
 
         // POST /api/agent/chat
         if (req.method === 'POST' && pathname === '/api/agent/chat') {
-            const { handleAgentChat } = await import('./controllers/agent.js');
             return await handleAgentChat(req, res);
         }
 
@@ -67,13 +69,11 @@ export default async function handler(req, res) {
 
         // POST /api/swap/uniswap/quote or /api/swap/quote
         if (req.method === 'POST' && (pathname === '/api/swap/uniswap/quote' || pathname === '/api/swap/quote')) {
-            const { handleUniswapQuote } = await import('./controllers/uniswap.js');
             return await handleUniswapQuote(req, res);
         }
 
         // POST /api/swap/uniswap/build-tx or /api/swap/build-tx
         if (req.method === 'POST' && (pathname === '/api/swap/uniswap/build-tx' || pathname === '/api/swap/build-tx')) {
-            const { handleUniswapBuildTx } = await import('./controllers/uniswap.js');
             return await handleUniswapBuildTx(req, res);
         }
 

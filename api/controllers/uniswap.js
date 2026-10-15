@@ -27,7 +27,6 @@ export const handleUniswapQuote = async (req, res) => {
             });
         }
 
-        const parsedBody = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
         const {
             tokenIn,
             tokenOut,
@@ -45,13 +44,13 @@ export const handleUniswapQuote = async (req, res) => {
             });
         }
 
-        const chainId = Number(tokenInChainId || 5042);
-        const destinationChainId = Number(tokenOutChainId || chainId);
+        const inputChainId = Number(tokenInChainId || chainId);
+        const destinationChainId = Number(tokenOutChainId || inputChainId);
 
         const quotePayload = {
             tokenIn,
             tokenOut,
-            tokenInChainId: chainId,
+            tokenInChainId: inputChainId,
             tokenOutChainId: destinationChainId,
             amount: String(amount),
             type: "EXACT_INPUT",
