@@ -234,10 +234,21 @@ export default function ProfilePage() {
     setActivitiesList(prev => prev.filter(t => t.id !== tradeId));
   };
 
+  const [activityTypeFilter, setActivityTypeFilter] = useState('all');
+
   const filteredActivities = useMemo(() => {
-    if (!searchQuery.trim()) return activitiesList;
+    let list = activitiesList;
+    if (activityTypeFilter === 'swap') {
+      list = list.filter(act => act.type?.toLowerCase() === 'swap');
+    } else if (activityTypeFilter === 'bridge') {
+      list = list.filter(act => act.type?.toLowerCase() === 'bridge');
+    } else if (activityTypeFilter === 'payment') {
+      list = list.filter(act => act.type?.toLowerCase() === 'receive' || act.type?.toLowerCase() === 'send');
+    }
+
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
-    return activitiesList.filter(act => 
+    return list.filter(act => 
       (act.tokenIn && act.tokenIn.toLowerCase().includes(q)) ||
       (act.tokenOut && act.tokenOut.toLowerCase().includes(q)) ||
       (act.currency && act.currency.toLowerCase().includes(q)) ||
@@ -247,7 +258,7 @@ export default function ProfilePage() {
       (act.txHash && act.txHash.toLowerCase().includes(q)) ||
       (act.hash && act.hash.toLowerCase().includes(q))
     );
-  }, [activitiesList, searchQuery]);
+  }, [activitiesList, activityTypeFilter, searchQuery]);
 
   // Pagination Logic
   const activitiesPerPage = 4;
@@ -255,7 +266,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     setActivityPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, activityTypeFilter]);
 
   const totalActivityPages = Math.max(1, Math.ceil(filteredActivities.length / activitiesPerPage));
   const paginatedActivities = filteredActivities.slice((activityPage - 1) * activitiesPerPage, activityPage * activitiesPerPage);
@@ -421,6 +432,28 @@ export default function ProfilePage() {
                     placeholder="Search by token hash/symbol/chain" 
                     className="w-full bg-dark-input border border-dark-border/50 rounded-xl py-2 pl-9 pr-4 text-sm text-white placeholder-dark-muted outline-none focus:border-blue-500/50 transition-colors"
                   />
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {[
+                    { id: 'all', label: 'All Activities' },
+                    { id: 'swap', label: 'Swaps' },
+                    { id: 'bridge', label: 'Bridges' },
+                    { id: 'payment', label: 'Invoices & Payments' },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActivityTypeFilter(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                        activityTypeFilter === tab.id
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                          : 'bg-dark-input text-dark-muted hover:text-white hover:bg-dark-border'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
                 
                 {/* Desktop Table Header */}

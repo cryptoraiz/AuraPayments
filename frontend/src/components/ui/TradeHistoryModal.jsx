@@ -31,7 +31,7 @@ function getChainIcon(chainName) {
     return c ? c.icon : 'https://cdn.prod.website-files.com/685311a976e7c248b5dfde95/68926aad995d4eae931403a4_arc-favicon-256x256.png';
 }
 
-export default function TradeHistoryModal({ isOpen, onClose }) {
+export default function TradeHistoryModal({ isOpen, onClose, filterType = 'all' }) {
     const { address, isConnected } = useAccount();
     const { connect, connectors } = useConnect();
     const chainId = useChainId();
@@ -62,20 +62,31 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
         }
     }, [isOpen]);
 
-    useEffect(() => {
-        setIsLoading(true);
+    const loadTrades = () => {
         if (isConnected && address) {
             const history = getTradeHistoryByWallet(address, chainId);
+            let scoped = history;
+            if (filterType && filterType !== 'all') {
+                scoped = history.filter(t => t.type?.toLowerCase() === filterType.toLowerCase());
+            }
             // Sort by newest first
-            history.sort((a, b) => b.createdAt - a.createdAt);
-            setTrades(history);
+            scoped.sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+            setTrades(scoped);
         } else {
             setTrades([]);
         }
-        
-        // Remove artificial loading delay
         setIsLoading(false);
-    }, [address, isConnected, isOpen, chainId]);
+    };
+
+    useEffect(() => {
+        setIsLoading(true);
+        loadTrades();
+    }, [address, isConnected, isOpen, chainId, filterType]);
+
+    useEffect(() => {
+        window.addEventListener('storage', loadTrades);
+        return () => window.removeEventListener('storage', loadTrades);
+    }, [address, isConnected, chainId, filterType]);
 
     const defaultArc = chainId === arcMainnet.id ? 'Arc' : 'Arc Testnet';
 
@@ -194,9 +205,11 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                 {/* Header: Unique Aura Theme */}
                                 <div className="flex flex-col items-center mt-2 mb-6">
                                     <h2 className="text-[26px] font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-400 to-cyan-300 tracking-tight mb-1 text-center">
-                                        Transaction Log
+                                        {filterType === 'Swap' ? 'Swap History' : filterType === 'Bridge' ? 'Bridge History' : 'Transaction Log'}
                                     </h2>
-                                    <span className="text-xs text-white/50 uppercase tracking-widest font-bold">Your recent activity</span>
+                                    <span className="text-xs text-white/50 uppercase tracking-widest font-bold">
+                                        {filterType === 'Swap' ? 'Your recent swap activity' : filterType === 'Bridge' ? 'Your recent bridge activity' : 'Your recent activity'}
+                                    </span>
                                 </div>
 
                                 {/* Search Bar - Sleek Pill Design */}
@@ -225,7 +238,9 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                         </div>
                                     ) : filteredTrades.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-10 text-zinc-600 space-y-4">
-                                            <p className="text-sm font-medium">No activity found.</p>
+                                            <p className="text-sm font-medium">
+                                                {filterType === 'Swap' ? 'No swap activity found.' : filterType === 'Bridge' ? 'No bridge activity found.' : 'No activity found.'}
+                                            </p>
                                         </div>
                                     ) : (
                                         <div className="flex flex-col gap-6 relative">
@@ -245,7 +260,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                                                         {item.type} {Number(item.amountIn).toLocaleString('en-US', { maximumFractionDigits: 6 })} {item.tokenIn}
                                                                     </h3>
                                                                     <p className="text-white/40 text-[11px] font-medium tracking-wide uppercase">
-                                                                        {item.type === 'Bridge' ? 'Cross-Chain (CCTP)' : 'Synthra AMM'}
+                                                                        {item.type === 'Bridge' ? 'Cross-Chain (CCTP)' : (item.provider || 'Synthra AMM')}
                                                                     </p>
                                                                 </div>
                                                             </div>
@@ -266,7 +281,7 @@ export default function TradeHistoryModal({ isOpen, onClose }) {
                                                             {item.status === 'pending_attestation' ? (
                                                                 <div className="flex items-center gap-1.5 text-sky-400 bg-sky-400/10 px-2.5 py-1 rounded-md">
                                                                     <div className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping"></div>
-                                                                    <span className="text-[11px] font-bold uppercase tracking-wider">Aguardando Circle (~15m)</span>
+                                                                    <span className="text-[11px] font-bold uppercase tracking-wider">Awaiting Circle (~15m)</span>
                                                                 </div>
                                                             ) : (
                                                                 <div className="flex items-center gap-1.5 text-emerald-400/90 bg-emerald-400/10 px-2.5 py-1 rounded-md">

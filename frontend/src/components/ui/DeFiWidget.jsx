@@ -809,7 +809,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             ))}
           </div>
           <div className="flex gap-2 relative" ref={settingsRef}>
-            <button onClick={() => setIsHistoryModalOpen(true)} title="Swap & Bridge History"
+            <button onClick={() => setIsHistoryModalOpen(true)} title={activeTab === 'swap' ? 'Swap History' : 'Bridge History'}
               className="w-9 h-9 flex items-center justify-center rounded-full bg-dark-bg text-dark-muted hover:text-white hover:bg-dark-border transition-all">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1360,6 +1360,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       <TradeHistoryModal 
         isOpen={isHistoryModalOpen} 
         onClose={() => setIsHistoryModalOpen(false)} 
+        filterType={activeTab === 'swap' ? 'Swap' : 'Bridge'}
       />
 
       <WalletModal

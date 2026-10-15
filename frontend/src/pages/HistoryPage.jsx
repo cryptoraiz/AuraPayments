@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAccount, useConnect, useChainId } from 'wagmi';
 import { arcMainnet } from '../config/wagmi';
 import { getTradeHistoryByWallet, deleteTrade } from '../utils/localStorage';
@@ -12,6 +12,7 @@ export default function HistoryPage() {
     const [showWalletModal, setShowWalletModal] = useState(false);
     const [trades, setTrades] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [historyTab, setHistoryTab] = useState('all');
 
     const handleWalletSelect = (connector) => {
         connect({ connector });
@@ -40,6 +41,12 @@ export default function HistoryPage() {
         deleteTrade(tradeId);
         setTrades(prev => prev.filter(t => t.id !== tradeId));
     };
+
+    const displayedTrades = useMemo(() => {
+        if (historyTab === 'swap') return trades.filter(t => t.type?.toLowerCase() === 'swap');
+        if (historyTab === 'bridge') return trades.filter(t => t.type?.toLowerCase() === 'bridge');
+        return trades;
+    }, [trades, historyTab]);
 
     const HistorySkeleton = () => (
         <div className="group relative bg-white/[0.02] border border-white/5 rounded-xl p-4 animate-pulse">
@@ -106,26 +113,49 @@ export default function HistoryPage() {
                     <p className="text-zinc-400">Your recent Swap and Bridge activities on Arc</p>
                 </div>
 
+                {/* Filter Tabs */}
+                <div className="flex gap-2">
+                    {[
+                        { id: 'all', label: 'All Activities' },
+                        { id: 'swap', label: 'Swaps' },
+                        { id: 'bridge', label: 'Bridges' }
+                    ].map(t => (
+                        <button
+                            key={t.id}
+                            onClick={() => setHistoryTab(t.id)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                historyTab === t.id
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                            }`}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Links List */}
-                <div className="flex-1 space-y-3 pb-8 mt-4">
+                <div className="flex-1 space-y-3 pb-8 mt-2">
                     {isLoading ? (
                         <div className="grid gap-3">
                             {[1, 2, 3].map((i) => (
                                 <HistorySkeleton key={i} />
                             ))}
                         </div>
-                    ) : trades.length === 0 ? (
+                    ) : displayedTrades.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 text-zinc-600 space-y-4">
                             <div className="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center">
                                 <svg className="w-6 h-6 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                                 </svg>
                             </div>
-                            <p className="text-sm font-medium">No swap or bridge activity found.</p>
+                            <p className="text-sm font-medium">
+                                {historyTab === 'swap' ? 'No swap activity found.' : historyTab === 'bridge' ? 'No bridge activity found.' : 'No swap or bridge activity found.'}
+                            </p>
                         </div>
                     ) : (
                         <div className="grid gap-3">
-                            {trades.map(item => (
+                            {displayedTrades.map(item => (
                                 <div key={item.id} className="group relative bg-gradient-to-br from-white/[0.07] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl p-4 transition-all hover:bg-white/[0.04]">
                                     <div className="flex items-center justify-between gap-4">
                                         
