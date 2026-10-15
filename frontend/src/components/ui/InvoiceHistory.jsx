@@ -39,9 +39,9 @@ export default function InvoiceHistory({ onUpdateStats }) {
         return () => clearTimeout(timer);
     }, []);
 
-    // Pagination State
+    // Pagination State (4 items per page; 5th triggers 'Next')
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 5;
+    const ITEMS_PER_PAGE = 4;
 
     // Notification State
     const [toasts, setToasts] = useState([]);

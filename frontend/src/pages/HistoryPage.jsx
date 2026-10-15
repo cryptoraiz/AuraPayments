@@ -14,7 +14,7 @@ export default function HistoryPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [historyTab, setHistoryTab] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 5;
+    const ITEMS_PER_PAGE = 4;
 
     const handleWalletSelect = (connector) => {
         connect({ connector });
