@@ -113,6 +113,22 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const fetchIdRef = useRef(0);
   const [pendingBridge, setPendingBridge] = useState(null);
 
+  // Notebook / Compact Screen Detection (dynamically scales card when on laptop viewports)
+  const [isNotebook, setIsNotebook] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerHeight <= 850 || (window.innerWidth <= 1536 && window.innerHeight <= 900);
+  });
+
+  useEffect(() => {
+    const checkNotebook = () => {
+      if (typeof window === 'undefined') return;
+      setIsNotebook(window.innerHeight <= 850 || (window.innerWidth <= 1536 && window.innerHeight <= 900));
+    };
+    checkNotebook();
+    window.addEventListener('resize', checkNotebook);
+    return () => window.removeEventListener('resize', checkNotebook);
+  }, []);
+
   useEffect(() => {
     if (address) {
       setPendingBridge(getPendingBridge(address));
@@ -813,28 +829,40 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   );
 
   return (
-    <div className={`flex flex-col lg:flex-row items-center lg:items-start justify-center gap-4 lg:gap-5 w-full mx-auto transition-all ${activeTab === 'swap' && (quote || quoteLoading || quoteError) ? 'max-w-5xl' : 'max-w-[480px]'}`}>
-      <div className="bg-dark-card border border-dark-border rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl w-full max-w-[480px] shrink-0">
+    <div className={`flex flex-col ${isNotebook ? 'md:flex-row md:items-start' : 'lg:flex-row lg:items-start'} items-center justify-center gap-3 sm:gap-4 lg:gap-5 w-full mx-auto transition-all ${
+      activeTab === 'swap' && (quote || quoteLoading || quoteError)
+        ? (isNotebook ? 'max-w-4xl' : 'max-w-5xl')
+        : (isNotebook ? 'max-w-[410px]' : 'max-w-[480px]')
+    }`}>
+      <div className={`bg-dark-card border border-dark-border shadow-2xl w-full shrink-0 transition-all ${
+        isNotebook
+          ? 'max-w-[410px] rounded-2xl p-3 sm:p-3.5'
+          : 'max-w-[480px] rounded-2xl sm:rounded-3xl p-4 sm:p-5'
+      }`}>
 
         {/* Tabs */}
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <div className={`flex items-center justify-between ${isNotebook ? 'mb-2 sm:mb-2.5' : 'mb-3 sm:mb-4'}`}>
           <div className="flex gap-1 bg-dark-bg rounded-xl p-1">
             {['swap', 'bridge'].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`px-4 sm:px-5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all capitalize ${activeTab === tab ? 'bg-dark-card text-white shadow-sm' : 'text-dark-muted hover:text-white'}`}>
+                className={`rounded-lg font-semibold transition-all capitalize ${
+                  isNotebook
+                    ? 'px-3.5 py-1 text-xs'
+                    : 'px-4 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm'
+                } ${activeTab === tab ? 'bg-dark-card text-white shadow-sm' : 'text-dark-muted hover:text-white'}`}>
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
           <div className="flex gap-2 relative" ref={settingsRef}>
             <button onClick={() => setIsHistoryModalOpen(true)} title={activeTab === 'swap' ? 'Swap History' : 'Bridge History'}
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-dark-bg text-dark-muted hover:text-white hover:bg-dark-border transition-all">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              className={`${isNotebook ? 'w-7.5 h-7.5' : 'w-9 h-9'} flex items-center justify-center rounded-full bg-dark-bg text-dark-muted hover:text-white hover:bg-dark-border transition-all`}>
+              <svg className={`${isNotebook ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
-            <button onClick={() => setShowSettings(!showSettings)} title="Slippage Settings" className={`w-9 h-9 flex items-center justify-center rounded-full transition-all ${showSettings ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'bg-dark-bg text-dark-muted hover:text-white hover:bg-dark-border'}`}>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button onClick={() => setShowSettings(!showSettings)} title="Slippage Settings" className={`${isNotebook ? 'w-7.5 h-7.5' : 'w-9 h-9'} flex items-center justify-center rounded-full transition-all ${showSettings ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'bg-dark-bg text-dark-muted hover:text-white hover:bg-dark-border'}`}>
+              <svg className={`${isNotebook ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
@@ -874,7 +902,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Pending Bridge Banner */}
         {pendingBridge && (
-          <div className="mb-4 p-3 bg-gradient-to-r from-blue-900/40 via-sky-900/30 to-blue-900/40 border border-blue-500/30 rounded-2xl flex items-center justify-between gap-3 shadow-lg animate-fadeIn">
+          <div className={`${isNotebook ? 'mb-2.5 p-2 sm:p-2.5 rounded-xl' : 'mb-4 p-3 rounded-2xl'} bg-gradient-to-r from-blue-900/40 via-sky-900/30 to-blue-900/40 border border-blue-500/30 flex items-center justify-between gap-3 shadow-lg animate-fadeIn`}>
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-ping shrink-0" />
               <div className="truncate">
@@ -899,27 +927,35 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {activeTab === 'swap' && (
           <div className="flex flex-col gap-1">
             {/* From */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
-              <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
+            <div className={`bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl flex flex-col justify-between transition-all ${
+              isNotebook 
+                ? 'p-2.5 sm:p-3 min-h-[90px]' 
+                : 'p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px]'
+            }`}>
+              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-xs mb-1' : 'text-sm mb-3'}`}>
                 <span>You pay</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3 sm:gap-4">
                 <div className="flex flex-col items-start w-full">
                   <input type="number" placeholder="0" value={amount}
                     onChange={(e) => { setAmount(e.target.value); setSwapStatus('idle'); setSwapError(''); }}
-                    className="w-full bg-transparent text-left text-4xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
-                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
+                    className={`w-full bg-transparent text-left font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0 ${
+                      isNotebook ? 'text-2xl sm:text-3xl' : 'text-4xl'
+                    }`} />
+                  <div className={`${isNotebook ? 'h-4 text-[11px] mt-0.5' : 'h-5 text-xs mt-1'} flex items-center font-medium text-dark-muted`}>
                     {inputUsd && inputUsd !== '--' ? `~$ ${inputUsd}` : <span className="invisible">~$ 0.00</span>}
                   </div>
                 </div>
                 <div className="flex flex-col items-end shrink-0">
                   <button onClick={() => { setSelectingFor('in'); setIsSwapModalOpen(true); }}
-                    className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg group">
-                    <TokenIcon token={tokenIn} size="sm" />
-                    <span className="font-bold text-white text-lg tracking-wide">{tokenIn.symbol}</span>
-                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    className={`flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full shadow-lg group ${
+                      isNotebook ? 'py-1 px-2.5' : 'py-1.5 px-3'
+                    }`}>
+                    <TokenIcon token={tokenIn} size={isNotebook ? 'xs' : 'sm'} />
+                    <span className={`font-bold text-white tracking-wide ${isNotebook ? 'text-sm sm:text-base' : 'text-lg'}`}>{tokenIn.symbol}</span>
+                    <svg className={`${isNotebook ? 'w-4 h-4' : 'w-5 h-5'} text-dark-muted group-hover:text-white transition-colors`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </button>
-                  <span className={`flex items-center gap-1.5 text-[11px] mt-2 font-semibold cursor-pointer transition-colors ${isInsufficientBalance ? 'text-red-400 font-bold' : 'text-dark-muted hover:text-white'}`}
+                  <span className={`flex items-center gap-1.5 font-semibold cursor-pointer transition-colors ${isNotebook ? 'text-[10px] mt-1' : 'text-[11px] mt-2'} ${isInsufficientBalance ? 'text-red-400 font-bold' : 'text-dark-muted hover:text-white'}`}
                     onClick={() => { if (balInData) setAmount(balInData.formatted); }}>
                     Balance: {fmtInSwap} {tokenIn.symbol}
                   </span>
@@ -928,7 +964,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* Arrow */}
-            <div className="relative h-2 flex items-center justify-center z-10 -my-3">
+            <div className={`relative h-2 flex items-center justify-center z-10 ${isNotebook ? '-my-2.5' : '-my-3'}`}>
               <div onClick={() => { 
                   const prevOut = quote?.amountOutDecimals;
                   setQuote(null);
@@ -944,26 +980,34 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                   }
                   setSwapStatus('idle'); 
                 }}
-                className="absolute w-10 h-10 bg-dark-card border-4 border-dark-bg rounded-xl flex items-center justify-center text-dark-muted hover:text-white transition-all hover:bg-dark-border cursor-pointer shadow-lg hover:rotate-180 duration-500">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                className={`absolute bg-dark-card border-4 border-dark-bg rounded-xl flex items-center justify-center text-dark-muted hover:text-white transition-all hover:bg-dark-border cursor-pointer shadow-lg hover:rotate-180 duration-500 ${
+                  isNotebook ? 'w-8 h-8' : 'w-10 h-10'
+                }`}>
+                <svg className={`${isNotebook ? 'w-4 h-4' : 'w-5 h-5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
               </div>
             </div>
 
             {/* To */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
-              <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
+            <div className={`bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl flex flex-col justify-between transition-all ${
+              isNotebook 
+                ? 'p-2.5 sm:p-3 min-h-[90px]' 
+                : 'p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px]'
+            }`}>
+              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-xs mb-1' : 'text-sm mb-3'}`}>
                 <span>You receive</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3 sm:gap-4">
                 <div className="flex flex-col items-start w-full">
-                  <div className="w-full text-left text-4xl font-black tracking-tight min-w-0 h-10 flex items-center">
+                  <div className={`w-full text-left font-black tracking-tight min-w-0 flex items-center ${
+                    isNotebook ? 'text-2xl sm:text-3xl h-8' : 'text-4xl h-10'
+                  }`}>
                     {quoteLoading
-                      ? <span className="text-dark-muted text-4xl animate-pulse">...</span>
+                      ? <span className={`text-dark-muted animate-pulse ${isNotebook ? 'text-2xl sm:text-3xl' : 'text-4xl'}`}>...</span>
                       : outputAmount
                         ? <span className="text-white truncate">{outputAmount}</span>
                         : <span className="text-dark-border">0</span>}
                   </div>
-                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
+                  <div className={`${isNotebook ? 'h-4 text-[11px] mt-0.5' : 'h-5 text-xs mt-1'} flex items-center font-medium text-dark-muted`}>
                     {quoteLoading && amount && Number(amount) > 0 ? (
                       <span className="text-dark-muted animate-pulse">~$ ...</span>
                     ) : outputUsd && outputUsd !== '--' ? (
@@ -975,12 +1019,14 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                 </div>
                 <div className="flex flex-col items-end shrink-0">
                   <button onClick={() => { setSelectingFor('out'); setIsSwapModalOpen(true); }}
-                    className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg group">
-                    <TokenIcon token={tokenOut} size="sm" />
-                    <span className="font-bold text-white text-lg tracking-wide">{tokenOut.symbol}</span>
-                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    className={`flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full shadow-lg group ${
+                      isNotebook ? 'py-1 px-2.5' : 'py-1.5 px-3'
+                    }`}>
+                    <TokenIcon token={tokenOut} size={isNotebook ? 'xs' : 'sm'} />
+                    <span className={`font-bold text-white tracking-wide ${isNotebook ? 'text-sm sm:text-base' : 'text-lg'}`}>{tokenOut.symbol}</span>
+                    <svg className={`${isNotebook ? 'w-4 h-4' : 'w-5 h-5'} text-dark-muted group-hover:text-white transition-colors`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </button>
-                  <span className="flex items-center gap-1.5 text-[11px] mt-2 text-dark-muted font-semibold cursor-pointer hover:text-white transition-colors">
+                  <span className={`flex items-center gap-1.5 font-semibold cursor-pointer hover:text-white transition-colors ${isNotebook ? 'text-[10px] mt-1' : 'text-[11px] mt-2 text-dark-muted'}`}>
                     Balance: {fmtOutSwap} {tokenOut.symbol}
                   </span>
                 </div>
@@ -993,11 +1039,15 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {activeTab === 'bridge' && (
           <div className="flex flex-col gap-1">
             {/* From */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
-              <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
+            <div className={`bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl flex flex-col justify-between transition-all ${
+              isNotebook 
+                ? 'p-2.5 sm:p-3 min-h-[90px]' 
+                : 'p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px]'
+            }`}>
+              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-xs mb-1' : 'text-sm mb-3'}`}>
                 <span>Bridge from</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3 sm:gap-4">
                 <div className="flex flex-col items-start w-full">
                   <input type="number" placeholder="0" value={amount}
                     onChange={(e) => { 
@@ -1011,24 +1061,28 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                         setQuote(null);
                       }
                     }}
-                    className="w-full bg-transparent text-left text-4xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
-                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
+                    className={`w-full bg-transparent text-left font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0 ${
+                      isNotebook ? 'text-2xl sm:text-3xl' : 'text-4xl'
+                    }`} />
+                  <div className={`${isNotebook ? 'h-4 text-[11px] mt-0.5' : 'h-5 text-xs mt-1'} flex items-center font-medium text-dark-muted`}>
                     {inputUsd && inputUsd !== '--' ? `~$ ${inputUsd}` : <span className="invisible">~$ 0.00</span>}
                   </div>
                 </div>
                 <div className="flex flex-col items-end shrink-0">
                   <button onClick={() => { setSelectingFor('in'); setIsBridgeModalOpen(true); }}
-                    className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg group">
+                    className={`flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full shadow-lg group ${
+                      isNotebook ? 'py-1 px-2.5' : 'py-1.5 px-3'
+                    }`}>
                     <div className="relative flex shrink-0">
-                      <TokenIcon token={bridgeTokenIn} size="sm" />
+                      <TokenIcon token={bridgeTokenIn} size={isNotebook ? 'xs' : 'sm'} />
                       <div className="absolute -bottom-1 -right-1">
                          <ChainBadge chain={bridgeChainIn} />
                       </div>
                     </div>
-                    <span className="font-bold text-white text-lg tracking-wide">{bridgeTokenIn.symbol}</span>
-                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    <span className={`font-bold text-white tracking-wide ${isNotebook ? 'text-sm sm:text-base' : 'text-lg'}`}>{bridgeTokenIn.symbol}</span>
+                    <svg className={`${isNotebook ? 'w-4 h-4' : 'w-5 h-5'} text-dark-muted group-hover:text-white transition-colors`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </button>
-                  <span className={`flex items-center gap-1.5 text-[11px] mt-2 font-semibold cursor-pointer transition-colors ${isInsufficientBalance ? 'text-red-400 font-bold' : 'text-dark-muted hover:text-white'}`}
+                  <span className={`flex items-center gap-1.5 font-semibold cursor-pointer transition-colors ${isNotebook ? 'text-[10px] mt-1' : 'text-[11px] mt-2'} ${isInsufficientBalance ? 'text-red-400 font-bold' : 'text-dark-muted hover:text-white'}`}
                     onClick={() => { if (bridgeBalInData) setAmount(bridgeBalInData.formatted); }}>
                     Balance: {fmtInBridge} {bridgeTokenIn.symbol}
                   </span>
@@ -1037,7 +1091,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* Arrow */}
-            <div className="relative h-2 flex items-center justify-center z-10 -my-3">
+            <div className={`relative h-2 flex items-center justify-center z-10 ${isNotebook ? '-my-2.5' : '-my-3'}`}>
               <div onClick={() => { 
                   const targetChain = bridgeChainOut;
                   setBridgeChainIn(bridgeChainOut); setBridgeChainOut(bridgeChainIn); 
@@ -1054,24 +1108,32 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                     handleSwitchNetwork(targetChain.id);
                   }
                 }}
-                className="absolute w-10 h-10 bg-dark-card border-4 border-dark-bg rounded-xl flex items-center justify-center text-dark-muted hover:text-white transition-all hover:bg-dark-border cursor-pointer shadow-lg hover:rotate-180 duration-500">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                className={`absolute bg-dark-card border-4 border-dark-bg rounded-xl flex items-center justify-center text-dark-muted hover:text-white transition-all hover:bg-dark-border cursor-pointer shadow-lg hover:rotate-180 duration-500 ${
+                  isNotebook ? 'w-8 h-8' : 'w-10 h-10'
+                }`}>
+                <svg className={`${isNotebook ? 'w-4 h-4' : 'w-5 h-5'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
               </div>
             </div>
 
             {/* To */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
-              <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
+            <div className={`bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl flex flex-col justify-between transition-all ${
+              isNotebook 
+                ? 'p-2.5 sm:p-3 min-h-[90px]' 
+                : 'p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px]'
+            }`}>
+              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-xs mb-1' : 'text-sm mb-3'}`}>
                 <span>Bridge to</span>
               </div>
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center justify-between gap-3 sm:gap-4">
                 <div className="flex flex-col items-start w-full">
-                  <div className="w-full text-left text-4xl font-black tracking-tight min-w-0 h-10 flex items-center">
+                  <div className={`w-full text-left font-black tracking-tight min-w-0 flex items-center ${
+                    isNotebook ? 'text-2xl sm:text-3xl h-8' : 'text-4xl h-10'
+                  }`}>
                     {outputAmount
                       ? <span className="text-white truncate">{outputAmount}</span>
                       : <span className="text-dark-border">0</span>}
                   </div>
-                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
+                  <div className={`${isNotebook ? 'h-4 text-[11px] mt-0.5' : 'h-5 text-xs mt-1'} flex items-center font-medium text-dark-muted`}>
                     {outputUsd && outputUsd !== '--' ? (
                       <span className="text-dark-muted">~$ {outputUsd}</span>
                     ) : (
@@ -1081,17 +1143,19 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                 </div>
                 <div className="flex flex-col items-end shrink-0">
                   <button onClick={() => { setSelectingFor('out'); setIsBridgeModalOpen(true); }}
-                    className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg group">
+                    className={`flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full shadow-lg group ${
+                      isNotebook ? 'py-1 px-2.5' : 'py-1.5 px-3'
+                    }`}>
                     <div className="relative flex shrink-0">
-                      <TokenIcon token={bridgeTokenOut} size="sm" />
+                      <TokenIcon token={bridgeTokenOut} size={isNotebook ? 'xs' : 'sm'} />
                       <div className="absolute -bottom-1 -right-1">
                          <ChainBadge chain={bridgeChainOut} />
                       </div>
                     </div>
-                    <span className="font-bold text-white text-lg tracking-wide">{bridgeTokenOut.symbol}</span>
-                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    <span className={`font-bold text-white tracking-wide ${isNotebook ? 'text-sm sm:text-base' : 'text-lg'}`}>{bridgeTokenOut.symbol}</span>
+                    <svg className={`${isNotebook ? 'w-4 h-4' : 'w-5 h-5'} text-dark-muted group-hover:text-white transition-colors`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </button>
-                  <span className="flex items-center gap-1.5 text-[11px] mt-2 text-dark-muted font-semibold cursor-pointer hover:text-white transition-colors">
+                  <span className={`flex items-center gap-1.5 font-semibold cursor-pointer hover:text-white transition-colors ${isNotebook ? 'text-[10px] mt-1' : 'text-[11px] mt-2 text-dark-muted'}`}>
                     Balance: {fmtOutBridge} {bridgeTokenOut.symbol}
                   </span>
                 </div>
@@ -1102,12 +1166,14 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Bridge Detailed Info */}
         {activeTab === 'bridge' && (
-          <div className="mt-5 mb-2 px-1 flex flex-col gap-6">
+          <div className={`${isNotebook ? 'mt-2.5 mb-1 gap-2.5' : 'mt-5 mb-2 gap-6'} px-1 flex flex-col`}>
             <div className="flex justify-start">
-               <button onClick={() => setIsReceiverModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-dark-bg/60 hover:bg-dark-border transition-colors border border-dark-border/50 rounded-full text-xs font-bold text-white shadow-sm">
+               <button onClick={() => setIsReceiverModalOpen(true)} className={`flex items-center gap-2 bg-dark-bg/60 hover:bg-dark-border transition-colors border border-dark-border/50 rounded-full font-bold text-white shadow-sm ${
+                 isNotebook ? 'px-3 py-1 text-[11px]' : 'px-4 py-2 text-xs'
+               }`}>
                  {receiverAddress ? (
                    <>
-                     <div className="w-4 h-4 rounded-full bg-blue-500 shadow-inner flex-shrink-0" />
+                     <div className="w-3.5 h-3.5 rounded-full bg-blue-500 shadow-inner flex-shrink-0" />
                      {receiverAddress.slice(0, 6)}...{receiverAddress.slice(-4)}
                    </>
                  ) : (
@@ -1118,16 +1184,16 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                  )}
                </button>
             </div>
-            <div className="flex flex-col gap-3 px-1">
-               <div className="flex items-center justify-between text-sm">
+            <div className={`flex flex-col px-1 ${isNotebook ? 'gap-1.5' : 'gap-3'}`}>
+               <div className={`flex items-center justify-between ${isNotebook ? 'text-xs' : 'text-sm'}`}>
                  <span className="text-dark-muted font-medium">Bridge Fee</span>
                  <span className="text-emerald-400 font-bold">{BRIDGE_FEE > 0 ? `${BRIDGE_FEE.toFixed(2)} ${bridgeTokenIn.symbol}` : 'Free (0.00 USDC)'}</span>
                </div>
-               <div className="flex items-center justify-between text-sm">
+               <div className={`flex items-center justify-between ${isNotebook ? 'text-xs' : 'text-sm'}`}>
                  <span className="text-dark-muted font-medium">Estimated Time</span>
                  <span className="text-white font-bold">{getEstimatedTime(bridgeChainIn?.id, bridgeChainOut?.id)}</span>
                </div>
-               <div className="flex items-center justify-between text-sm">
+               <div className={`flex items-center justify-between ${isNotebook ? 'text-xs' : 'text-sm'}`}>
                  <span className="text-dark-muted font-medium">You Receive</span>
                  <span className="text-white font-bold">{Number(amount) > 0 && netBridgeAmount > 0 ? `${outputAmount} ${bridgeTokenOut.symbol}` : '--'}</span>
                </div>
@@ -1137,7 +1203,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Swap Transparency Info */}
         {activeTab === 'swap' && (
-          <div className="mt-4 pt-3 px-1 flex flex-col gap-2 border-t border-dark-border/40 text-xs text-dark-muted">
+          <div className={`${isNotebook ? 'mt-2 pt-2 gap-1 text-[11px]' : 'mt-4 pt-3 gap-2 text-xs'} px-1 flex flex-col border-t border-dark-border/40 text-dark-muted`}>
             <div className="flex items-center justify-between">
               <span>Slippage Tolerance</span>
               <strong className="text-white font-mono">{slippage}%</strong>
@@ -1155,26 +1221,28 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Error */}
         {swapStatus === 'error' && swapError && (
-          <div className="mt-2 px-3 py-2 bg-red-900/30 border border-red-500/40 rounded-xl text-xs text-red-300 break-all">
+          <div className={`${isNotebook ? 'mt-1.5 px-2.5 py-1.5' : 'mt-2 px-3 py-2'} bg-red-900/30 border border-red-500/40 rounded-xl text-xs text-red-300 break-all`}>
             ⚠️ {swapError}
           </div>
         )}
 
         {/* Action Button */}
         <button onClick={handleSwap} disabled={btnDisabled}
-          className={`w-full mt-3 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all active:scale-[0.98] ${
+          className={`w-full transition-all active:scale-[0.98] ${
+            isNotebook ? 'mt-2.5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold' : 'mt-3 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold'
+          } ${
             !address 
-              ? 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold text-sm sm:text-base'
+              ? 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white'
               : btnDisabled 
-                ? 'bg-white/[0.04] border border-white/[0.05] cursor-not-allowed opacity-60 text-white font-bold text-sm sm:text-base' 
-                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 cursor-pointer shadow-[0_0_20px_rgba(39,117,202,0.3)] hover:shadow-[0_0_25px_rgba(39,117,202,0.5)] text-white font-bold text-sm sm:text-base'
+                ? 'bg-white/[0.04] border border-white/[0.05] cursor-not-allowed opacity-60 text-white' 
+                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 cursor-pointer shadow-[0_0_20px_rgba(39,117,202,0.3)] hover:shadow-[0_0_25px_rgba(39,117,202,0.5)] text-white'
           }`}>
           {btnLabel}
         </button>
 
         {/* Tx hash */}
         {txHash && (
-          <div className="mt-3 text-center text-xs text-dark-muted">
+          <div className={`${isNotebook ? 'mt-2 text-[11px]' : 'mt-3 text-xs'} text-center text-dark-muted`}>
             Tx: <a href={`${connectedChainId === arcMainnet.id ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app'}/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
               className="text-blue-400 hover:underline">{txHash.slice(0, 12)}...{txHash.slice(-6)}</a>
           </div>
@@ -1182,7 +1250,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Rescue Pending Bridge Link */}
         {activeTab === 'bridge' && (
-          <div className="mt-3 text-center">
+          <div className={`${isNotebook ? 'mt-2' : 'mt-3'} text-center`}>
             <button
               type="button"
               onClick={() => {
@@ -1203,10 +1271,14 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
       {/* Route Selection Side Panel (Desktop Beside / Mobile Stacked) */}
       {activeTab === 'swap' && Boolean(amount && Number(String(amount).replace(',', '.')) > 0) && (
-        <div className="w-full max-w-[480px] lg:w-[360px] bg-dark-card border border-dark-border rounded-3xl p-5 shadow-2xl flex flex-col justify-between transition-all shrink-0">
+        <div className={`w-full bg-dark-card border border-dark-border shadow-2xl flex flex-col justify-between transition-all shrink-0 ${
+          isNotebook 
+            ? 'max-w-[410px] md:w-[310px] rounded-2xl p-3.5' 
+            : 'max-w-[480px] lg:w-[360px] rounded-3xl p-5'
+        }`}>
           <div>
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-dark-border/40">
+            <div className={`flex items-center justify-between ${isNotebook ? 'pb-2 mb-2.5' : 'pb-3 mb-4'} border-b border-dark-border/40`}>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-xs font-bold uppercase tracking-wider text-white">Route Selection</span>
@@ -1216,7 +1288,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
             {/* Content */}
             {quoteLoading && !quote && dexQuotes.length === 0 ? (
-              <div className="py-10 flex flex-col items-center justify-center gap-2 text-dark-muted">
+              <div className={`${isNotebook ? 'py-6' : 'py-10'} flex flex-col items-center justify-center gap-2 text-dark-muted`}>
                 <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                 <span className="text-xs font-medium animate-pulse">Calculating best route...</span>
               </div>
@@ -1226,7 +1298,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                 <span className="text-[10px] text-dark-muted">Check token liquidity</span>
               </div>
             ) : dexQuotes.length > 0 ? (
-              <div className="flex flex-col gap-2.5">
+              <div className={`flex flex-col ${isNotebook ? 'gap-2' : 'gap-2.5'}`}>
                 {(isQuotesExpanded
                   ? dexQuotes
                   : (dexQuotes.find(q => q.id === selectedDEX) ? [dexQuotes.find(q => q.id === selectedDEX)] : dexQuotes.slice(0, 1))
@@ -1248,7 +1320,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                         }
                         fetchQuote(true, q.id);
                       }}
-                      className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
+                      className={`${isNotebook ? 'p-2.5 rounded-xl' : 'p-3.5 rounded-2xl'} border flex items-center justify-between transition-all cursor-pointer ${
                         isSelected
                           ? 'border-blue-500/60 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.12)]'
                           : 'border-dark-border/60 bg-dark-bg/40 hover:border-dark-border/80'
@@ -1256,7 +1328,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                     >
                       {/* Left: Brand Logo + Name + Best Price Badge */}
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-[#0E1525] border border-white/10 p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+                        <div className={`${isNotebook ? 'w-7 h-7 p-1' : 'w-8 h-8 p-1.5'} rounded-xl bg-[#0E1525] border border-white/10 flex items-center justify-center shrink-0 shadow-sm overflow-hidden`}>
                           <img
                             src={q.logo}
                             alt={q.name}
@@ -1266,7 +1338,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
                         <div className="flex flex-col min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
-                            <span className="text-sm font-bold text-white whitespace-nowrap">
+                            <span className={`${isNotebook ? 'text-xs' : 'text-sm'} font-bold text-white whitespace-nowrap`}>
                               {q.name}
                             </span>
                             {q.badge && (
@@ -1283,7 +1355,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
                       {/* Right: Output Amount + USD */}
                       <div className="flex flex-col items-end shrink-0 text-right pl-2">
-                        <span className="text-sm font-black font-mono tracking-tight text-white whitespace-nowrap">
+                        <span className={`${isNotebook ? 'text-xs sm:text-sm' : 'text-sm'} font-black font-mono tracking-tight text-white whitespace-nowrap`}>
                           {q.amountOut} <span className="text-xs font-semibold text-dark-muted">{tokenOut.symbol}</span>
                         </span>
                         <span className="text-[11px] text-dark-muted font-medium whitespace-nowrap">
@@ -1406,11 +1478,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 // Icons 
 function TokenIcon({ token, size = 'sm' }) {
   const [imgError, setImgError] = useState(false);
-  const dim = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
+  const dim = size === 'xs' ? 'w-6 h-6' : size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
 
   if (imgError || !token.iconImg) {
     return (
-      <div className={`${dim} rounded-full ${token.color || 'bg-gray-600'} flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-inner`}>
+      <div className={`${dim} rounded-full ${token.color || 'bg-gray-600'} flex items-center justify-center text-white ${size === 'xs' ? 'text-[10px]' : 'text-xs'} font-bold shrink-0 shadow-inner`}>
         {token.symbol.slice(0, 2)}
       </div>
     );
