@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChainId } from 'wagmi';
 import { arcMainnet, arcTestnet } from '../../config/wagmi';
@@ -365,7 +366,9 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
     };
   }, [isOpen]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -373,14 +376,14 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18, ease: 'easeOut' }}
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md overflow-y-auto"
         >
           <motion.div
             initial={{ scale: 0.96, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.96, opacity: 0, y: 10 }}
             transition={{ type: 'spring', damping: 26, stiffness: 350 }}
-            className="bg-[#1C1C1E] border border-white/10 rounded-[32px] w-full max-w-[420px] max-h-[90dvh] overflow-y-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] p-6 relative"
+            className="bg-[#1C1C1E] border border-white/10 rounded-2xl sm:rounded-[32px] w-full max-w-[420px] max-h-[90dvh] overflow-y-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] p-5 sm:p-6 my-auto relative"
             onClick={(e) => e.stopPropagation()}
           >
           {/* Close Button */}
@@ -468,6 +471,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
         </motion.div>
       </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

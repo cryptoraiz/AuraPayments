@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useAccount, useConnect, useChainId } from 'wagmi';
 import { arcMainnet } from '../../config/wagmi';
 import { getTradeHistoryByWallet, deleteTrade } from '../../utils/localStorage';
@@ -119,13 +120,13 @@ export default function TradeHistoryModal({ isOpen, onClose, filterType = 'all' 
 
     if (!isOpen) return null;
 
-    if (!isConnected) return (
+    if (!isConnected) return typeof document !== 'undefined' ? createPortal(
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md overflow-y-auto"
                 onClick={onClose}
             >
                 <motion.div
@@ -133,7 +134,7 @@ export default function TradeHistoryModal({ isOpen, onClose, filterType = 'all' 
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.95, opacity: 0, y: 20 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className="bg-[#1C1C1E] border border-dark-border rounded-[32px] w-full max-w-[420px] max-h-[90dvh] overflow-y-auto shadow-2xl p-6 md:p-8 text-center relative"
+                    className="bg-[#1C1C1E] border border-dark-border rounded-2xl sm:rounded-[32px] w-full max-w-[420px] max-h-[90dvh] overflow-y-auto shadow-2xl p-6 md:p-8 text-center my-auto relative"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button onClick={onClose} className="absolute top-5 right-5 text-dark-muted hover:text-white transition-colors">
@@ -169,16 +170,17 @@ export default function TradeHistoryModal({ isOpen, onClose, filterType = 'all' 
                 connectors={connectors}
                 onSelectWallet={handleWalletSelect}
             />
-        </AnimatePresence>
-    );
+        </AnimatePresence>,
+        document.body
+    ) : null;
 
-    return (
+    return typeof document !== 'undefined' ? createPortal(
         <AnimatePresence>
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md overflow-y-auto"
                 onClick={onClose}
             >
                 <motion.div
@@ -186,7 +188,7 @@ export default function TradeHistoryModal({ isOpen, onClose, filterType = 'all' 
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.95, opacity: 0, y: 20 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className="bg-[#1C1C1E] border border-dark-border rounded-[32px] w-full max-w-[420px] h-[88dvh] max-h-[580px] min-h-[380px] shadow-2xl overflow-hidden p-6 relative flex flex-col"
+                    className="bg-[#1C1C1E] border border-dark-border rounded-2xl sm:rounded-[32px] w-full max-w-[420px] h-[88dvh] max-h-[580px] min-h-[380px] shadow-2xl overflow-hidden p-5 sm:p-6 my-auto relative flex flex-col"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button onClick={onClose} className="absolute top-5 right-5 text-dark-muted hover:text-white transition-colors z-10 bg-black/40 p-2 rounded-full backdrop-blur-md">
@@ -449,6 +451,7 @@ export default function TradeHistoryModal({ isOpen, onClose, filterType = 'all' 
                     </AnimatePresence>
                 </motion.div>
             </motion.div>
-        </AnimatePresence>
-    );
+        </AnimatePresence>,
+        document.body
+    ) : null;
 }

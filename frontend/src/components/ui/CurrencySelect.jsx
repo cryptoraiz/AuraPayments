@@ -39,12 +39,12 @@ export default function CurrencySelect({ value, onChange, compact, isClassic, is
   return (
     <Listbox value={selected} onChange={handleChange}>
       <div className="relative">
-        <Listbox.Button className={`relative w-full rounded-2xl text-left focus:outline-none focus:ring-4 transition-all cursor-pointer ${compact ? 'h-[52px] pl-3 pr-8' : 'h-[60px] pl-4 pr-10'} ${styles.button}`}>
-          <span className={`flex items-center gap-2 font-bold whitespace-nowrap truncate ${compact ? 'text-sm' : 'text-base'} ${styles.textMain}`}>
+        <Listbox.Button className={`relative w-full text-left focus:outline-none focus:ring-4 transition-all cursor-pointer flex items-center ${compact ? '!h-[42px] pl-3 pr-7 !rounded-xl' : 'h-[60px] pl-4 pr-10 rounded-2xl'} ${styles.button}`}>
+          <span className={`flex items-center gap-1.5 font-bold whitespace-nowrap truncate ${compact ? 'text-xs' : 'text-base'} ${styles.textMain}`}>
             <span className="shrink-0">{selected.emoji}</span> <span className="truncate">{selected.name}</span>
           </span>
-          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-            <svg className={`h-5 w-5 ${styles.icon}`} viewBox="0 0 20 20" fill="currentColor">
+          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+            <svg className={`${compact ? 'h-4 w-4' : 'h-5 w-5'} ${styles.icon}`} viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
                 d="M10 3a.75.75 0 01.55.24l3.25 3.5a.75.75 0 11-1.1 1.02L10 4.852 7.3 7.76a.75.75 0 01-1.1-1.02l3.25-3.5A.75.75 0 0110 3zm-3.76 9.2a.75.75 0 011.06.04l2.7 2.908 2.7-2.908a.75.75 0 111.1 1.02l-3.25 3.5a.75.75 0 01-1.1 0l-3.25-3.5a.75.75 0 01.04-1.06z"
@@ -60,12 +60,12 @@ export default function CurrencySelect({ value, onChange, compact, isClassic, is
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <Listbox.Options className={`absolute z-10 mt-2 min-w-full overflow-hidden rounded-2xl focus:outline-none ${styles.optionsBg}`}>
+          <Listbox.Options className={`absolute z-10 mt-1.5 min-w-full overflow-hidden ${compact ? 'rounded-xl' : 'rounded-2xl'} focus:outline-none ${styles.optionsBg}`}>
             {currencies.map((currency) => (
               <Listbox.Option
                 key={currency.id}
                 className={({ active }) =>
-                  `relative cursor-pointer select-none transition-all ${compact ? 'px-3 py-3' : 'px-4 py-4'} ${active ? styles.optionActive : ''
+                  `relative cursor-pointer select-none transition-all ${compact ? 'px-2.5 py-2' : 'px-4 py-4'} ${active ? styles.optionActive : ''
                   }`
                 }
                 value={currency}
@@ -73,14 +73,14 @@ export default function CurrencySelect({ value, onChange, compact, isClassic, is
                 {({ selected, active }) => (
                   <div
                     className={`flex items-center justify-between ${selected
-                      ? `${styles.activeBorder} pl-3 font-semibold`
+                      ? `${styles.activeBorder} ${compact ? 'pl-2' : 'pl-3'} font-semibold`
                       : 'border-l-4 border-transparent'
                       }`}
                   >
-                    <span className={`flex items-center gap-2 whitespace-nowrap ${compact ? 'text-sm' : 'text-base'} ${selected ? styles.checkmark : styles.optionText}`}>
+                    <span className={`flex items-center gap-1.5 whitespace-nowrap ${compact ? 'text-xs' : 'text-base'} ${selected ? styles.checkmark : styles.optionText}`}>
                       <span className="shrink-0">{currency.emoji}</span> <span>{currency.name}</span>
                     </span>
-                    {selected && <span className={`${styles.checkmark} font-bold ml-2 shrink-0`}>✓</span>}
+                    {selected && <span className={`${styles.checkmark} font-bold ml-2 shrink-0 ${compact ? 'text-xs' : ''}`}>✓</span>}
                   </div>
                 )}
               </Listbox.Option>

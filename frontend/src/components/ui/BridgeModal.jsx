@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { saveTrade, savePendingBridge, clearPendingBridge, updateTradeByHash } from '../../utils/localStorage';
 import { ERC20_ABI } from '../../utils/abis';
@@ -662,18 +663,20 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
     executeBridge(rescueHashInput.trim());
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md overflow-y-auto"
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-[#1C1C1E] border border-white/10 rounded-[32px] w-full max-w-[420px] max-h-[90dvh] overflow-y-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] p-6 relative"
+          className="bg-[#1C1C1E] border border-white/10 rounded-2xl sm:rounded-[32px] w-full max-w-[420px] max-h-[90dvh] overflow-y-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] p-5 sm:p-6 my-auto relative"
           onClick={(e) => e.stopPropagation()}
         >
           <button onClick={handleClose} className="absolute top-5 right-5 text-dark-muted hover:text-white transition-colors">
@@ -840,7 +843,8 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
           )}
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
