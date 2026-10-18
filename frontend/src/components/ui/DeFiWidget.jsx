@@ -829,14 +829,14 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   );
 
   return (
-    <div className={`flex flex-col ${isNotebook ? 'md:flex-row md:items-start' : 'lg:flex-row lg:items-start'} items-center justify-center gap-3 sm:gap-4 lg:gap-5 w-full mx-auto transition-all ${
+    <div className={`flex flex-col ${isNotebook ? 'md:flex-row md:items-stretch' : 'lg:flex-row lg:items-start'} items-center justify-center gap-3 sm:gap-4 lg:gap-5 w-full mx-auto transition-all ${
       activeTab === 'swap' && (quote || quoteLoading || quoteError)
         ? (isNotebook ? 'max-w-4xl' : 'max-w-5xl')
         : (isNotebook ? 'max-w-[420px]' : 'max-w-[480px]')
-    }`}>
+    } ${isNotebook ? 'flex-1 h-full min-h-0' : ''}`}>
       <div className={`bg-dark-card border border-dark-border shadow-2xl w-full shrink-0 transition-all ${
         isNotebook
-          ? 'max-w-[420px] rounded-2xl p-3 sm:p-3.5 flex flex-col'
+          ? 'max-w-[420px] rounded-2xl p-2.5 sm:p-3 flex-1 h-full min-h-0 flex flex-col justify-between overflow-hidden'
           : 'max-w-[480px] rounded-2xl sm:rounded-3xl p-4 sm:p-5'
       }`}>
 
@@ -1301,7 +1301,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       {activeTab === 'swap' && Boolean(amount && Number(String(amount).replace(',', '.')) > 0) && (
         <div className={`w-full bg-dark-card border border-dark-border shadow-2xl flex flex-col justify-between transition-all shrink-0 ${
           isNotebook 
-            ? 'max-w-[420px] md:w-[310px] rounded-2xl p-3' 
+            ? 'max-w-[420px] md:w-[310px] rounded-2xl p-2.5 sm:p-3 flex-1 h-full min-h-0 overflow-y-auto' 
             : 'max-w-[480px] lg:w-[360px] rounded-3xl p-5'
         }`}>
           <div>

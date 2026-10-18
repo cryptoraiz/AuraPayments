@@ -18,18 +18,18 @@ export default function BridgePage() {
   }, []);
 
   return (
-    <section className={`flex-1 flex flex-col overflow-hidden min-h-0 w-full ${
-      isNotebook ? '' : 'items-center justify-center p-1.5 sm:p-3'
-    }`}>
-      <div className={`overflow-y-auto min-h-0 flex flex-col items-center w-full ${
-        isNotebook ? 'flex-1 justify-center py-2 px-2' : ''
-      }`}>
-        <div className="w-full max-w-7xl mx-auto flex flex-col items-center">
-          <div className={`text-center ${isNotebook ? 'mb-2 shrink-0' : 'mb-1 sm:mb-2'}`}>
-            <h1 className={`${isNotebook ? 'text-base sm:text-lg font-bold mb-0.5' : 'text-base sm:text-xl lg:text-2xl font-bold mb-0.5'} text-white`}>Cross-Chain Bridge</h1>
-            <p className={`text-dark-muted ${isNotebook ? 'text-xs' : 'text-[11px] sm:text-xs'}`}>Move assets seamlessly between networks using Circle's CCTP.</p>
+    <section className={`flex-1 flex flex-col ${
+      isNotebook ? 'overflow-hidden min-h-0' : 'items-center justify-center p-1.5 sm:p-3'
+    } w-full`}>
+      <div className={`overflow-y-auto flex-1 min-h-0 flex flex-col items-center ${
+        isNotebook ? 'justify-start pt-0.5 sm:pt-1 pb-1 sm:pb-1.5 px-2' : ''
+      } w-full`}>
+        <div className={`w-full max-w-7xl mx-auto flex flex-col items-center ${isNotebook ? 'flex-1 h-full min-h-0' : ''}`}>
+          <div className={`text-center ${isNotebook ? 'mb-0.5 shrink-0' : 'mb-1 sm:mb-2'}`}>
+            <h1 className={`${isNotebook ? 'text-sm sm:text-base mb-0' : 'text-base sm:text-xl lg:text-2xl font-bold mb-0.5'} text-white`}>Cross-Chain Bridge</h1>
+            <p className={`text-dark-muted ${isNotebook ? 'text-[10px]' : 'text-[11px] sm:text-xs'}`}>Move assets seamlessly between networks using Circle's CCTP.</p>
           </div>
-          <div className="w-full flex justify-center items-center">
+          <div className={`w-full flex justify-center items-center ${isNotebook ? 'flex-1 h-full min-h-0' : ''}`}>
             <DeFiWidget defaultTab="bridge" />
           </div>
         </div>
