@@ -11,15 +11,15 @@ export default function InvoicePage() {
   }, []);
 
   return (
-    <section className="flex-1 flex flex-col items-center justify-start pt-4 pb-0 w-full">
-      <div className="w-full max-w-4xl mx-auto px-6 flex flex-col items-center">
+    <section className="flex-1 flex flex-col items-center justify-start pt-4 pb-12 w-full">
+      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 flex flex-col items-center">
         <div className="text-center mb-2">
           <h1 className="text-3xl font-bold text-white mb-0">Invoice 2.0</h1>
           <p className="text-dark-muted">Create professional crypto payment links instantly.</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 bg-dark-input p-1 rounded-2xl border border-dark-border/50 w-full max-w-sm mb-2">
+        <div className="flex items-center gap-1 bg-dark-input p-1 rounded-2xl border border-dark-border/50 w-full max-w-sm mb-4">
           <button
             onClick={() => setActiveTab('create')}
             className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all duration-300 ${
@@ -47,7 +47,7 @@ export default function InvoicePage() {
           </button>
         </div>
         
-        <div className="flex w-full flex-col items-center min-h-[550px]">
+        <div className="flex w-full flex-col items-center">
           {/* Both panels stay mounted - CSS visibility swap eliminates re-mount jank */}
           <div
             className="w-full flex justify-center transition-opacity duration-200"
