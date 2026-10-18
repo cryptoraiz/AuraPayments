@@ -266,10 +266,13 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
   const handleClose = () => {
     hasStartedRef.current = false;
     isExecutingRef.current = false;
+    const finalBurn = burnTxHash;
+    const finalReceive = receiveTxHash;
     setBurnTxHash('');
     if (currentStep === 4 && onComplete) {
-      onComplete();
-    } else if (onClose) {
+      onComplete({ burnTxHash: finalBurn, receiveTxHash: finalReceive, amount, fromChain, toChain, token });
+    }
+    if (onClose) {
       onClose();
     }
   };

@@ -173,11 +173,14 @@ export const TOKENS = [
 ];
 
 export function getTokenBySymbol(symbol, chainId) {
+  if (!symbol) return null;
+  const sym = symbol.toUpperCase();
   if (chainId) {
-    const match = TOKENS.find(t => t.symbol.toUpperCase() === symbol.toUpperCase() && t.chainId === chainId);
+    const match = TOKENS.find(t => t.symbol.toUpperCase() === sym && t.chainId === chainId);
     if (match) return match;
+    return null; // Do NOT fallback to another chain's token!
   }
-  return TOKENS.find(t => t.symbol.toUpperCase() === symbol.toUpperCase()) || TOKENS[0];
+  return TOKENS.find(t => t.symbol.toUpperCase() === sym) || null;
 }
 
 export function getAllTokens() {

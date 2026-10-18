@@ -31,7 +31,9 @@ export default async function handler(req, res) {
             recipientName,
             amount,
             currency,
-            description
+            description,
+            chainId,
+            network
         } = req.body;
 
         // Validation
@@ -51,7 +53,9 @@ export default async function handler(req, res) {
             currency,
             description: description || '',
             status: 'pending',
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            chainId: chainId || null,
+            network: network || null
         };
 
         // Use JSON Store for now (High reliability fallback)

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useAccount, useConnect, useChainId, useSwitchChain } from 'wagmi'
+import { useSearchParams } from 'react-router-dom'
+import { useAccount, useConnect, useSwitchChain } from 'wagmi'
 import { arcMainnet, arcTestnet } from '../../config/wagmi'
+import { useActiveArcChain } from '../../hooks/useActiveArcChain'
 import { v4 as uuidv4 } from 'uuid'
 import CurrencySelect from '../ui/CurrencySelect'
 import { savePaymentLink } from '../../utils/localStorage'
@@ -11,17 +13,18 @@ import WalletModal from '../ui/WalletModal'
 export default function PaymentForm({ theme = 'modern', isNotebook = false }) {
   const { address, isConnected } = useAccount()
   const { connect, connectors } = useConnect()
-  const chainId = useChainId()
+  const { chainId, isTestnet, networkName } = useActiveArcChain()
   const { switchChain, switchChainAsync } = useSwitchChain()
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false)
+  const [searchParams] = useSearchParams()
 
   // State
   const [formData, setFormData] = useState({
-    name: '',
+    name: searchParams.get('client') || '',
     wallet: '',
-    amount: '',
+    amount: searchParams.get('amount') || '',
     currency: 'USDC',
-    description: '',
+    description: searchParams.get('desc') || '',
   })
   const [generatedLink, setGeneratedLink] = useState('')
   const [generatedLinkId, setGeneratedLinkId] = useState('')
@@ -50,6 +53,21 @@ export default function PaymentForm({ theme = 'modern', isNotebook = false }) {
       setFormData(prev => ({ ...prev, wallet: '' }))
     }
   }, [isConnected, address])
+
+  // Sync with searchParams if navigated with pre-filled invoice data
+  useEffect(() => {
+    const qAmount = searchParams.get('amount')
+    const qClient = searchParams.get('client')
+    const qDesc = searchParams.get('desc')
+    if (qAmount || qClient || qDesc) {
+      setFormData(prev => ({
+        ...prev,
+        amount: qAmount || prev.amount,
+        name: qClient || prev.name,
+        description: qDesc || prev.description
+      }))
+    }
+  }, [searchParams])
 
   // Handle Spotlight
   const handleMouseMove = (e) => {

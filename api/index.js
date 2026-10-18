@@ -248,7 +248,16 @@ async function handleGetInvoicesByWallet(req, res, wallet) {
     const q = 'SELECT * FROM invoices WHERE "fromWallet" = $1 OR "recipientWallet" = $1 ORDER BY "createdAt" DESC LIMIT 50';
     try {
         const result = await db.query(q, [wallet]);
-        return res.status(200).json({ success: true, invoices: result.rows });
+        const sanitizedInvoices = (result.rows || []).map(row => {
+            const chainId = Number(row.chainId || row.chainid || row.chain_id || null);
+            const network = row.network || row.network_name || (chainId === 5042 ? 'Arc Mainnet' : (chainId === 5042002 ? 'Arc Testnet' : null));
+            return {
+                ...row,
+                chainId,
+                network
+            };
+        });
+        return res.status(200).json({ success: true, invoices: sanitizedInvoices });
     } catch (e) {
         return res.status(500).json({ error: e.message });
     }
@@ -382,7 +391,15 @@ async function getDb() {
 
     pool.findById = async (id) => {
         const r = await pool.query('SELECT * FROM invoices WHERE id = $1', [id]);
-        return r.rows[0];
+        const invoice = r.rows[0];
+        if (!invoice) return null;
+        const chainId = Number(invoice.chainId || invoice.chainid || invoice.chain_id || null);
+        const network = invoice.network || invoice.network_name || (chainId === 5042 ? 'Arc Mainnet' : (chainId === 5042002 ? 'Arc Testnet' : null));
+        return {
+            ...invoice,
+            chainId,
+            network
+        };
     };
 
     return pool;

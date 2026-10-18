@@ -11,7 +11,25 @@ export const getPaymentLinks = () => {
     try {
         const links = localStorage.getItem(STORAGE_KEY);
         if (!links) return [];
-        return JSON.parse(links);
+        const parsed = JSON.parse(links);
+        let modified = false;
+        const sanitized = parsed.map(item => {
+            if (!item) return item;
+            const cid = Number(item.chainId || item.chainid);
+            const net = (item.network || '').toLowerCase();
+            // Preserve explicit Mainnet items
+            if (cid === 5042 || net.includes('mainnet')) {
+                if (item.chainId !== 5042 || item.network !== 'Arc Mainnet') {
+                    modified = true;
+                    return { ...item, chainId: 5042, network: 'Arc Mainnet' };
+                }
+            }
+            return item;
+        });
+        if (modified) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
+        }
+        return sanitized;
     } catch (error) {
         console.error('Error reading payment links:', error);
         return [];
@@ -27,8 +45,8 @@ export const savePaymentLink = (linkData) => {
         links.push({
             status: 'pending',
             createdAt: Date.now(),
-            chainId: 5042,
-            network: 'Arc Mainnet',
+            chainId: linkData.chainId || 5042,
+            network: linkData.network || 'Arc Mainnet',
             ...linkData,
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
@@ -64,30 +82,34 @@ export const updatePaymentLink = (linkId, updates) => {
 export const ARC_MAINNET_LAUNCH = 1791849600000;
 
 /**
- * Check if an invoice belongs strictly to testnet
+ * Check if an invoice belongs strictly to mainnet
  */
-export const isTestnetInvoice = (item) => {
+export const isMainnetInvoice = (item) => {
     if (!item) return false;
-    const chainIdNum = Number(item.chainId);
-    // Explicit Testnet Chain IDs
-    if (chainIdNum === 5042002 || chainIdNum === 11155111 || chainIdNum === 84532 || chainIdNum === 421614 || chainIdNum === 11155420 || chainIdNum === 80002) {
-        return true;
-    }
+    const cid = Number(item.chainId || item.chainid || item.chain_id);
+    if (cid === 5042) return true;
+    if (cid === 5042002) return false;
+
     const net = (item.network || '').toLowerCase();
-    if (net.includes('testnet') || net.includes('sepolia') || net.includes('amoy')) {
-        return true;
+    if (net.includes('mainnet')) return true;
+    if (net.includes('testnet') || net.includes('sepolia') || net.includes('amoy')) return false;
+
+    // Check local lookup if item is from backend and missing chain info
+    const local = getPaymentLinkById(item.id);
+    if (local) {
+        const localCid = Number(local.chainId);
+        if (localCid === 5042) return true;
+        if (localCid === 5042002) return false;
+        if ((local.network || '').toLowerCase().includes('mainnet')) return true;
     }
-    // Explicit Mainnet markers
-    if (chainIdNum === 5042 || net.includes('mainnet')) {
-        return false;
-    }
-    // Legacy heuristic: items created before Mainnet launch date without chainId
-    const createdAtNum = Number(item.createdAt || 0);
-    if (createdAtNum > 0 && createdAtNum < ARC_MAINNET_LAUNCH) {
-        return true;
-    }
+
     return false;
 };
+
+/**
+ * Check if an invoice belongs strictly to testnet
+ */
+export const isTestnetInvoice = (item) => !isMainnetInvoice(item);
 
 /**
  * Get payment links filtered by wallet address
@@ -99,8 +121,8 @@ export const getPaymentLinksByWallet = (walletAddress, chainId) => {
             if (!link || link.creatorAddress?.toLowerCase() !== walletAddress?.toLowerCase()) return false;
             if (!chainId) return true;
             const isMainnetRequest = Number(chainId) === 5042;
-            const isTestnet = isTestnetInvoice(link);
-            return isMainnetRequest ? !isTestnet : isTestnet;
+            const isItemMainnet = isMainnetInvoice(link);
+            return isMainnetRequest ? isItemMainnet : !isItemMainnet;
         }
     );
 };
@@ -194,7 +216,25 @@ const SENT_PAYMENTS_KEY = 'arc_invoice_sent_payments';
 export const getSentPayments = () => {
     try {
         const payments = localStorage.getItem(SENT_PAYMENTS_KEY);
-        return payments ? JSON.parse(payments) : [];
+        if (!payments) return [];
+        const parsed = JSON.parse(payments);
+        let modified = false;
+        const sanitized = parsed.map(item => {
+            if (!item) return item;
+            const cid = Number(item.chainId || item.chainid);
+            const net = (item.network || '').toLowerCase();
+            if (cid === 5042 || net.includes('mainnet')) {
+                if (item.chainId !== 5042 || item.network !== 'Arc Mainnet') {
+                    modified = true;
+                    return { ...item, chainId: 5042, network: 'Arc Mainnet' };
+                }
+            }
+            return item;
+        });
+        if (modified) {
+            localStorage.setItem(SENT_PAYMENTS_KEY, JSON.stringify(sanitized));
+        }
+        return sanitized;
     } catch (error) {
         console.error('Error reading sent payments:', error);
         return [];
@@ -241,8 +281,8 @@ export const getSentPaymentsByWallet = (walletAddress, chainId) => {
             if (!payment || payment.payer?.toLowerCase() !== walletAddress?.toLowerCase()) return false;
             if (!chainId) return true;
             const isMainnetRequest = Number(chainId) === 5042;
-            const isTestnet = isTestnetInvoice(payment);
-            return isMainnetRequest ? !isTestnet : isTestnet;
+            const isItemMainnet = isMainnetInvoice(payment);
+            return isMainnetRequest ? isItemMainnet : !isItemMainnet;
         }
     );
 };

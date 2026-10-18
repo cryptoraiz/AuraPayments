@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useAccount, useConnect, useChainId } from 'wagmi';
-import { arcMainnet } from '../../config/wagmi';
-import { getPaymentLinksByWallet, getSentPaymentsByWallet, clearPaymentLinksByScope, clearSentPaymentsByScope, getBlacklist, syncLocalLinks, isTestnetInvoice } from '../../utils/localStorage';
+import { useAccount, useConnect } from 'wagmi';
+import { arcMainnet, arcTestnet } from '../../config/wagmi';
+import useActiveArcChain from '../../hooks/useActiveArcChain';
+import { getPaymentLinks, getPaymentLinksByWallet, getSentPaymentsByWallet, clearPaymentLinksByScope, clearSentPaymentsByScope, getBlacklist, syncLocalLinks, isTestnetInvoice, isMainnetInvoice } from '../../utils/localStorage';
 import { invoiceAPI } from '../../services/invoiceService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateBatchReceipts } from '../../utils/generateReceipt';
@@ -19,7 +20,7 @@ const safeDate = (val) => {
 export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
     const { address, isConnected } = useAccount();
     const { connect, connectors } = useConnect();
-    const chainId = useChainId();
+    const { chainId, isMainnet: isCurrentMainnet } = useActiveArcChain();
     const [showWalletModal, setShowWalletModal] = useState(false);
     const [receivedLinks, setReceivedLinks] = useState([]);
     const [sentPayments, setSentPayments] = useState([]);
@@ -64,6 +65,7 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
             return;
         }
 
+        const allLocalLinks = getPaymentLinks();
         const receivedLocal = getPaymentLinksByWallet(address, chainId);
         const sentLocal = getSentPaymentsByWallet(address, chainId);
 
@@ -84,47 +86,53 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                 paidAt: inv.paidAt,
                 txHash: inv.txHash,
                 payer: inv.payer,
-                chainId: inv.chainId,
-                network: inv.network,
+                chainId: inv.chainId || inv.chainid || inv.chain_id,
+                network: inv.network || inv.network_name,
                 isBackend: true
             }));
 
-            // Merge Logic (Backend Priority with Property Preservation)
+            // Map all local items to preserve original chainId and network
+            const allLocalMap = new Map();
+            allLocalLinks.forEach(loc => {
+                if (loc && loc.id) allLocalMap.set(loc.id, loc);
+            });
+
             const itemMap = new Map();
 
-            // 1. Add local items first
+            // 1. Add local items for active chain first
             receivedLocal.forEach(loc => {
                 if (loc && loc.id) {
                     itemMap.set(loc.id, {
                         ...loc,
-                        recipientName: loc.recipientName || loc.name || 'Payment Request',
-                        chainId: loc.chainId || (chainId || 5042),
-                        network: loc.network || (chainId === 5042002 ? 'Arc Testnet' : 'Arc Mainnet')
+                        recipientName: loc.recipientName || loc.name || 'Payment Request'
                     });
                 }
             });
 
-            // 2. Merge backend items (updating status/txHash/paidAt/payer, but preserving missing properties)
+            // 2. Merge backend items (updating status/txHash/paidAt/payer, but strictly preserving network from localItem)
             backendReceivedItems.forEach(bItem => {
                 if (!bItem || !bItem.id) return;
-                const existing = itemMap.get(bItem.id);
-                if (existing) {
-                    itemMap.set(bItem.id, {
-                        ...existing,
-                        ...bItem,
-                        recipientName: (bItem.recipientName && bItem.recipientName !== 'Payment Received')
-                            ? bItem.recipientName 
-                            : (existing.recipientName || existing.name || 'Payment Request'),
-                        chainId: bItem.chainId || existing.chainId || (chainId || 5042),
-                        network: bItem.network || existing.network || (chainId === 5042002 ? 'Arc Testnet' : 'Arc Mainnet')
-                    });
-                } else {
-                    itemMap.set(bItem.id, {
-                        ...bItem,
-                        recipientName: bItem.recipientName || 'Payment Request',
-                        chainId: bItem.chainId || (chainId || 5042),
-                        network: bItem.network || (chainId === 5042002 ? 'Arc Testnet' : 'Arc Mainnet')
-                    });
+                const localItem = allLocalMap.get(bItem.id);
+                const recName = (bItem.recipientName && bItem.recipientName !== 'Payment Received')
+                    ? bItem.recipientName 
+                    : (localItem?.recipientName || localItem?.name || 'Payment Request');
+
+                // Determine true chainId and network
+                const resolvedChainId = Number(localItem?.chainId || bItem.chainId || (isCurrentMainnet ? arcMainnet.id : 5042002));
+                const resolvedNetwork = localItem?.network || bItem.network || (resolvedChainId === arcMainnet.id ? 'Arc Mainnet' : 'Arc Testnet');
+
+                const merged = {
+                    ...(localItem || {}),
+                    ...bItem,
+                    recipientName: recName,
+                    chainId: resolvedChainId,
+                    network: resolvedNetwork
+                };
+
+                // Strictly isolate: only include if matches the currently selected network
+                const isItemMainnet = isMainnetInvoice(merged);
+                if (isCurrentMainnet ? isItemMainnet : !isItemMainnet) {
+                    itemMap.set(bItem.id, merged);
                 }
             });
 
@@ -136,35 +144,23 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                 uniqueReceived = uniqueReceived.filter(item => !blacklist.includes(item.id));
             }
 
-            // Network segregation: strictly isolate Mainnet vs Testnet
-            const isCurrentMainnet = Number(chainId) === arcMainnet.id;
+            // Secondary safety check: ensure 100% strict network segregation
             uniqueReceived = uniqueReceived.filter(item => {
-                const isTestnet = isTestnetInvoice(item);
-                return isCurrentMainnet ? !isTestnet : isTestnet;
+                const isItemMainnet = isMainnetInvoice(item);
+                return isCurrentMainnet ? isItemMainnet : !isItemMainnet;
             });
 
             // CRITICAL FIX: Ghost Transaction Prevention
-            // If I am the payer (fromWallet matches my address), I should NOT see this in "Received"
-            // This prevents "Self-Funding" tests from showing up as duplicate +100 and -100
             uniqueReceived = uniqueReceived.filter(item => {
                 const isMyPayment = item.payer && item.payer.toLowerCase() === address.toLowerCase();
                 const isMyCreation = item.creatorAddress && item.creatorAddress.toLowerCase() === address.toLowerCase();
-
-                // Keep if I created it (Creator View) OR if I am the recipient
-                // BUT if I paid it (Payer View), it belongs in 'Sent', not 'Received'
-                // However, for ArcInvoice standard:
-                // Received Tab = Links I created (regardless of who paid, even me)
-                // Sent Tab = Payments I made
-
-                return true; // Logic revisited below in 'displayedItems' to handle visual duplication if needed
+                return true;
             });
 
             // Notification Logic: Check for new 'paid' status
             uniqueReceived.forEach(newItem => {
                 if (newItem.status === 'paid') {
                     const oldItem = prevReceivedRef.current.find(old => old.id === newItem.id);
-                    // Trigger if it wasn't paid before (or is new and paid)
-                    // Only if oldItem existed and was NOT paid (avoid notification on first load if refined, but here handles 'just paid')
                     if (oldItem && oldItem.status !== 'paid') {
                         addToast('Payment Received! 💰', `Received ${newItem.amount} ${newItem.currency} from ${newItem.recipientName}`);
                     }
@@ -174,13 +170,17 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
             // Update State and Ref
             setReceivedLinks(uniqueReceived);
             prevReceivedRef.current = uniqueReceived;
-            // Deduplicate sent items by txHash or id
+
+            // Deduplicate and filter sent items by active network
             const sentMap = new Map();
             sentLocal.forEach(item => {
                 if (!item) return;
-                const key = item.txHash || item.id;
-                if (key && !sentMap.has(key)) {
-                    sentMap.set(key, item);
+                const isItemMainnet = isMainnetInvoice(item);
+                if (isCurrentMainnet ? isItemMainnet : !isItemMainnet) {
+                    const key = item.txHash || item.id;
+                    if (key && !sentMap.has(key)) {
+                        sentMap.set(key, item);
+                    }
                 }
             });
             const uniqueSent = Array.from(sentMap.values());
@@ -196,7 +196,7 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
         } finally {
             setIsLoading(false);
         }
-    }, [address, isConnected, chainId]);
+    }, [address, isConnected, chainId, isCurrentMainnet]);
 
     // Polling Effect + Immediate Event Listener
     useEffect(() => {

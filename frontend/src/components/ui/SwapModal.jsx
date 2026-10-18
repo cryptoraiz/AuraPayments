@@ -19,7 +19,7 @@ const TOWER_KEY_TEST   = import.meta.env.VITE_TOWER_API_KEY_TEST || '';
 const TOWER_KEY_PRD    = import.meta.env.VITE_TOWER_API_KEY_PRD  || import.meta.env.VITE_TOWER_API_KEY || '';
 const UNISWAP_KEY      = import.meta.env.VITE_UNISWAP_API_KEY || '';
 
-export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn, amountOut, rawAmountIn, userAddress, quote, selectedDEX = 'uniswap', slippage = '0.5' }) {
+export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn, amountOut, rawAmountIn, userAddress, quote, selectedDEX = 'uniswap', slippage = '0.5', onComplete }) {
   const chainId = useChainId();
   const activeChainId = chainId === arcTestnet.id ? arcTestnet.id : arcMainnet.id;
   const isMainnet = activeChainId === arcMainnet.id;
@@ -333,6 +333,10 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
         txHash: hash,
         hash: hash
       });
+
+      if (onComplete) {
+        onComplete({ hash, amountIn, amountOut, tokenIn, tokenOut });
+      }
     } catch (err) {
       console.error('[SwapModal]', err);
       const lower = (err.message || '').toLowerCase();

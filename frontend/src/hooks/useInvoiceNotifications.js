@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount, useChainId } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { invoiceAPI } from '../services/invoiceService';
 import { arcMainnet, arcTestnet } from '../config/wagmi';
-import { getBlacklist, isTestnetInvoice } from '../utils/localStorage';
+import useActiveArcChain from './useActiveArcChain';
+import { getBlacklist, isMainnetInvoice } from '../utils/localStorage';
 
 /**
  * Hook to manage invoice notifications for the connected wallet
@@ -13,7 +14,7 @@ import { getBlacklist, isTestnetInvoice } from '../utils/localStorage';
  */
 export const useInvoiceNotifications = () => {
     const { address, isConnected } = useAccount();
-    const chainId = useChainId();
+    const { chainId, isMainnet } = useActiveArcChain();
 
     // "Raw" data from API (before local time filtering)
     const [rawInvoices, setRawInvoices] = useState([]);
@@ -40,9 +41,8 @@ export const useInvoiceNotifications = () => {
             if (blacklist.includes(inv.id)) return false;
 
             // Network segregation: strictly isolate Mainnet vs Testnet
-            const isMainnet = Number(chainId) === arcMainnet.id;
-            const isTestnet = isTestnetInvoice(inv);
-            const isMatch = isMainnet ? !isTestnet : isTestnet;
+            const isItemMainnet = isMainnetInvoice(inv);
+            const isMatch = isMainnet ? isItemMainnet : !isItemMainnet;
             if (!isMatch) return false;
 
             // Must not be expired (24-hour production rule)
@@ -64,7 +64,7 @@ export const useInvoiceNotifications = () => {
             }
             return pending;
         });
-    }, [rawInvoices, chainId]); // Dependency on raw data and current chain
+    }, [rawInvoices, chainId, isMainnet]); // Dependency on raw data and current chain
 
     // --- 2. Data Sync (Runs less frequently) ---
     const fetchInvoices = useCallback(async () => {

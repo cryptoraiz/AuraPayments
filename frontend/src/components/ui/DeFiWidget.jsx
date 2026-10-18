@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAccount, useBalance, useChainId, useConnect, useSwitchChain } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { arcMainnet, arcTestnet } from '../../config/wagmi';
@@ -74,22 +74,57 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     queryClient.invalidateQueries();
   }, [connectedChainId, queryClient]);
 
-  const [activeTab, setActiveTab] = useState(defaultTab);
-  const [amount,    setAmount]    = useState('');
+  const [searchParams] = useSearchParams();
+  const queryTab = searchParams.get('tab');
+  const queryAmount = searchParams.get('amount');
+  const queryFrom = searchParams.get('from');
+  const queryTo = searchParams.get('to');
+
+  const [activeTab, setActiveTab] = useState(() => queryTab || defaultTab);
+  const [amount,    setAmount]    = useState(() => queryAmount || '');
   
   // Swap State 
   const isInitiallyTestnet = connectedChainId === arcTestnet.id;
   const initialArcId = isInitiallyTestnet ? arcTestnet.id : arcMainnet.id;
   const initialCounterChainId = isInitiallyTestnet ? 84532 : 8453;
 
-  const [tokenIn,  setTokenIn]  = useState(() => getTokenBySymbol('USDC', initialArcId));
-  const [tokenOut, setTokenOut] = useState(() => getTokenBySymbol('EURC', initialArcId));
+  const [tokenIn,  setTokenIn]  = useState(() => {
+    if (queryFrom) {
+      const found = getTokenBySymbol(queryFrom, initialArcId);
+      if (found) return found;
+    }
+    return getTokenBySymbol('USDC', initialArcId);
+  });
+  const [tokenOut, setTokenOut] = useState(() => {
+    if (queryTo) {
+      const found = getTokenBySymbol(queryTo, initialArcId);
+      if (found) return found;
+    }
+    return getTokenBySymbol('EURC', initialArcId);
+  });
   
   // Bridge State 
   const [bridgeChainIn,   setBridgeChainIn]   = useState(() => getChainById(initialArcId));
   const [bridgeTokenIn,   setBridgeTokenIn]   = useState(() => getTokenBySymbol('USDC', initialArcId));
   const [bridgeChainOut,  setBridgeChainOut]  = useState(() => getChainById(initialCounterChainId));
   const [bridgeTokenOut,  setBridgeTokenOut]  = useState(() => getTokenBySymbol('USDC', initialCounterChainId));
+
+  useEffect(() => {
+    if (queryTab && (queryTab === 'swap' || queryTab === 'bridge')) {
+      setActiveTab(queryTab);
+    }
+    if (queryAmount) {
+      setAmount(queryAmount);
+    }
+    if (queryFrom) {
+      const foundIn = getTokenBySymbol(queryFrom, initialArcId);
+      if (foundIn) setTokenIn(foundIn);
+    }
+    if (queryTo) {
+      const foundOut = getTokenBySymbol(queryTo, initialArcId);
+      if (foundOut) setTokenOut(foundOut);
+    }
+  }, [queryTab, queryAmount, queryFrom, queryTo, initialArcId]);
 
   // Modals State 
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);

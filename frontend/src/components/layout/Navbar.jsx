@@ -1,9 +1,10 @@
 
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId } from 'wagmi'
+import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi'
 import { useQueryClient } from '@tanstack/react-query'
 import { useInvoiceNotifications } from '../../hooks/useInvoiceNotifications'
+import { useActiveArcChain } from '../../hooks/useActiveArcChain'
 import { arcTestnet, arcMainnet } from '../../config/wagmi'
 import { toast } from 'sonner'
 import WalletModal from '../ui/WalletModal'
@@ -14,7 +15,7 @@ export default function Navbar() {
   const { connect, connectors } = useConnect()
   const { disconnect } = useDisconnect()
   const { count: notificationCount } = useInvoiceNotifications()
-  const chainId = useChainId()
+  const { chainId, isMainnet, isTestnet, networkName, setWindowChainId } = useActiveArcChain()
   const { switchChain, switchChainAsync } = useSwitchChain()
   const queryClient = useQueryClient()
   const [showWalletModal, setShowWalletModal] = useState(false)
@@ -41,9 +42,6 @@ export default function Navbar() {
     connect({ connector })
   }
 
-  const isTestnet = chainId === arcTestnet.id
-  const isMainnet = chainId === arcMainnet.id
-
   // Toggle between Arc Mainnet and Arc Testnet
   const handleToggleNetwork = async () => {
     if (!isConnected) {
@@ -60,6 +58,7 @@ export default function Navbar() {
       } else {
         await switchChain({ chainId: targetChain.id })
       }
+      setWindowChainId?.(targetChain.id)
       queryClient.invalidateQueries()
     } catch (err) {
       if (err.code === 4001 || err.message?.includes('rejected')) {
@@ -67,6 +66,7 @@ export default function Navbar() {
       }
       const success = await attemptRawSwitchTo(targetChain)
       if (success) {
+        setWindowChainId?.(targetChain.id)
         queryClient.invalidateQueries()
       }
     }
@@ -183,7 +183,7 @@ export default function Navbar() {
                   </svg>
                   Aura AI
                 </Link>
-                {chainId === arcTestnet.id && (
+                {isTestnet && (
                   <Link
                     to="/faucet"
                     className={`text-sm font-medium transition ${isActive('/faucet') ? 'text-white' : 'text-dark-muted hover:text-white'
@@ -316,7 +316,7 @@ export default function Navbar() {
               </svg>
               Aura AI
             </Link>
-            {chainId === arcTestnet.id && (
+            {isTestnet && (
               <Link
                 to="/faucet"
                 onClick={() => setIsMobileMenuOpen(false)}

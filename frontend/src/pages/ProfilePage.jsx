@@ -1,16 +1,19 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useAccount, useBalance, useChainId } from 'wagmi';
+import { useAccount, useBalance } from 'wagmi';
 import { arcMainnet, arcTestnet } from '../config/wagmi';
 import { getAllTokens } from '../config/tokens';
 import { motion } from 'framer-motion';
 import { useTokenPrices, formatUsdValue } from '../hooks/useTokenPrices';
+import { useActiveArcChain } from '../hooks/useActiveArcChain';
 import { 
   getTradeHistoryByWallet, 
   deleteTrade, 
+  getPaymentLinks,
   getPaymentLinksByWallet, 
   getSentPaymentsByWallet, 
   getBlacklist, 
   addToBlacklist, 
+  isMainnetInvoice,
   isTestnetInvoice 
 } from '../utils/localStorage';
 import { invoiceAPI } from '../services/invoiceService';
@@ -178,8 +181,7 @@ function usePortfolioBalances(address, chainId) {
 
 export default function ProfilePage() {
   const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const isMainnet = chainId !== arcTestnet.id;
+  const { chainId, isMainnet } = useActiveArcChain();
   const currentTokens = isMainnet ? MAINNET_TOKENS : TESTNET_TOKENS;
 
   const [activeTab, setActiveTab] = useState('assets');
@@ -265,6 +267,11 @@ export default function ProfilePage() {
       // 2. Invoices & Payments from Local Storage
       const receivedLocal = getPaymentLinksByWallet(address, chainId) || [];
       const sentLocal = getSentPaymentsByWallet(address, chainId) || [];
+      const allLocalLinks = getPaymentLinks() || [];
+      const allLocalMap = new Map();
+      allLocalLinks.forEach(loc => {
+        if (loc && loc.id) allLocalMap.set(loc.id, loc);
+      });
 
       // Merge backend and local received items
       const itemMap = new Map();
@@ -273,11 +280,18 @@ export default function ProfilePage() {
       });
       backendItems.forEach(bItem => {
         if (!bItem || !bItem.id) return;
-        const existing = itemMap.get(bItem.id);
-        if (existing) {
-          itemMap.set(bItem.id, { ...existing, ...bItem });
-        } else {
-          itemMap.set(bItem.id, bItem);
+        const localItem = allLocalMap.get(bItem.id);
+        const resolvedChainId = Number(localItem?.chainId || bItem.chainId || bItem.chainid || (isCurrentMainnet ? arcMainnet.id : 5042002));
+        const resolvedNetwork = localItem?.network || bItem.network || (resolvedChainId === arcMainnet.id ? 'Arc Mainnet' : 'Arc Testnet');
+        const merged = {
+          ...(localItem || {}),
+          ...bItem,
+          chainId: resolvedChainId,
+          network: resolvedNetwork
+        };
+        const isItemMainnet = isMainnetInvoice(merged);
+        if (isCurrentMainnet ? isItemMainnet : !isItemMainnet) {
+          itemMap.set(bItem.id, merged);
         }
       });
 
@@ -286,8 +300,8 @@ export default function ProfilePage() {
         .filter(item => {
           if (!item || !item.id) return false;
           if (blacklist.includes(item.id)) return false;
-          const isTestnet = isTestnetInvoice(item);
-          return isCurrentMainnet ? !isTestnet : isTestnet;
+          const isItemMainnet = isMainnetInvoice(item);
+          return isCurrentMainnet ? isItemMainnet : !isItemMainnet;
         })
         .map(item => {
           const d = safeDate(item.paidAt || item.createdAt);
@@ -334,8 +348,8 @@ export default function ProfilePage() {
         .filter(item => {
           if (!item || !item.id) return false;
           if (blacklist.includes(item.id)) return false;
-          const isTestnet = isTestnetInvoice(item);
-          return isCurrentMainnet ? !isTestnet : isTestnet;
+          const isItemMainnet = isMainnetInvoice(item);
+          return isCurrentMainnet ? isItemMainnet : !isItemMainnet;
         })
         .map(item => {
           const d = safeDate(item.paidAt || item.timestamp || item.createdAt);
@@ -412,8 +426,8 @@ export default function ProfilePage() {
           paidAt: inv.paidAt,
           txHash: inv.txHash,
           payer: inv.payer,
-          chainId: inv.chainId,
-          network: inv.network,
+          chainId: inv.chainId || inv.chainid || inv.chain_id,
+          network: inv.network || inv.network_name,
           isBackend: true
         }));
         setActivitiesList(formatActivities(formattedBackend));

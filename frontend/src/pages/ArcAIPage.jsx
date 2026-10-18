@@ -1,24 +1,35 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAccount, useConnect, useSendTransaction, useChainId } from 'wagmi';
-import { parseEther } from 'viem';
+import { useNavigate } from 'react-router-dom';
+import { useAccount, useConnect, useBalance } from 'wagmi';
 import confetti from 'canvas-confetti';
-import { arcMainnet } from '../config/wagmi';
-import DeFiWidget from '../components/ui/DeFiWidget';
-import PaymentForm from '../components/forms/PaymentForm';
+import { useActiveArcChain } from '../hooks/useActiveArcChain';
+import { arcMainnet, arcTestnet } from '../config/wagmi';
 import WalletModal from '../components/ui/WalletModal';
+import SwapModal from '../components/ui/SwapModal';
+import BridgeModal from '../components/ui/BridgeModal';
+import { getTokenBySymbol } from '../config/tokens';
+import { getChainById, getAllChains } from '../config/chains';
+import { toRaw } from '../utils/chainUtils';
+import { fetchUniswapArcQuote } from '../utils/uniswapArc';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ArcAIPage() {
+  const navigate = useNavigate();
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
-  const chainId = useChainId();
-  const isMainnet = chainId === arcMainnet.id;
-  const networkName = isMainnet ? 'Arc Mainnet' : 'Arc Testnet';
-  const explorerUrl = isMainnet ? 'https://explorer.arc.io' : 'https://testnet.arcscan.app';
-  const explorerName = isMainnet ? 'Arc Explorer' : 'ArcScan';
+  const { chainId, isMainnet, isTestnet, networkName, explorerUrl, explorerName } = useActiveArcChain();
 
-  const { sendTransaction, isPending, isSuccess } = useSendTransaction();
+  const { data: balanceData, refetch: refetchBalance } = useBalance({
+    address,
+    chainId,
+  });
+  const currentUsdcBalance = balanceData ? Number(balanceData.formatted) : 0;
+
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
+  const [swapModalData, setSwapModalData] = useState(null);
+  const [isBridgeModalOpen, setIsBridgeModalOpen] = useState(false);
+  const [bridgeModalData, setBridgeModalData] = useState(null);
   const [copiedHash, setCopiedHash] = useState(null);
   const [executedActions, setExecutedActions] = useState(new Set());
   const [mobileView, setMobileView] = useState('chat'); // 'chat' | 'status'
@@ -38,6 +49,7 @@ export default function ArcAIPage() {
     window.addEventListener('resize', checkNotebook);
     return () => window.removeEventListener('resize', checkNotebook);
   }, []);
+  const [activeEngine, setActiveEngine] = useState('Aura Copilot');
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Welcome to Aura Terminal! ⚡ I can prepare cross-chain swaps, bridge tokens across networks via CCTP, or generate instant B2B on-chain invoices. How can I assist you today?' }
   ]);
@@ -47,6 +59,7 @@ export default function ArcAIPage() {
   const [logs, setLogs] = useState([
     "[SYSTEM] Initializing Aura Agent Stack...",
     `[SYSTEM] Connected to ${networkName}.`,
+    "[AGENT] Model: Aura Core Engine.",
     "[AGENT] Monitoring cross-chain routes & gas...",
     "[AGENT] Aura Core Engine active."
   ]);
@@ -68,8 +81,9 @@ export default function ArcAIPage() {
     if (prevChainIdRef.current !== chainId) {
       prevChainIdRef.current = chainId;
       addLog(`[SYSTEM] Network switched to ${networkName}.`);
+      refetchBalance?.();
     }
-  }, [chainId, networkName]);
+  }, [chainId, networkName, refetchBalance]);
 
   const addLog = (text) => {
     setLogs(prev => [...prev, text]);
@@ -83,6 +97,7 @@ export default function ArcAIPage() {
     setLogs([
       "[SYSTEM] Initializing Aura Agent Stack...",
       `[SYSTEM] Connected to ${networkName}.`,
+      "[AGENT] Model: Aura Core Engine.",
       "[AGENT] Monitoring cross-chain routes & gas...",
       "[AGENT] Aura Core Engine active.",
       "[SYSTEM] Chat session restarted."
@@ -106,7 +121,13 @@ export default function ArcAIPage() {
         const res = await fetch('/api/agent/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: newMessages, userAddress: address })
+          body: JSON.stringify({ 
+            messages: newMessages, 
+            userAddress: address,
+            networkName,
+            chainId,
+            usdcBalance: currentUsdcBalance
+          })
         });
         if (res.ok) {
           data = await res.json();
@@ -120,7 +141,13 @@ export default function ArcAIPage() {
         const prodRes = await fetch('https://www.aurapayments.xyz/api/agent/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: newMessages, userAddress: address })
+          body: JSON.stringify({ 
+            messages: newMessages, 
+            userAddress: address,
+            networkName,
+            chainId,
+            usdcBalance: currentUsdcBalance
+          })
         });
         if (prodRes.ok) {
           data = await prodRes.json();
@@ -128,6 +155,8 @@ export default function ArcAIPage() {
       }
 
       if (data && data.message) {
+        setActiveEngine('Aura Copilot');
+
         setMessages(prev => [...prev, { 
           role: 'assistant', 
           content: data.message.content, 
@@ -135,9 +164,9 @@ export default function ArcAIPage() {
         }]);
         
         if (data.action) {
-           addLog(`[AGENT] Executed action: ${data.action.action}`);
+           addLog(`[AGENT] Prepared action: ${data.action.action}`);
         } else {
-           addLog(`[AGENT] Inference completed successfully.`);
+           addLog(`[AGENT] Response via Aura Core Engine.`);
         }
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: "An error occurred." }]);
@@ -149,42 +178,193 @@ export default function ArcAIPage() {
     }
   };
 
-  const executeAIAction = (actionDetails, msgIdx) => {
+  const handleSwapSuccess = (swapResult) => {
+    try {
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    } catch (_) {}
+
+    const hash = swapResult?.hash;
+    const fromSymbol = swapResult?.tokenIn?.symbol || swapModalData?.tokenIn?.symbol || 'USDC';
+    const toSymbol = swapResult?.tokenOut?.symbol || swapModalData?.tokenOut?.symbol || 'EURC';
+    const amtIn = swapResult?.amountIn || swapModalData?.amountIn;
+    const amtOut = swapResult?.amountOut || swapModalData?.amountOut;
+
+    addLog(`[AGENT] Swap completed on-chain! ${hash ? `Tx: ${hash.slice(0, 10)}...${hash.slice(-8)}` : 'Confirmed'}`);
+    addLog(`[SYSTEM] Balances updated.`);
+    refetchBalance?.();
+
+    if (hash) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `🎉 **Swap Executed Successfully!**\n\nSwapped **${amtIn} ${fromSymbol}** for **${amtOut ? `~${amtOut} ` : ''}${toSymbol}** directly on ${networkName}.`,
+        txHash: hash
+      }]);
+    }
+  };
+
+  const handleBridgeSuccess = (bridgeResult) => {
+    try {
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    } catch (_) {}
+
+    const burnHash = bridgeResult?.burnTxHash || bridgeResult?.receiveTxHash;
+    const amt = bridgeResult?.amount || bridgeModalData?.amount;
+    const destName = bridgeResult?.toChain?.name || bridgeModalData?.toChain?.name || 'Destination Chain';
+
+    addLog(`[AGENT] CCTP Bridge initiated & verified! ${burnHash ? `Tx: ${burnHash.slice(0, 10)}...${burnHash.slice(-8)}` : ''}`);
+    addLog(`[SYSTEM] Cross-chain burn verified by Circle.`);
+    refetchBalance?.();
+
+    if (burnHash) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `🌉 **Cross-Chain Bridge Completed!**\n\nBridged **${amt} USDC** from ${networkName} to **${destName}** via Circle CCTP.`,
+        txHash: burnHash
+      }]);
+    } else {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `🌉 **Cross-Chain Bridge Completed!**\n\nBridged **${amt} USDC** from ${networkName} to **${destName}** via Circle CCTP.`
+      }]);
+    }
+  };
+
+  const executeAIAction = async (actionDetails, msgIdx) => {
     if (!isConnected || !address) {
       setIsWalletModalOpen(true);
       return;
     }
     
-    // Fire a generic test transaction to simulate the prepared execution
-    sendTransaction({
-      to: address, 
-      value: parseEther('0.0001'),
-    }, {
-      onSuccess: (hash) => {
-        if (msgIdx !== undefined) {
-          setExecutedActions(prev => new Set([...prev, msgIdx]));
-        }
+    if (!actionDetails) return;
 
-        try {
-          confetti({
-            particleCount: 60,
-            spread: 60,
-            origin: { y: 0.7 }
-          });
-        } catch (e) {}
+    if (actionDetails.action === 'UI_PREPARE_SWAP') {
+      const { amount, from, to } = actionDetails.payload || {};
+      const swapAmount = Number(amount || 0);
 
+      // Strict balance check for USDC
+      if ((!from || from.toUpperCase() === 'USDC') && swapAmount > currentUsdcBalance) {
+        addLog(`[SECURITY] Blocked swap: Insufficient balance (${currentUsdcBalance.toFixed(4)} < ${swapAmount} USDC)`);
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: `✅ **Transaction Successfully Submitted!**\n\nThe operation is now confirmed on **${networkName}**. You can view the live on-chain receipt below:`,
-          txHash: hash
+          content: `⚠️ **Insufficient Balance:** Your wallet currently has **${currentUsdcBalance.toFixed(4)} USDC**, which is insufficient to swap **${swapAmount} USDC**. Please top up your wallet or enter a lower amount.`
         }]);
-        addLog(`[SYSTEM] Transaction confirmed: ${hash}`);
-      },
-      onError: (error) => {
-        addLog(`[ERROR] Transaction rejected or failed.`);
+        return;
       }
-    });
-    addLog(`[USER] Signed action: ${actionDetails.action} via Wallet`);
+
+      let tIn = getTokenBySymbol(from || 'USDC', chainId);
+      let tOut = getTokenBySymbol(to || 'EURC', chainId);
+
+      if (!tIn || !tOut) {
+        const invalidSym = (!tIn ? from : to) || 'Token';
+        const validList = isMainnet ? 'USDC, EURC, cirBTC' : 'USDC, EURC, USDT, cirBTC';
+        addLog(`[SECURITY] Blocked swap: ${invalidSym} does not exist on ${networkName}`);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `⚠️ **Token Not Available on ${networkName}:** The token **${invalidSym}** does not exist on **${networkName}** yet.\n\n• Supported tokens for swap on ${networkName}: **${validList}**.`
+        }]);
+        return;
+      }
+
+      if (tIn.symbol.toUpperCase() === tOut.symbol.toUpperCase()) {
+        const fallbackOut = isMainnet ? 'EURC' : 'USDT';
+        tOut = getTokenBySymbol(fallbackOut, chainId);
+      }
+
+      const rawIn = toRaw(amount, tIn.decimals);
+
+      addLog(`[AGENT] Initiating direct swap: ${amount} ${tIn.symbol} -> ${tOut.symbol}...`);
+
+      let quote = null;
+      let calculatedOut = '';
+
+      if (isMainnet) {
+        try {
+          quote = await fetchUniswapArcQuote({
+            tokenIn: tIn,
+            tokenOut: tOut,
+            amountInRaw: rawIn,
+            slippage: 0.5
+          });
+          if (quote?.amountOutFormatted) {
+            calculatedOut = quote.amountOutFormatted;
+          }
+        } catch (qErr) {
+          console.warn('[ArcAIPage] Quote fetch error:', qErr);
+        }
+      }
+
+      setSwapModalData({
+        tokenIn: tIn,
+        tokenOut: tOut,
+        amountIn: String(amount),
+        amountOut: calculatedOut,
+        rawAmountIn: rawIn,
+        quote,
+        slippage: '0.5'
+      });
+      setIsSwapModalOpen(true);
+      return;
+    }
+
+    if (actionDetails.action === 'UI_PREPARE_BRIDGE') {
+      const { amount, destination } = actionDetails.payload || {};
+      const bridgeAmount = Number(amount || 0);
+
+      if (bridgeAmount > currentUsdcBalance) {
+        addLog(`[SECURITY] Blocked bridge: Insufficient balance (${currentUsdcBalance.toFixed(4)} < ${bridgeAmount} USDC)`);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `⚠️ **Insufficient Balance:** Your wallet currently has **${currentUsdcBalance.toFixed(4)} USDC**, which is insufficient to bridge **${bridgeAmount} USDC**.`
+        }]);
+        return;
+      }
+
+      const arcChain = getChainById(chainId);
+      
+      const allChains = getAllChains();
+      const rawDest = (destination || '').trim();
+      const cleanDest = rawDest
+        .toLowerCase()
+        .replace(/\b(network|mainnet|sepolia|chain|pos|l1|l2)\b/g, '')
+        .trim();
+
+      let matchedChain = allChains.find(c => {
+        if (c.isTestnet !== isTestnet || c.id === chainId) return false;
+        const cName = c.name.toLowerCase();
+        const cKey = c.key.toLowerCase();
+        return (
+          cName === rawDest.toLowerCase() ||
+          cName === cleanDest ||
+          cName.includes(cleanDest) ||
+          cleanDest.includes(cName) ||
+          cKey.includes(cleanDest)
+        );
+      });
+
+      if (!matchedChain) {
+        matchedChain = allChains.find(c => c.isTestnet === isTestnet && c.id !== chainId);
+      }
+
+      const bridgeToken = getTokenBySymbol('USDC', chainId);
+
+      addLog(`[AGENT] Initiating CCTP bridge: ${amount} USDC -> ${matchedChain?.name || destination}...`);
+
+      setBridgeModalData({
+        amount: String(amount),
+        fromChain: arcChain,
+        toChain: matchedChain,
+        token: bridgeToken
+      });
+      setIsBridgeModalOpen(true);
+      return;
+    }
+
+    if (actionDetails.action === 'UI_GENERATE_INVOICE') {
+      const { amount, clientName, description } = actionDetails.payload || {};
+      addLog(`[USER] Redirecting to Invoice creation for ${clientName}`);
+      navigate(`/invoice?amount=${encodeURIComponent(amount || '')}&client=${encodeURIComponent(clientName || '')}&desc=${encodeURIComponent(description || '')}`);
+      return;
+    }
   };
 
   const suggestedPrompts = [
@@ -253,7 +433,7 @@ export default function ArcAIPage() {
             <div className={`w-full text-left ${isNotebook ? 'space-y-1.5 text-[11px]' : 'space-y-3 text-sm'}`}>
               <div className="flex justify-between items-center">
                 <span className="text-dark-muted font-medium">Model</span>
-                <span className="text-white font-bold">Aura AI</span>
+                <span className="text-white font-bold">{activeEngine}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-dark-muted font-medium">Network</span>
@@ -374,39 +554,44 @@ export default function ArcAIPage() {
                   {/* Action Execution Button */}
                   {msg.action && msg.action.action !== 'SHOW_STATS' && (
                     <div className={`${isNotebook ? 'mt-2.5 pt-2.5' : 'mt-4 pt-4'} border-t border-dark-border/50`}>
-                      {executedActions.has(idx) ? (
-                        <div className={`w-full ${isNotebook ? 'py-1.5 px-3 text-[11px]' : 'py-2.5 px-4 text-xs'} bg-green-500/10 border border-green-500/30 text-green-400 font-bold rounded-xl flex items-center justify-center gap-2`}>
-                          <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span>Action Confirmed</span>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => executeAIAction(msg.action, idx)}
-                          disabled={isPending}
-                          className={`w-full ${
-                            isNotebook ? 'py-2 text-xs' : 'py-2.5 text-sm'
-                          } bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.98]`}
-                        >
-                          {isPending ? (
-                            <>
-                              <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      {(() => {
+                        const isInsufficient = (msg.action.action === 'UI_PREPARE_SWAP' || msg.action.action === 'UI_PREPARE_BRIDGE') && 
+                          Number(msg.action.payload?.amount || 0) > currentUsdcBalance;
+
+                        if (isInsufficient) {
+                          return (
+                            <div className={`w-full ${isNotebook ? 'py-1.5 px-3 text-[11px]' : 'py-2.5 px-4 text-xs'} bg-red-500/10 border border-red-500/30 text-red-400 font-bold rounded-xl flex items-center justify-center gap-2`}>
+                              <svg className="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                               </svg>
-                              Confirming in Wallet...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                              </svg>
-                              Sign Transaction
-                            </>
-                          )}
-                        </button>
-                      )}
+                              <span>Insufficient Balance ({(currentUsdcBalance >= 0.01 ? (Math.floor(currentUsdcBalance * 100) / 100).toFixed(2) : currentUsdcBalance.toFixed(4))} USDC)</span>
+                            </div>
+                          );
+                        }
+
+                        let buttonLabel = 'Confirm & Execute ➔';
+                        if (msg.action.action === 'UI_PREPARE_SWAP') {
+                          buttonLabel = `Confirm & Swap (${msg.action.payload?.amount} ${msg.action.payload?.from || 'USDC'}) ➔`;
+                        } else if (msg.action.action === 'UI_PREPARE_BRIDGE') {
+                          buttonLabel = `Confirm & Bridge (${msg.action.payload?.amount} USDC) ➔`;
+                        } else if (msg.action.action === 'UI_GENERATE_INVOICE') {
+                          buttonLabel = `Open Invoice Generator ➔`;
+                        }
+
+                        return (
+                          <button
+                            onClick={() => executeAIAction(msg.action, idx)}
+                            className={`w-full ${
+                              isNotebook ? 'py-2 text-xs' : 'py-2.5 text-sm'
+                            } bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] flex items-center justify-center gap-2 active:scale-[0.98]`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            <span>{buttonLabel}</span>
+                          </button>
+                        );
+                      })()}
                     </div>
                   )}
 
@@ -572,6 +757,43 @@ export default function ArcAIPage() {
         </div>
 
       </div>
+
+      {swapModalData && (
+        <SwapModal
+          isOpen={isSwapModalOpen}
+          onClose={() => {
+            setIsSwapModalOpen(false);
+            refetchBalance?.();
+          }}
+          tokenIn={swapModalData.tokenIn}
+          tokenOut={swapModalData.tokenOut}
+          amountIn={swapModalData.amountIn}
+          amountOut={swapModalData.amountOut}
+          rawAmountIn={swapModalData.rawAmountIn}
+          userAddress={address}
+          slippage={swapModalData.slippage || '0.5'}
+          quote={swapModalData.quote}
+          selectedDEX={isMainnet ? 'uniswap' : 'synthra'}
+          onComplete={handleSwapSuccess}
+        />
+      )}
+
+      {bridgeModalData && (
+        <BridgeModal
+          isOpen={isBridgeModalOpen}
+          onClose={() => {
+            setIsBridgeModalOpen(false);
+            refetchBalance?.();
+          }}
+          amount={bridgeModalData.amount}
+          fromChain={bridgeModalData.fromChain}
+          toChain={bridgeModalData.toChain}
+          token={bridgeModalData.token}
+          userAddress={address}
+          receiverAddress={address}
+          onComplete={handleBridgeSuccess}
+        />
+      )}
 
       <WalletModal
         isOpen={isWalletModalOpen}
