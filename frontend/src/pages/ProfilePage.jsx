@@ -4,7 +4,16 @@ import { arcMainnet, arcTestnet } from '../config/wagmi';
 import { getAllTokens } from '../config/tokens';
 import { motion } from 'framer-motion';
 import { useTokenPrices, formatUsdValue } from '../hooks/useTokenPrices';
-import { getTradeHistoryByWallet, deleteTrade } from '../utils/localStorage';
+import { 
+  getTradeHistoryByWallet, 
+  deleteTrade, 
+  getPaymentLinksByWallet, 
+  getSentPaymentsByWallet, 
+  getBlacklist, 
+  addToBlacklist, 
+  isTestnetInvoice 
+} from '../utils/localStorage';
+import { invoiceAPI } from '../services/invoiceService';
 
 const getExplorerUrl = (txHash, chain, currentChainId) => {
   if (!txHash || txHash === 'undefined' || txHash === 'null') return null;
@@ -16,6 +25,14 @@ const getExplorerUrl = (txHash, chain, currentChainId) => {
   if (c.includes('ethereum')) return `https://sepolia.etherscan.io/tx/${txHash}`;
   if (currentChainId === arcMainnet.id || c.includes('mainnet')) return `https://explorer.arc.io/tx/${txHash}`;
   return `https://testnet.arcscan.app/tx/${txHash}`;
+};
+
+const safeDate = (val) => {
+  if (!val) return new Date(0);
+  if (typeof val === 'number') return new Date(val);
+  if (typeof val === 'string' && /^\d+$/.test(val)) return new Date(parseInt(val, 10));
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? new Date(0) : d;
 };
 
 // Portfolio tokens on Arc Mainnet
@@ -39,7 +56,9 @@ const NetworkBadge = ({ chain }) => {
   
   if (c.includes('arc')) return (
     <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#121A2F] flex items-center justify-center">
-      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h4.5l2.5-5h6l2.5 5H22L12 2zm0 5l2 4H10l2-4z"/></svg>
+      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3.5 20.9988C3.64596 16.5923 4.39308 12.48 5.64212 9.28212C7.22346 5.23096 9.51327 3 12.0881 3C14.6629 3 16.9527 5.23096 18.5346 9.28269C19.3573 11.3896 19.9625 13.8935 20.3213 16.6171C20.3537 16.8606 20.3808 17.1075 20.4085 17.3544C20.4177 17.3694 20.4229 17.3838 20.4212 17.3954C20.4212 17.3954 20.6317 18.7119 20.6767 20.9994H20.6531C20.3404 20.7427 16.6533 17.846 10.5413 18.6848C10.6337 17.6504 10.7606 16.6442 10.9244 15.6796C10.9331 15.6306 10.9423 15.5827 10.951 15.5337C13.3481 15.4615 15.4463 15.7396 17.0554 16.1048C17.0496 16.0667 17.0444 16.0275 17.0381 15.9894C16.7075 13.9298 16.2194 12.0444 15.59 10.4331C14.5613 7.79827 13.2188 6.16154 12.0875 6.16154C10.9562 6.16154 9.61365 7.79827 8.585 10.4331C8.33577 11.0706 8.10904 11.7502 7.90596 12.4667C7.62038 13.4712 7.38038 14.5483 7.18827 15.6796C6.90442 17.351 6.72731 19.1429 6.66212 21H3.5V20.9988Z" />
+      </svg>
     </div>
   );
   if (c.includes('polygon')) return (
@@ -204,34 +223,224 @@ export default function ProfilePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activitiesList, setActivitiesList] = useState([]);
 
-  const loadActivities = () => {
+  const loadActivities = async () => {
     if (!address) {
       setActivitiesList([]);
       return;
     }
-    const list = (getTradeHistoryByWallet(address, chainId) || []).map(t => {
-      const timestamp = t.createdAt ? Number(t.createdAt) : Date.now();
-      const d = new Date(isNaN(timestamp) ? Date.now() : timestamp);
-      return {
-        ...t,
-        dateFormatted: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
-        timeFormatted: d.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-        time: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
-        status: 'Completed'
-      };
-    }).sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
-    setActivitiesList(list);
+
+    const isCurrentMainnet = Number(chainId) === arcMainnet.id;
+    const blacklist = getBlacklist() || [];
+
+    const formatActivities = (backendItems = []) => {
+      // 1. Swaps and Bridges from Trade History (Deduplicated by ID and txHash)
+      const seenTradeIds = new Set();
+      const seenTradeHashes = new Set();
+      const uniqueTrades = [];
+
+      (getTradeHistoryByWallet(address, chainId) || []).forEach(t => {
+        if (!t) return;
+        const id = t.id ? String(t.id) : null;
+        const hash = (t.txHash || t.hash) ? String(t.txHash || t.hash).toLowerCase() : null;
+        if (id && seenTradeIds.has(id)) return;
+        if (hash && seenTradeHashes.has(hash)) return;
+        if (id) seenTradeIds.add(id);
+        if (hash) seenTradeHashes.add(hash);
+        uniqueTrades.push(t);
+      });
+
+      const trades = uniqueTrades.map(t => {
+        const d = safeDate(t.createdAt);
+        const timestamp = d.getTime();
+        return {
+          ...t,
+          createdAt: timestamp,
+          dateFormatted: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+          timeFormatted: d.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          time: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
+          status: t.status === 'Confirmed' ? 'Completed' : (t.status || 'Completed')
+        };
+      });
+
+      // 2. Invoices & Payments from Local Storage
+      const receivedLocal = getPaymentLinksByWallet(address, chainId) || [];
+      const sentLocal = getSentPaymentsByWallet(address, chainId) || [];
+
+      // Merge backend and local received items
+      const itemMap = new Map();
+      receivedLocal.forEach(loc => {
+        if (loc && loc.id) itemMap.set(loc.id, loc);
+      });
+      backendItems.forEach(bItem => {
+        if (!bItem || !bItem.id) return;
+        const existing = itemMap.get(bItem.id);
+        if (existing) {
+          itemMap.set(bItem.id, { ...existing, ...bItem });
+        } else {
+          itemMap.set(bItem.id, bItem);
+        }
+      });
+
+      // Format received invoices (created payment requests)
+      const invoiceItems = Array.from(itemMap.values())
+        .filter(item => {
+          if (!item || !item.id) return false;
+          if (blacklist.includes(item.id)) return false;
+          const isTestnet = isTestnetInvoice(item);
+          return isCurrentMainnet ? !isTestnet : isTestnet;
+        })
+        .map(item => {
+          const d = safeDate(item.paidAt || item.createdAt);
+          const timestamp = d.getTime();
+          const isPaid = item.status === 'paid';
+          const isExpired = item.status === 'expired' || (!isPaid && (Date.now() - timestamp > 24 * 60 * 60 * 1000));
+          return {
+            id: item.id,
+            type: 'Receive',
+            isInvoice: true,
+            amount: item.amount,
+            amountIn: item.amount,
+            currency: item.currency || 'USDC',
+            tokenIn: item.currency || 'USDC',
+            status: isPaid ? 'Completed' : (isExpired ? 'Expired' : 'Pending'),
+            createdAt: timestamp,
+            dateFormatted: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+            timeFormatted: d.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+            time: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
+            txHash: item.txHash,
+            recipientName: item.recipientName || item.description || 'Payment Request',
+            fromChain: 'Invoice'
+          };
+        });
+
+      // Deduplicate sent payments strictly by both txHash and id
+      const seenSentIds = new Set();
+      const seenSentHashes = new Set();
+      const uniqueSent = [];
+
+      sentLocal.forEach(item => {
+        if (!item) return;
+        const id = item.id ? String(item.id) : null;
+        const hash = (item.txHash || item.hash) ? String(item.txHash || item.hash).toLowerCase() : null;
+        if (id && seenSentIds.has(id)) return;
+        if (hash && seenSentHashes.has(hash)) return;
+        if (id) seenSentIds.add(id);
+        if (hash) seenSentHashes.add(hash);
+        uniqueSent.push(item);
+      });
+
+      // Format sent payments
+      const sentItems = uniqueSent
+        .filter(item => {
+          if (!item || !item.id) return false;
+          if (blacklist.includes(item.id)) return false;
+          const isTestnet = isTestnetInvoice(item);
+          return isCurrentMainnet ? !isTestnet : isTestnet;
+        })
+        .map(item => {
+          const d = safeDate(item.paidAt || item.timestamp || item.createdAt);
+          const timestamp = d.getTime();
+          return {
+            id: item.id,
+            type: 'Send',
+            isInvoice: true,
+            amount: item.amount,
+            amountIn: item.amount,
+            currency: item.currency || 'USDC',
+            tokenIn: item.currency || 'USDC',
+            status: 'Completed',
+            createdAt: timestamp,
+            dateFormatted: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
+            timeFormatted: d.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+            time: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
+            txHash: item.txHash,
+            recipientName: item.recipientName || 'Payment Sent',
+            fromChain: isCurrentMainnet ? 'Arc' : 'Arc Testnet'
+          };
+        });
+
+      // Cross-deduplicate across trades, sent items and invoices:
+      // If any items share the same non-empty txHash, keep only one
+      const seenGlobalHashes = new Set();
+      const seenGlobalSendIds = new Set();
+      const rawMerged = [...trades, ...sentItems, ...invoiceItems];
+      const allMerged = [];
+
+      for (const act of rawMerged) {
+        const hash = (act.txHash || act.hash) ? String(act.txHash || act.hash).toLowerCase() : null;
+        if (hash && hash !== 'undefined' && hash !== 'null') {
+          if (seenGlobalHashes.has(hash)) continue;
+          seenGlobalHashes.add(hash);
+        }
+        if (act.id && act.type === 'Send') {
+          const sendKey = `send_${act.id}`;
+          if (seenGlobalSendIds.has(sendKey)) continue;
+          seenGlobalSendIds.add(sendKey);
+        }
+        allMerged.push(act);
+      }
+
+      // Merge and sort stably (newest first, then by type, then by id)
+      return allMerged.sort((a, b) => {
+        const timeA = safeDate(a.createdAt).getTime();
+        const timeB = safeDate(b.createdAt).getTime();
+        const diff = timeB - timeA;
+        if (diff !== 0) return diff;
+        const typeDiff = (a.type || '').localeCompare(b.type || '');
+        if (typeDiff !== 0) return typeDiff;
+        return String(a.id || '').localeCompare(String(b.id || ''));
+      });
+    };
+
+    // 1. Instant local render (0ms delay)
+    setActivitiesList(formatActivities([]));
+
+    // 2. Fetch backend in background and update
+    try {
+      const backendInvoices = await invoiceAPI.getByWallet(address);
+      if (Array.isArray(backendInvoices) && backendInvoices.length > 0) {
+        const formattedBackend = backendInvoices.map(inv => ({
+          id: inv.id,
+          creatorAddress: inv.fromWallet,
+          recipientName: inv.recipientName || 'Payment Request',
+          recipientWallet: inv.recipientWallet,
+          amount: inv.amount,
+          currency: inv.currency,
+          description: inv.description,
+          status: inv.status,
+          createdAt: inv.createdAt,
+          paidAt: inv.paidAt,
+          txHash: inv.txHash,
+          payer: inv.payer,
+          chainId: inv.chainId,
+          network: inv.network,
+          isBackend: true
+        }));
+        setActivitiesList(formatActivities(formattedBackend));
+      }
+    } catch (err) {
+      console.warn('[ProfilePage] Backend invoice fetch fallback:', err);
+    }
   };
 
   useEffect(() => {
     loadActivities();
     window.addEventListener('storage', loadActivities);
-    return () => window.removeEventListener('storage', loadActivities);
+    window.addEventListener('invoice_updated', loadActivities);
+    window.addEventListener('pending_bridge_updated', loadActivities);
+    window.addEventListener('aura:bridge-complete', loadActivities);
+    return () => {
+      window.removeEventListener('storage', loadActivities);
+      window.removeEventListener('invoice_updated', loadActivities);
+      window.removeEventListener('pending_bridge_updated', loadActivities);
+      window.removeEventListener('aura:bridge-complete', loadActivities);
+    };
   }, [address, chainId]);
 
-  const handleDeleteActivity = (tradeId) => {
-    deleteTrade(tradeId);
-    setActivitiesList(prev => prev.filter(t => t.id !== tradeId));
+  const handleDeleteActivity = (activityId) => {
+    deleteTrade(activityId);
+    addToBlacklist([activityId]);
+    setActivitiesList(prev => prev.filter(t => t.id !== activityId));
   };
 
   const [activityTypeFilter, setActivityTypeFilter] = useState('all');
@@ -243,7 +452,7 @@ export default function ProfilePage() {
     } else if (activityTypeFilter === 'bridge') {
       list = list.filter(act => act.type?.toLowerCase() === 'bridge');
     } else if (activityTypeFilter === 'payment') {
-      list = list.filter(act => act.type?.toLowerCase() === 'receive' || act.type?.toLowerCase() === 'send');
+      list = list.filter(act => act.type?.toLowerCase() === 'receive' || act.type?.toLowerCase() === 'send' || act.type?.toLowerCase() === 'invoice');
     }
 
     if (!searchQuery.trim()) return list;
@@ -255,12 +464,13 @@ export default function ProfilePage() {
       (act.fromChain && act.fromChain.toLowerCase().includes(q)) ||
       (act.toChain && act.toChain.toLowerCase().includes(q)) ||
       (act.type && act.type.toLowerCase().includes(q)) ||
+      (act.recipientName && act.recipientName.toLowerCase().includes(q)) ||
       (act.txHash && act.txHash.toLowerCase().includes(q)) ||
       (act.hash && act.hash.toLowerCase().includes(q))
     );
   }, [activitiesList, activityTypeFilter, searchQuery]);
 
-  // Pagination Logic
+  // Pagination Logic (strictly 4 items per page)
   const activitiesPerPage = 4;
   const [activityPage, setActivityPage] = useState(1);
 
@@ -269,7 +479,19 @@ export default function ProfilePage() {
   }, [searchQuery, activityTypeFilter]);
 
   const totalActivityPages = Math.max(1, Math.ceil(filteredActivities.length / activitiesPerPage));
-  const paginatedActivities = filteredActivities.slice((activityPage - 1) * activitiesPerPage, activityPage * activitiesPerPage);
+
+  useEffect(() => {
+    if (activityPage > totalActivityPages && totalActivityPages > 0) {
+      setActivityPage(totalActivityPages);
+    } else if (activityPage < 1) {
+      setActivityPage(1);
+    }
+  }, [activityPage, totalActivityPages]);
+
+  const paginatedActivities = useMemo(() => {
+    const start = (activityPage - 1) * activitiesPerPage;
+    return filteredActivities.slice(start, start + activitiesPerPage);
+  }, [filteredActivities, activityPage, activitiesPerPage]);
 
   // If wallet is not connected
   if (!isConnected) {
@@ -468,117 +690,139 @@ export default function ProfilePage() {
               </div>
 
               {paginatedActivities.length === 0 ? (
-                <div className="p-8 text-center text-dark-muted">
+                <div className="p-12 text-center text-dark-muted flex-1 flex items-center justify-center">
                   {searchQuery ? 'No activities match your search' : 'No recent activities found for this wallet'}
                 </div>
-              ) : paginatedActivities.map((act, idx) => (
-                <div key={act.id || idx} className="flex flex-col md:grid md:grid-cols-12 md:items-center px-6 py-4 border-b border-dark-border/30 hover:bg-dark-input/30 transition-colors gap-4 md:gap-4">
-                  
-                  {/* Left Side: Icon and Type */}
-                  <div className="md:col-span-2 flex items-center justify-between md:justify-start w-full">
-                    <div className="flex items-center gap-3">
-                      {act.type === 'Swap' && <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>}
-                      {act.type === 'Bridge' && <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>}
-                      {act.type === 'Receive' && <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>}
-                      {act.type === 'Send' && <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>}
-                      <div className="font-bold text-white text-base md:text-sm">{act.type}</div>
-                    </div>
-                    {/* Mobile Date */}
-                    <div className="md:hidden text-xs text-dark-muted font-medium">{act.time}</div>
-                  </div>
-
-                  {/* Source */}
-                  <div className="md:col-span-3 flex items-center gap-3">
-                    <div className="relative">
-                      <img src={getTokenIcon(act.tokenIn || act.currency)} alt="token" className="w-8 h-8 rounded-full" />
-                      <NetworkBadge chain={act.type === 'Receive' ? 'Invoice' : (act.fromChain || defaultArcLabel)} />
-                    </div>
-                    <div className="flex flex-col">
-                      <div className="font-bold text-white text-sm">{act.amountIn || act.amount} {act.tokenIn || act.currency}</div>
-                      <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.type === 'Receive' ? 'Invoice' : (act.fromChain || defaultArcLabel)}</div>
-                    </div>
-                  </div>
-
-                  {/* Destination */}
-                  <div className="md:col-span-3 flex items-center gap-3">
-                    {act.type === 'Swap' || act.type === 'Bridge' ? (
-                      <>
-                        <div className="relative">
-                          <img src={getTokenIcon(act.tokenOut || act.tokenIn)} alt="token" className="w-8 h-8 rounded-full" />
-                          <NetworkBadge chain={act.toChain || defaultArcLabel} />
-                        </div>
-                        <div className="flex flex-col">
-                          <div className="font-bold text-white text-sm">{act.amountOut || act.amountIn} {act.tokenOut || act.tokenIn}</div>
-                          <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.toChain || defaultArcLabel}</div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="relative">
-                          <div className="w-8 h-8 rounded-full bg-dark-input border border-dark-border/50 flex items-center justify-center text-dark-muted">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              ) : (
+                <div key={`activity_${activityTypeFilter}_page_${activityPage}`} className="flex-1 flex flex-col divide-y divide-dark-border/30">
+                  {paginatedActivities.map((act, idx) => {
+                    const actKey = `${act.type || 'act'}_${act.id || ''}_${act.txHash || act.hash || ''}_${idx}`;
+                    return (
+                      <div key={actKey} className="flex flex-col md:grid md:grid-cols-12 md:items-center px-6 py-4 hover:bg-dark-input/30 transition-colors gap-4 md:gap-4">
+                        
+                        {/* Left Side: Icon and Type */}
+                        <div className="md:col-span-2 flex items-center justify-between md:justify-start w-full">
+                          <div className="flex items-center gap-3">
+                            {act.type === 'Swap' && <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>}
+                            {act.type === 'Bridge' && <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>}
+                            {act.type === 'Receive' && <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>}
+                            {act.type === 'Send' && <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>}
+                            <div className="font-bold text-white text-base md:text-sm">{act.type}</div>
                           </div>
-                          <NetworkBadge chain={defaultArcLabel} />
+                          {/* Mobile Date */}
+                          <div className="md:hidden text-xs text-dark-muted font-medium">{act.time}</div>
                         </div>
-                        <div className="flex flex-col max-w-[120px]">
-                          <div className="font-bold text-white text-sm truncate">{act.type === 'Send' ? (act.recipientName || 'Wallet') : 'Wallet'}</div>
-                          <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{defaultArcLabel}</div>
+
+                        {/* Source */}
+                        <div className="md:col-span-3 flex items-center gap-3">
+                          <div className="relative">
+                            <img src={getTokenIcon(act.tokenIn || act.currency)} alt="token" className="w-8 h-8 rounded-full" />
+                            <NetworkBadge chain={act.type === 'Receive' ? 'Invoice' : (act.fromChain || defaultArcLabel)} />
+                          </div>
+                          <div className="flex flex-col">
+                            <div className="font-bold text-white text-sm">{act.amountIn || act.amount} {act.tokenIn || act.currency}</div>
+                            <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.type === 'Receive' ? 'Invoice' : (act.fromChain || defaultArcLabel)}</div>
+                          </div>
                         </div>
-                      </>
-                    )}
-                  </div>
 
-                  {/* Status */}
-                  <div className="md:col-span-1 flex items-center justify-between md:justify-start mt-2 md:mt-0">
-                    <span className="md:hidden text-xs font-bold text-dark-muted">Status</span>
-                    <span className={`text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full border ${
-                      act.status === 'Completed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                      act.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 
-                      'bg-red-500/10 text-red-400 border-red-500/20'
-                    }`}>
-                      {act.status === 'Completed' ? 'Successful' : act.status}
-                    </span>
-                  </div>
+                        {/* Destination */}
+                        <div className="md:col-span-3 flex items-center gap-3">
+                          {act.type === 'Swap' || act.type === 'Bridge' ? (
+                            <>
+                              <div className="relative">
+                                <img src={getTokenIcon(act.tokenOut || act.tokenIn)} alt="token" className="w-8 h-8 rounded-full" />
+                                <NetworkBadge chain={act.toChain || defaultArcLabel} />
+                              </div>
+                              <div className="flex flex-col">
+                                <div className="font-bold text-white text-sm">{act.amountOut || act.amountIn} {act.tokenOut || act.tokenIn}</div>
+                                <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.toChain || defaultArcLabel}</div>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="relative">
+                                <div className="w-8 h-8 rounded-full bg-dark-input border border-dark-border/50 flex items-center justify-center text-dark-muted">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                </div>
+                                <NetworkBadge chain={defaultArcLabel} />
+                              </div>
+                              <div className="flex flex-col max-w-[120px]">
+                                <div className="font-bold text-white text-sm truncate">{act.type === 'Send' ? (act.recipientName || 'Wallet') : (act.recipientName || 'Payment Request')}</div>
+                                <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{defaultArcLabel}</div>
+                              </div>
+                            </>
+                          )}
+                        </div>
 
-                  {/* Desktop Date */}
-                  <div className="hidden md:flex md:col-span-2 flex-col items-center justify-center">
-                    <div className="font-bold text-white text-sm text-center">{act.dateFormatted}</div>
-                    <div className="text-[11px] text-dark-muted font-medium text-center">{act.timeFormatted}</div>
-                  </div>
+                        {/* Status */}
+                        <div className="md:col-span-1 flex items-center justify-between md:justify-start mt-2 md:mt-0">
+                          <span className="md:hidden text-xs font-bold text-dark-muted">Status</span>
+                          <span className={`text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full border ${
+                            act.status === 'Completed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                            act.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 
+                            'bg-red-500/10 text-red-400 border-red-500/20'
+                          }`}>
+                            {act.status === 'Completed' ? 'Successful' : act.status}
+                          </span>
+                        </div>
 
-                  {/* Action */}
-                  <div className="md:col-span-1 flex justify-end items-center gap-2 mt-2 md:mt-0">
-                    {(() => {
-                      const hash = act.txHash || act.hash;
-                      const chain = act.type === 'Bridge' ? (act.fromChain || defaultArcLabel) : defaultArcLabel;
-                      const url = getExplorerUrl(hash, chain, chainId);
-                      return url ? (
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1.5 rounded-full border border-dark-border bg-white text-black hover:bg-zinc-200 text-xs font-bold transition-all shadow-md active:scale-95 whitespace-nowrap text-center"
-                        >
-                          View Details
-                        </a>
-                      ) : (
-                        <span className="px-3 py-1.5 rounded-full border border-dark-border bg-dark-input text-dark-muted text-xs font-bold whitespace-nowrap text-center opacity-50 cursor-not-allowed">
-                          No Hash
-                        </span>
-                      );
-                    })()}
-                    <button
-                      onClick={() => handleDeleteActivity(act.id)}
-                      title="Delete activity"
-                      className="p-1.5 rounded-lg text-dark-muted hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
+                        {/* Desktop Date */}
+                        <div className="hidden md:flex md:col-span-2 flex-col items-center justify-center">
+                          <div className="font-bold text-white text-sm text-center">{act.dateFormatted}</div>
+                          <div className="text-[11px] text-dark-muted font-medium text-center">{act.timeFormatted}</div>
+                        </div>
+
+                        {/* Action */}
+                        <div className="md:col-span-1 flex justify-end items-center gap-2 mt-2 md:mt-0">
+                          {(() => {
+                            const hash = act.txHash || act.hash;
+                            const chain = act.type === 'Bridge' ? (act.fromChain || defaultArcLabel) : defaultArcLabel;
+                            const url = getExplorerUrl(hash, chain, chainId);
+                            if (url) {
+                              return (
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-1.5 rounded-full border border-dark-border bg-white text-black hover:bg-zinc-200 text-xs font-bold transition-all shadow-md active:scale-95 whitespace-nowrap text-center cursor-pointer"
+                                >
+                                  View Details
+                                </a>
+                              );
+                            }
+                            if (act.isInvoice && act.id) {
+                              return (
+                                <a
+                                  href={`/pay/${act.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-1.5 rounded-full border border-dark-border bg-white text-black hover:bg-zinc-200 text-xs font-bold transition-all shadow-md active:scale-95 whitespace-nowrap text-center cursor-pointer"
+                                >
+                                  View Link
+                                </a>
+                              );
+                            }
+                            return (
+                              <span className="px-3 py-1.5 rounded-full border border-dark-border bg-dark-input text-dark-muted text-xs font-bold whitespace-nowrap text-center opacity-50 cursor-not-allowed">
+                                No Hash
+                              </span>
+                            );
+                          })()}
+                          <button
+                            onClick={() => handleDeleteActivity(act.id)}
+                            title="Delete activity"
+                            className="p-1.5 rounded-lg text-dark-muted hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
+              )}
 
               {/* Pagination Controls */}
               {totalActivityPages > 1 && (
@@ -590,14 +834,14 @@ export default function ProfilePage() {
                     <button 
                       onClick={() => setActivityPage(p => Math.max(1, p - 1))}
                       disabled={activityPage === 1}
-                      className="px-3 py-1.5 rounded-lg border border-dark-border bg-dark-input text-white text-xs font-bold hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="px-3 py-1.5 rounded-lg border border-dark-border bg-dark-input text-white text-xs font-bold hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
                       Prev
                     </button>
                     <button 
                       onClick={() => setActivityPage(p => Math.min(totalActivityPages, p + 1))}
                       disabled={activityPage === totalActivityPages}
-                      className="px-3 py-1.5 rounded-lg border border-dark-border bg-dark-input text-white text-xs font-bold hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="px-3 py-1.5 rounded-lg border border-dark-border bg-dark-input text-white text-xs font-bold hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
                       Next
                     </button>

@@ -173,9 +173,9 @@ export default function HistoryPage() {
                             </p>
                         </div>
                     ) : (
-                        <div className="grid gap-3">
-                            {paginatedTrades.map(item => (
-                                <div key={item.id} className="group relative bg-gradient-to-br from-white/[0.07] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl p-4 transition-all hover:bg-white/[0.04]">
+                        <div className="grid gap-3" key={`${historyTab}_page_${currentPage}`}>
+                            {paginatedTrades.map((item, index) => (
+                                <div key={`${item.type || 'trade'}_${item.id || item.txHash || index}`} className="group relative bg-gradient-to-br from-white/[0.07] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-xl p-4 transition-all hover:bg-white/[0.04]">
                                     <div className="flex items-center justify-between gap-4">
                                         
                                         {/* Left Icon */}

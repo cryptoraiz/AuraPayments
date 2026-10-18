@@ -247,8 +247,15 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
       }
 
       if (chainId === arcMainnet.id) {
+        const dexDisplayName = selectedDEX?.toLowerCase() === 'synthra' 
+          ? 'Synthra' 
+          : selectedDEX?.toLowerCase() === 'tower' 
+            ? 'Tower' 
+            : selectedDEX?.toLowerCase() === 'uniswap' 
+              ? 'Uniswap' 
+              : (selectedDEX ? (selectedDEX.charAt(0).toUpperCase() + selectedDEX.slice(1)) : 'Synthra');
         setStatus('error');
-        setErrorMsg('DEX liquidity pools are awaiting liquidity on Arc Mainnet. Swaps will execute automatically as liquidity is funded on Tower / Synthra.');
+        setErrorMsg(`DEX liquidity pools are awaiting liquidity on Arc Mainnet. Swaps will execute automatically as liquidity is funded on ${dexDisplayName}.`);
         return;
       }
       // Fetch the swap payload

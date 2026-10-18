@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useAccount, useConnect, useChainId } from 'wagmi';
 import { arcMainnet } from '../../config/wagmi';
@@ -9,11 +9,11 @@ import { generateBatchReceipts } from '../../utils/generateReceipt';
 import WalletModal from './WalletModal';
 
 const safeDate = (val) => {
-    if (!val) return new Date();
+    if (!val) return new Date(0);
     if (typeof val === 'number') return new Date(val);
     if (typeof val === 'string' && /^\d+$/.test(val)) return new Date(parseInt(val, 10));
     const d = new Date(val);
-    return isNaN(d.getTime()) ? new Date() : d;
+    return isNaN(d.getTime()) ? new Date(0) : d;
 };
 
 export default function InvoiceHistory({ onUpdateStats }) {
@@ -174,7 +174,17 @@ export default function InvoiceHistory({ onUpdateStats }) {
             // Update State and Ref
             setReceivedLinks(uniqueReceived);
             prevReceivedRef.current = uniqueReceived;
-            setSentPayments(sentLocal);
+            // Deduplicate sent items by txHash or id
+            const sentMap = new Map();
+            sentLocal.forEach(item => {
+                if (!item) return;
+                const key = item.txHash || item.id;
+                if (key && !sentMap.has(key)) {
+                    sentMap.set(key, item);
+                }
+            });
+            const uniqueSent = Array.from(sentMap.values());
+            setSentPayments(uniqueSent);
 
         } catch (err) {
             console.error('❌ Polling error:', err);
@@ -236,7 +246,8 @@ export default function InvoiceHistory({ onUpdateStats }) {
     }, [pendingCount, completedCount, onUpdateStats]);
 
     // --- Filtering Logic ---
-    let displayedItems = [];
+    const receivedItems = useMemo(() => receivedLinks.map(i => ({ ...i, type: 'received' })), [receivedLinks]);
+    const sentItems = useMemo(() => sentPayments.map(i => ({ ...i, type: 'sent', status: 'paid' })), [sentPayments]);
 
     // Helper for countdown display
     const getTimeRemaining = (createdAt) => {
@@ -251,57 +262,63 @@ export default function InvoiceHistory({ onUpdateStats }) {
         return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
     };
 
-    const receivedItems = receivedLinks.map(i => ({ ...i, type: 'received' }));
-    const sentItems = sentPayments.map(i => ({ ...i, type: 'sent', status: 'paid' }));
+    const displayedItems = useMemo(() => {
+        let items = [];
+        switch (activeTab) {
+            case 'received':
+                items = receivedItems.filter(i => i.status === 'paid');
+                break;
+            case 'pending':
+                items = receivedItems.filter(i => i.status === 'pending' && !isExpired(i));
+                break;
+            case 'expired':
+                items = receivedItems.filter(i => i.status === 'pending' && isExpired(i));
+                break;
+            case 'sent':
+                items = sentItems;
+                break;
+            case 'all':
+            default:
+                items = [...receivedItems, ...sentItems];
+                break;
+        }
 
-    switch (activeTab) {
-        case 'received':
-            displayedItems = receivedItems.filter(i => i.status === 'paid');
-            break;
-        case 'pending':
-            displayedItems = receivedItems.filter(i => i.status === 'pending' && !isExpired(i));
-            break;
-        case 'expired':
-            displayedItems = receivedItems.filter(i => i.status === 'pending' && isExpired(i));
-            break;
-        case 'sent':
-            displayedItems = sentItems;
-            break;
-        case 'all':
-        default:
-            // Standard View: Show EVERYTHING (Sent + Received)
-            // If self-payment, show both -100 (Sent) and +100 (Received) so math balances out.
-            // Duplicates of the SAME item are already handled by the Map() unique filtering above.
-            displayedItems = [...receivedItems, ...sentItems];
-            break;
-    }
+        // Sort by dates stably
+        items.sort((a, b) => {
+            const dateA = safeDate(a.paidAt || a.createdAt).getTime();
+            const dateB = safeDate(b.paidAt || b.createdAt).getTime();
+            const diff = dateB - dateA;
+            if (diff !== 0) return diff;
+            const typeCompare = (a.type || '').localeCompare(b.type || '');
+            if (typeCompare !== 0) return typeCompare;
+            return String(a.id || '').localeCompare(String(b.id || ''));
+        });
 
-    // Sort by dates
-    displayedItems.sort((a, b) => {
-        const dateA = a.paidAt || a.createdAt;
-        const dateB = b.paidAt || b.createdAt;
-        return safeDate(dateB) - safeDate(dateA);
-    });
+        // Apply Search
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            items = items.filter(item =>
+                item.description?.toLowerCase().includes(term) ||
+                item.recipientName?.toLowerCase().includes(term) ||
+                item.amount?.toString().includes(term)
+            );
+        }
 
-    // Apply Search
-    if (searchTerm) {
-        displayedItems = displayedItems.filter(item =>
-            item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.recipientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.amount?.toString().includes(searchTerm)
-        );
-    }
+        return items;
+    }, [receivedItems, sentItems, activeTab, searchTerm]);
 
-    // Apply Pagination (5 items per page)
+    // Apply Pagination (4 items per page strictly)
     const totalPages = Math.max(1, Math.ceil(displayedItems.length / ITEMS_PER_PAGE));
-    const paginatedItems = displayedItems.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    );
+    const paginatedItems = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return displayedItems.slice(start, start + ITEMS_PER_PAGE);
+    }, [displayedItems, currentPage]);
 
     useEffect(() => {
         if (currentPage > totalPages && totalPages > 0) {
             setCurrentPage(totalPages);
+        } else if (currentPage < 1) {
+            setCurrentPage(1);
         }
     }, [currentPage, totalPages]);
 
@@ -639,9 +656,11 @@ export default function InvoiceHistory({ onUpdateStats }) {
                             <p className="text-sm font-medium">No activity found</p>
                         </div>
                     ) : (
-                        <div className="grid gap-2" key={activeTab}>
-                            {paginatedItems.map(item => (
-                                <div key={item.id} className="group relative bg-dark-card border border-dark-border rounded-xl px-4 py-3 transition-all hover:border-dark-border/80 hover:bg-dark-input">
+                        <div className="grid gap-2" key={`${activeTab}_page_${currentPage}`}>
+                            {paginatedItems.map((item, index) => {
+                                const itemKey = `${item.type || 'item'}_${item.id || ''}_${item.txHash || ''}_${index}`;
+                                return (
+                                <div key={itemKey} className="group relative bg-dark-card border border-dark-border rounded-xl px-4 py-3 transition-all hover:border-dark-border/80 hover:bg-dark-input">
                                     <div className="flex items-center justify-between gap-3">
 
                                         {/* Left Icon */}
@@ -758,7 +777,8 @@ export default function InvoiceHistory({ onUpdateStats }) {
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
 

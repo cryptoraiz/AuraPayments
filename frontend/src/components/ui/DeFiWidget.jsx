@@ -98,6 +98,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [showSettings, setShowSettings] = useState(false);
   const [slippage, setSlippage] = useState('0.5');
   const [selectedDEX, setSelectedDEX] = useState('uniswap');
+  const selectedDEXRef = useRef(selectedDEX);
+  useEffect(() => {
+    selectedDEXRef.current = selectedDEX;
+  }, [selectedDEX]);
   const [isQuotesExpanded, setIsQuotesExpanded] = useState(true);
   const [refreshCountdown, setRefreshCountdown] = useState(12);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -140,6 +144,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
   // Transaction State 
   const [quote,            setQuote]            = useState(null);
+  const quoteRef = useRef(quote);
+  useEffect(() => {
+    quoteRef.current = quote;
+  }, [quote]);
   const [quoteLoading,     setQuoteLoading]     = useState(false);
   const [quoteError,       setQuoteError]       = useState(null);
   const [swapLoading,      setSwapLoading]      = useState(false);
@@ -263,7 +271,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   // Quote Logic (Swap only for now) 
   const fetchQuote = useCallback(async (isSilent = false, targetDEX = null) => {
     const currentFetchId = ++fetchIdRef.current;
-    const activeDEX = targetDEX || selectedDEX;
+    const activeDEX = targetDEX || selectedDEXRef.current;
 
     if (activeTab === 'bridge') {
       // Bridge mockup: 1:1 quote for visual purposes
@@ -491,7 +499,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         setRefreshCountdown(12);
       }
     }
-  }, [amount, tokenIn, tokenOut, activeTab, bridgeChainIn, bridgeChainOut, bridgeTokenIn, bridgeTokenOut, isCurrentMainnet, prices, selectedDEX]);
+  }, [amount, tokenIn, tokenOut, activeTab, bridgeChainIn, bridgeChainOut, bridgeTokenIn, bridgeTokenOut, isCurrentMainnet, prices]);
 
   useEffect(() => {
     if (activeTab === 'bridge') {
@@ -508,9 +516,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       setQuoteLoading(false);
       return;
     }
-    setQuote(null);
-    setQuoteLoading(true);
-    const t = setTimeout(() => fetchQuote(false), 200);
+    const hasExistingQuote = Boolean(quoteRef.current);
+    if (!hasExistingQuote) {
+      setQuoteLoading(true);
+    }
+    const t = setTimeout(() => fetchQuote(hasExistingQuote), 200);
     return () => clearTimeout(t);
   }, [fetchQuote, activeTab, amount, tokenIn.symbol, tokenOut.symbol]);
 
@@ -1197,12 +1207,12 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* Content */}
-            {quoteLoading && !quote ? (
+            {quoteLoading && !quote && dexQuotes.length === 0 ? (
               <div className="py-10 flex flex-col items-center justify-center gap-2 text-dark-muted">
                 <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                 <span className="text-xs font-medium animate-pulse">Calculating best route...</span>
               </div>
-            ) : quoteError ? (
+            ) : quoteError && dexQuotes.length === 0 ? (
               <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center justify-between">
                 <span>{quoteError}</span>
                 <span className="text-[10px] text-dark-muted">Check token liquidity</span>
@@ -1218,8 +1228,17 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                     <div
                       key={q.id}
                       onClick={() => {
+                        if (selectedDEX === q.id) return;
                         setSelectedDEX(q.id);
-                        fetchQuote(false, q.id);
+                        if (q.amountOut) {
+                          setQuote(prev => prev ? {
+                            ...prev,
+                            amountOutDecimals: q.amountOut,
+                            provider: q.id,
+                            routeString: q.name
+                          } : prev);
+                        }
+                        fetchQuote(true, q.id);
                       }}
                       className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
                         isSelected

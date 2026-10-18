@@ -4,7 +4,7 @@ export const CHAINS = [
     id: 5042,
     key: 'ARC_MAINNET',
     name: 'Arc',
-    icon: 'https://cdn.prod.website-files.com/685311a976e7c248b5dfde95/68926aad995d4eae931403a4_arc-favicon-256x256.png',
+    icon: '/arc-branded.svg',
     color: 'bg-blue-600',
     isTestnet: false,
     explorer: 'https://explorer.arc.io'
@@ -13,7 +13,7 @@ export const CHAINS = [
     id: 5042002,
     key: 'ARC',
     name: 'Arc Testnet',
-    icon: 'https://cdn.prod.website-files.com/685311a976e7c248b5dfde95/68926aad995d4eae931403a4_arc-favicon-256x256.png',
+    icon: '/arc-branded.svg',
     color: 'bg-blue-600',
     isTestnet: true,
     explorer: 'https://testnet.arcscan.app'

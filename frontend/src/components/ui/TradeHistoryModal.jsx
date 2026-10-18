@@ -26,9 +26,9 @@ function getTokenIcon(symbol) {
 }
 
 function getChainIcon(chainName) {
-    if (!chainName) return 'https://cdn.prod.website-files.com/685311a976e7c248b5dfde95/68926aad995d4eae931403a4_arc-favicon-256x256.png';
+    if (!chainName) return '/arc-branded.svg';
     const c = getAllChains().find(x => x.name === chainName);
-    return c ? c.icon : 'https://cdn.prod.website-files.com/685311a976e7c248b5dfde95/68926aad995d4eae931403a4_arc-favicon-256x256.png';
+    return c ? c.icon : '/arc-branded.svg';
 }
 
 export default function TradeHistoryModal({ isOpen, onClose, filterType = 'all' }) {
