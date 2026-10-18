@@ -533,12 +533,11 @@ export default function ProfilePage() {
     : 'linear-gradient(135deg, #2563eb, #9333ea)';
 
   return (
-    <section className="flex-1 flex flex-col overflow-hidden min-h-0 w-full">
-      <div className="overflow-y-auto flex-1 min-h-0 flex flex-col items-center justify-start py-2 sm:py-3 md:py-5 pb-8">
-      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex flex-col gap-4 relative z-20">
+    <section className="flex-1 flex flex-col items-center justify-start py-4 md:py-6 w-full pb-12 overflow-y-auto min-h-0">
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex flex-col gap-6 relative z-20">
         
         {/* Profile Header (Total Balance Card) */}
-        <div className="bg-dark-card border border-dark-border rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
+        <div className="bg-dark-card border border-dark-border rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 shrink-0">
           {/* Ambient Glow inside card */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
           
@@ -618,7 +617,7 @@ export default function ProfilePage() {
           <>
             {/* Tab: Assets */}
             <div
-              className={`col-start-1 row-start-1 w-full bg-dark-card border border-dark-border rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl flex-col min-h-0 flex-1 ${
+              className={`col-start-1 row-start-1 w-full bg-dark-card border border-dark-border rounded-3xl overflow-hidden shadow-2xl flex-col min-h-[480px] ${
                 activeTab === 'assets' ? 'flex' : 'hidden'
               }`}
             >
@@ -864,7 +863,6 @@ export default function ProfilePage() {
             </div>
           </>
         </div>
-      </div>
       </div>
     </section>
   );

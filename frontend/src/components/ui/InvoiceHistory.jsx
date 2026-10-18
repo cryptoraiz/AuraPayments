@@ -416,43 +416,43 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
 
     if (!isConnected) return (
         <>
-            <section className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 py-12 w-full relative">
+            <section className={`flex-1 flex flex-col items-center justify-center ${isNotebook ? 'p-2 py-2 min-h-0 h-full' : 'p-4 md:p-8 py-12'} w-full relative`}>
                 {/* Background Decoration */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${isNotebook ? 'w-[300px] h-[300px]' : 'w-[500px] h-[500px]'} bg-blue-500/10 rounded-full blur-[100px] pointer-events-none`}></div>
 
-                <div className="relative w-full max-w-md">
+                <div className={`relative w-full ${isNotebook ? 'max-w-[400px] flex-1 h-full min-h-0 flex flex-col justify-between' : 'max-w-md'}`}>
                     {/* Glass Card */}
-                    <div className="relative bg-dark-card border border-dark-border rounded-3xl p-8 md:p-10 text-center shadow-2xl overflow-hidden">
+                    <div className={`relative bg-dark-card border border-dark-border ${isNotebook ? 'rounded-2xl p-4 sm:p-5 flex-1 h-full min-h-0 flex flex-col justify-between' : 'rounded-3xl p-8 md:p-10'} text-center shadow-2xl overflow-hidden`}>
 
                         {/* Glow Gradient Top */}
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"></div>
 
                         {/* Icon Container with Animation */}
-                        <div className="relative mb-8 mx-auto w-24 h-24">
+                        <div className={`relative ${isNotebook ? 'mb-3 w-14 h-14' : 'mb-8 w-24 h-24'} mx-auto`}>
                             <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl animate-pulse"></div>
-                            <div className="relative w-full h-full bg-gradient-to-br from-blue-500/15 via-sky-500/10 to-cyan-500/15 rounded-full border border-white/10 flex items-center justify-center p-5">
-                                <svg className="w-10 h-10 text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <div className="relative w-full h-full bg-gradient-to-br from-blue-500/15 via-sky-500/10 to-cyan-500/15 rounded-full border border-white/10 flex items-center justify-center p-3">
+                                <svg className={`${isNotebook ? 'w-7 h-7' : 'w-10 h-10'} text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
                             </div>
                         </div>
 
                         {/* Text Content */}
-                        <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight">
+                        <h2 className={`${isNotebook ? 'text-lg sm:text-xl mb-1.5' : 'text-2xl md:text-3xl mb-3'} font-bold text-white tracking-tight`}>
                             Connect your wallet
                         </h2>
-                        <p className="text-gray-400 text-base leading-relaxed mb-8">
+                        <p className={`text-gray-400 ${isNotebook ? 'text-xs mb-4 leading-normal' : 'text-base leading-relaxed mb-8'}`}>
                             Connect your wallet to securely access your transaction activity, invoices, and payment status.
                         </p>
 
                         <button
                             onClick={() => setShowWalletModal(true)}
-                            className="w-full mt-2 py-4 rounded-2xl transition-all active:scale-[0.98] bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold text-lg"
+                            className={`w-full ${isNotebook ? 'mt-1 !h-[42px] text-sm rounded-xl' : 'mt-2 py-4 rounded-2xl text-lg'} transition-all active:scale-[0.98] bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold flex items-center justify-center`}
                         >
                             Connect Wallet
                         </button>
 
-                        <div className="mt-6 flex justify-center gap-4 text-xs text-gray-500 font-medium">
+                        <div className={`${isNotebook ? 'mt-3 gap-3 text-[10px]' : 'mt-6 gap-4 text-xs'} flex justify-center text-gray-500 font-medium`}>
                             <span className="flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                 Secure
@@ -480,41 +480,41 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
     );
 
     return (
-        <section className={`flex-1 flex flex-col ${isNotebook ? 'px-1 py-0' : 'px-4 md:px-0 py-1'} w-full items-center`}>
-            <div className={`w-full ${isNotebook ? 'max-w-2xl space-y-2' : 'max-w-4xl space-y-3 sm:space-y-4'} flex flex-col flex-1`}>
+        <section className={`flex-1 flex flex-col ${isNotebook ? 'px-1 py-0 h-full min-h-0' : 'px-4 md:px-0 py-1'} w-full items-center`}>
+            <div className={`w-full ${isNotebook ? 'max-w-2xl flex-1 h-full min-h-0 flex flex-col justify-between bg-dark-card border border-dark-border rounded-2xl p-2.5 sm:p-3 shadow-2xl overflow-hidden' : 'max-w-4xl space-y-3 sm:space-y-4'} flex flex-col flex-1`}>
 
                 {/* Header & Controls Container */}
-                <div className={`flex flex-col ${isNotebook ? 'gap-2' : 'gap-4'} opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]`}>
+                <div className={`flex flex-col ${isNotebook ? 'gap-1.5 shrink-0' : 'gap-4'} opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]`}>
 
                     {/* Stats Row */}
-                    <div className={isNotebook ? "space-y-2" : "space-y-4"}>
+                    <div className={isNotebook ? "space-y-1" : "space-y-4"}>
                         {/* Row 1 - Monetary Values Only */}
                         <div className={`grid ${isNotebook ? 'grid-cols-2 gap-2' : 'grid-cols-1 md:grid-cols-2 gap-4'}`}>
-                            <div className={`relative bg-dark-card border border-dark-border ${isNotebook ? 'p-2.5 rounded-xl' : 'p-5 rounded-2xl'} flex items-center justify-between`}>
+                            <div className={`relative ${isNotebook ? 'bg-dark-bg/60 border border-dark-border/60 p-2 sm:p-2.5 rounded-xl' : 'bg-dark-card border border-dark-border p-5 rounded-2xl'} flex items-center justify-between`}>
                                 <div>
-                                    <p className={`${isNotebook ? 'text-xs mb-0.5' : 'text-sm font-medium text-zinc-400 mb-1'}`}>Total Received</p>
-                                    <p className={`${isNotebook ? 'text-lg' : 'text-2xl'} font-bold text-white tracking-tight`}>${formattedTotalReceived}</p>
+                                    <p className={`${isNotebook ? 'text-[11px] mb-0.5' : 'text-sm font-medium text-zinc-400 mb-1'}`}>Total Received</p>
+                                    <p className={`${isNotebook ? 'text-base sm:text-lg' : 'text-2xl'} font-bold text-white tracking-tight`}>${formattedTotalReceived}</p>
                                 </div>
-                                <div className={`${isNotebook ? 'w-7 h-7' : 'w-10 h-10'} rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500`}>
-                                    <svg className={isNotebook ? "w-3.5 h-3.5" : "w-5 h-5"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <div className={`${isNotebook ? 'w-6 h-6' : 'w-10 h-10'} rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500`}>
+                                    <svg className={isNotebook ? "w-3 h-3" : "w-5 h-5"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 </div>
                             </div>
-                            <div className={`relative bg-dark-card border border-dark-border ${isNotebook ? 'p-2.5 rounded-xl' : 'p-5 rounded-2xl'} flex items-center justify-between`}>
+                            <div className={`relative ${isNotebook ? 'bg-dark-bg/60 border border-dark-border/60 p-2 sm:p-2.5 rounded-xl' : 'bg-dark-card border border-dark-border p-5 rounded-2xl'} flex items-center justify-between`}>
                                 <div>
-                                    <p className={`${isNotebook ? 'text-xs mb-0.5' : 'text-sm font-medium text-zinc-400 mb-1'}`}>Total Sent</p>
-                                    <p className={`${isNotebook ? 'text-lg' : 'text-2xl'} font-bold text-white tracking-tight`}>${formattedTotalSent}</p>
+                                    <p className={`${isNotebook ? 'text-[11px] mb-0.5' : 'text-sm font-medium text-zinc-400 mb-1'}`}>Total Sent</p>
+                                    <p className={`${isNotebook ? 'text-base sm:text-lg' : 'text-2xl'} font-bold text-white tracking-tight`}>${formattedTotalSent}</p>
                                 </div>
-                                <div className={`${isNotebook ? 'w-7 h-7' : 'w-10 h-10'} rounded-full bg-red-500/10 flex items-center justify-center text-red-500`}>
-                                    <svg className={isNotebook ? "w-3.5 h-3.5" : "w-5 h-5"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <div className={`${isNotebook ? 'w-6 h-6' : 'w-10 h-10'} rounded-full bg-red-500/10 flex items-center justify-center text-red-500`}>
+                                    <svg className={isNotebook ? "w-3 h-3" : "w-5 h-5"} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Controls Row */}
-                    <div className={`flex w-full items-center justify-between ${isNotebook ? 'gap-2' : 'gap-3'}`}>
+                    <div className={`flex w-full items-center justify-between ${isNotebook ? 'gap-1.5' : 'gap-3'}`}>
                         {/* Tabs */}
-                        <div className={`flex items-center gap-1 bg-dark-input ${isNotebook ? 'p-0.5 rounded-lg' : 'p-1 rounded-xl'} border border-dark-border/50 overflow-x-auto hide-scrollbar flex-1 min-w-0`}>
+                        <div className={`flex items-center gap-1 ${isNotebook ? 'bg-dark-bg/80 p-0.5 rounded-lg' : 'bg-dark-input p-1 rounded-xl'} border border-dark-border/50 overflow-x-auto hide-scrollbar flex-1 min-w-0`}>
                             {['All', 'Received', 'Pending', 'Expired', 'Sent'].map((tabLabel) => {
                                 const key = tabLabel === 'All' ? 'all' :
                                     tabLabel === 'Received' ? 'received' :
@@ -548,7 +548,7 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                                             setCurrentPage(1);
                                             setShowSettingsDropdown(false); // close settings if tab changes
                                         }}
-                                        className={`${isNotebook ? 'px-2.5 py-1 text-[11px]' : 'px-4 py-1.5 text-xs'} rounded-lg font-bold transition-all whitespace-nowrap ${isActive
+                                        className={`${isNotebook ? 'px-2 py-0.5 text-[10px]' : 'px-4 py-1.5 text-xs'} rounded-lg font-bold transition-all whitespace-nowrap ${isActive
                                             ? `bg-dark-card border border-dark-border shadow-lg ${activeColorClass}`
                                             : `${inactiveColorClass} hover:bg-dark-bg`
                                             }`}
@@ -563,11 +563,11 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                         <div className="relative shrink-0">
                             <button
                                 onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
-                                className={`${isNotebook ? 'p-1.5 rounded-lg' : 'p-2 rounded-xl'} border transition-all flex items-center justify-center ${showSettingsDropdown
+                                className={`${isNotebook ? 'p-1 rounded-lg' : 'p-2 rounded-xl'} border transition-all flex items-center justify-center ${showSettingsDropdown
                                     ? 'bg-blue-500/10 border-blue-500/20 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]'
                                     : 'bg-dark-input border-dark-border/50 text-zinc-400 hover:text-white hover:border-white/10 hover:bg-dark-card'}`}
                             >
-                                <svg className={isNotebook ? "w-4 h-4" : "w-5 h-5"} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg className={isNotebook ? "w-3.5 h-3.5" : "w-5 h-5"} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
@@ -577,7 +577,7 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                 </div>
 
                 {/* Links List / Settings Overlay Container */}
-                <div className={`flex-1 ${isNotebook ? 'pb-2' : 'pb-8'} relative flex flex-col`}>
+                <div className={`flex-1 min-h-0 ${isNotebook ? 'pb-0 pt-1' : 'pb-8'} relative flex flex-col justify-between`}>
                     <AnimatePresence>
                         {showSettingsDropdown && (
                             <motion.div
@@ -639,7 +639,7 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                         )}
                     </AnimatePresence>
 
-                    <div className={`${isNotebook ? 'space-y-1.5' : 'space-y-3'} flex-1 flex flex-col`}>
+                    <div className={`${isNotebook ? 'space-y-1.5 flex-1 min-h-0 overflow-y-auto pr-0.5' : 'space-y-3 flex-1 flex flex-col'}`}>
                     {/* Top Pagination Controls Removed */}
 
                     {isLoading && paginatedItems.length === 0 ? (
@@ -649,9 +649,9 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                             ))}
                         </div>
                     ) : paginatedItems.length === 0 ? (
-                        <div className={`flex flex-col items-center justify-center ${isNotebook ? 'py-10 space-y-2' : 'py-20 space-y-4'} text-zinc-600`}>
-                            <div className={`${isNotebook ? 'w-12 h-12' : 'w-16 h-16'} rounded-full bg-zinc-900 flex items-center justify-center`}>
-                                <svg className={`${isNotebook ? 'w-5 h-5' : 'w-6 h-6'} opacity-50`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                        <div className={`flex flex-col items-center justify-center ${isNotebook ? 'py-6 space-y-1.5 flex-1' : 'py-20 space-y-4'} text-zinc-600`}>
+                            <div className={`${isNotebook ? 'w-10 h-10' : 'w-16 h-16'} rounded-full bg-zinc-900 flex items-center justify-center`}>
+                                <svg className={`${isNotebook ? 'w-4 h-4' : 'w-6 h-6'} opacity-50`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
                             </div>
                             <p className={`${isNotebook ? 'text-xs' : 'text-sm'} font-medium`}>No activity found</p>
                         </div>
@@ -660,7 +660,7 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                             {paginatedItems.map((item, index) => {
                                 const itemKey = `${item.type || 'item'}_${item.id || ''}_${item.txHash || ''}_${index}`;
                                 return (
-                                <div key={itemKey} className={`group relative bg-dark-card border border-dark-border rounded-xl ${isNotebook ? 'px-3 py-1.5' : 'px-4 py-3'} transition-all hover:border-dark-border/80 hover:bg-dark-input`}>
+                                <div key={itemKey} className={`group relative ${isNotebook ? 'bg-dark-bg/60 border border-dark-border/60 px-3 py-1.5' : 'bg-dark-card border border-dark-border px-4 py-3'} rounded-xl transition-all hover:border-dark-border/90 hover:bg-dark-input`}>
                                     <div className={`flex items-center justify-between ${isNotebook ? 'gap-2' : 'gap-3'}`}>
 
                                         {/* Left Icon */}
@@ -782,18 +782,18 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                         </div>
                     )}
 
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                        <div className={`${isNotebook ? 'mt-2 px-2.5 py-1.5' : 'mt-3 px-3 py-2.5'} flex items-center justify-between bg-dark-card/60 border border-dark-border/50 rounded-xl`}>
-                            <span className={`${isNotebook ? 'text-[11px]' : 'text-xs'} font-semibold text-zinc-400`}>
+                    {/* Pagination Controls / Bottom Bar */}
+                    {totalPages > 1 ? (
+                        <div className={`${isNotebook ? 'mt-auto pt-1.5 px-2.5 py-1 shrink-0 bg-dark-bg/60 border border-dark-border/40' : 'mt-3 px-3 py-2.5 bg-dark-card/60 border border-dark-border/50'} flex items-center justify-between rounded-xl`}>
+                            <span className={`${isNotebook ? 'text-[10px]' : 'text-xs'} font-semibold text-zinc-400`}>
                                 Page <strong className="text-white">{currentPage}</strong> of <strong className="text-white">{totalPages}</strong>
-                                <span className={`${isNotebook ? 'ml-1 text-[10px]' : 'ml-2'} text-zinc-500`}>({displayedItems.length} total)</span>
+                                <span className={`${isNotebook ? 'ml-1 text-[9px]' : 'ml-2'} text-zinc-500`}>({displayedItems.length} total)</span>
                             </span>
                             <div className="flex items-center gap-1.5">
                                 <button
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className={`${isNotebook ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'} rounded-lg border border-dark-border bg-dark-input text-white font-bold hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer`}
+                                    className={`${isNotebook ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1.5 text-xs'} rounded-lg border border-dark-border bg-dark-input text-white font-bold hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer`}
                                     title="Previous Page"
                                 >
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -804,7 +804,7 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className={`${isNotebook ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'} rounded-lg border border-dark-border bg-dark-input text-white font-bold hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer`}
+                                    className={`${isNotebook ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1.5 text-xs'} rounded-lg border border-dark-border bg-dark-input text-white font-bold hover:bg-dark-border disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 cursor-pointer`}
                                     title="Next Page"
                                 >
                                     Next
@@ -814,7 +814,14 @@ export default function InvoiceHistory({ onUpdateStats, isNotebook = false }) {
                                 </button>
                             </div>
                         </div>
-                    )}
+                    ) : isNotebook && displayedItems.length > 0 ? (
+                        <div className="mt-auto px-2.5 py-1 shrink-0 flex items-center justify-between bg-dark-bg/40 border border-dark-border/30 rounded-xl">
+                            <span className="text-[10px] font-medium text-zinc-400">
+                                Showing all <strong className="text-white">{displayedItems.length}</strong> {displayedItems.length === 1 ? 'transaction' : 'transactions'}
+                            </span>
+                            <span className="text-[9px] text-zinc-500 font-mono">Page 1 of 1</span>
+                        </div>
+                    ) : null}
 
                 </div>
             </div>

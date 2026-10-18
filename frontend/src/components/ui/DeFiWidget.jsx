@@ -113,16 +113,16 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const fetchIdRef = useRef(0);
   const [pendingBridge, setPendingBridge] = useState(null);
 
-  // Notebook / Compact Screen Detection (dynamically scales card when on laptop viewports)
+  // Notebook / Compact Screen Detection (strictly false on desktop monitors)
   const [isNotebook, setIsNotebook] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return window.innerHeight <= 850 || (window.innerWidth <= 1536 && window.innerHeight <= 900);
+    return window.innerWidth < 1280 || (window.innerHeight < 700 && window.innerWidth < 1440);
   });
 
   useEffect(() => {
     const checkNotebook = () => {
       if (typeof window === 'undefined') return;
-      setIsNotebook(window.innerHeight <= 850 || (window.innerWidth <= 1536 && window.innerHeight <= 900));
+      setIsNotebook(window.innerWidth < 1280 || (window.innerHeight < 700 && window.innerWidth < 1440));
     };
     checkNotebook();
     window.addEventListener('resize', checkNotebook);
@@ -832,11 +832,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     <div className={`flex flex-col ${isNotebook ? 'md:flex-row md:items-start' : 'lg:flex-row lg:items-start'} items-center justify-center gap-3 sm:gap-4 lg:gap-5 w-full mx-auto transition-all ${
       activeTab === 'swap' && (quote || quoteLoading || quoteError)
         ? (isNotebook ? 'max-w-4xl' : 'max-w-5xl')
-        : (isNotebook ? 'max-w-[410px]' : 'max-w-[480px]')
+        : (isNotebook ? 'max-w-[420px]' : 'max-w-[480px]')
     }`}>
       <div className={`bg-dark-card border border-dark-border shadow-2xl w-full shrink-0 transition-all ${
         isNotebook
-          ? 'max-w-[410px] rounded-2xl p-2.5 sm:p-3'
+          ? 'max-w-[420px] rounded-2xl p-3 sm:p-3.5 flex flex-col'
           : 'max-w-[480px] rounded-2xl sm:rounded-3xl p-4 sm:p-5'
       }`}>
 
@@ -925,14 +925,14 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Swap Interface */}
         {activeTab === 'swap' && (
-          <div className="flex flex-col gap-1">
+          <div className={`flex flex-col ${isNotebook ? 'gap-1.5' : 'gap-1'}`}>
             {/* From */}
             <div className={`bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl flex flex-col justify-between transition-all ${
               isNotebook 
-                ? 'p-2 sm:p-2.5 min-h-[76px] sm:min-h-[80px]' 
+                ? 'p-2.5 sm:p-3 min-h-[82px] max-h-[92px]' 
                 : 'p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px]'
             }`}>
-              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-[11px] mb-0.5' : 'text-sm mb-3'}`}>
+              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-[11px] mb-1' : 'text-sm mb-3'}`}>
                 <span>You pay</span>
               </div>
               <div className="flex items-center justify-between gap-3 sm:gap-4">
@@ -964,7 +964,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* Arrow */}
-            <div className={`relative h-2 flex items-center justify-center z-10 ${isNotebook ? '-my-2' : '-my-3'}`}>
+            <div className={`relative h-2 flex items-center justify-center z-10 shrink-0 ${isNotebook ? '-my-1' : '-my-3'}`}>
               <div onClick={() => { 
                   const prevOut = quote?.amountOutDecimals;
                   setQuote(null);
@@ -990,10 +990,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             {/* To */}
             <div className={`bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl flex flex-col justify-between transition-all ${
               isNotebook 
-                ? 'p-2 sm:p-2.5 min-h-[76px] sm:min-h-[80px]' 
+                ? 'p-2.5 sm:p-3 min-h-[82px] max-h-[92px]' 
                 : 'p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px]'
             }`}>
-              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-[11px] mb-0.5' : 'text-sm mb-3'}`}>
+              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-[11px] mb-1' : 'text-sm mb-3'}`}>
                 <span>You receive</span>
               </div>
               <div className="flex items-center justify-between gap-3 sm:gap-4">
@@ -1037,14 +1037,14 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Bridge Interface */}
         {activeTab === 'bridge' && (
-          <div className="flex flex-col gap-1">
+          <div className={`flex flex-col ${isNotebook ? 'gap-1.5' : 'gap-1'}`}>
             {/* From */}
             <div className={`bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl flex flex-col justify-between transition-all ${
               isNotebook 
-                ? 'p-2 sm:p-2.5 min-h-[76px] sm:min-h-[80px]' 
+                ? 'p-2.5 sm:p-3 min-h-[82px] max-h-[92px]' 
                 : 'p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px]'
             }`}>
-              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-[11px] mb-0.5' : 'text-sm mb-3'}`}>
+              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-[11px] mb-1' : 'text-sm mb-3'}`}>
                 <span>Bridge from</span>
               </div>
               <div className="flex items-center justify-between gap-3 sm:gap-4">
@@ -1091,7 +1091,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* Arrow */}
-            <div className={`relative h-2 flex items-center justify-center z-10 ${isNotebook ? '-my-2' : '-my-3'}`}>
+            <div className={`relative h-2 flex items-center justify-center z-10 shrink-0 ${isNotebook ? '-my-1' : '-my-3'}`}>
               <div onClick={() => { 
                   const targetChain = bridgeChainOut;
                   setBridgeChainIn(bridgeChainOut); setBridgeChainOut(bridgeChainIn); 
@@ -1118,10 +1118,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             {/* To */}
             <div className={`bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl flex flex-col justify-between transition-all ${
               isNotebook 
-                ? 'p-2 sm:p-2.5 min-h-[76px] sm:min-h-[80px]' 
+                ? 'p-2.5 sm:p-3 min-h-[82px] max-h-[92px]' 
                 : 'p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px]'
             }`}>
-              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-[11px] mb-0.5' : 'text-sm mb-3'}`}>
+              <div className={`font-medium text-dark-muted flex justify-between ${isNotebook ? 'text-[11px] mb-1' : 'text-sm mb-3'}`}>
                 <span>Bridge to</span>
               </div>
               <div className="flex items-center justify-between gap-3 sm:gap-4">
@@ -1301,7 +1301,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       {activeTab === 'swap' && Boolean(amount && Number(String(amount).replace(',', '.')) > 0) && (
         <div className={`w-full bg-dark-card border border-dark-border shadow-2xl flex flex-col justify-between transition-all shrink-0 ${
           isNotebook 
-            ? 'max-w-[410px] md:w-[310px] rounded-2xl p-3.5' 
+            ? 'max-w-[420px] md:w-[310px] rounded-2xl p-3' 
             : 'max-w-[480px] lg:w-[360px] rounded-3xl p-5'
         }`}>
           <div>
