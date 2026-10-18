@@ -571,7 +571,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
       setCurrentStep(4);
       setStatus('idle');
       clearPendingBridge(userAddress);
-      updateTradeByHash(activeBurnHash, { status: 'confirmed' });
+      updateTradeByHash(activeBurnHash, { status: 'Completed' });
       window.dispatchEvent(new Event('aura:bridge-complete'));
 
     } catch (err) {

@@ -247,13 +247,18 @@ export default function ProfilePage() {
       const trades = uniqueTrades.map(t => {
         const d = safeDate(t.createdAt);
         const timestamp = d.getTime();
+        const rawStatus = (t.status || 'Completed').toLowerCase();
+        const isSuccess = rawStatus === 'confirmed' || rawStatus === 'completed' || rawStatus === 'success' || rawStatus === 'successful';
+        const isPending = rawStatus.includes('pending') || rawStatus === 'processing';
+        const resolvedStatus = isSuccess ? 'Completed' : (isPending ? 'Pending' : (t.status || 'Completed'));
+
         return {
           ...t,
           createdAt: timestamp,
           dateFormatted: d.toLocaleString('en-US', { month: 'short', day: 'numeric' }),
           timeFormatted: d.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
           time: d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
-          status: t.status === 'Confirmed' ? 'Completed' : (t.status || 'Completed')
+          status: resolvedStatus
         };
       });
 
@@ -752,13 +757,26 @@ export default function ProfilePage() {
                         {/* Status */}
                         <div className="md:col-span-1 flex items-center justify-between md:justify-start mt-2 md:mt-0">
                           <span className="md:hidden text-xs font-bold text-dark-muted">Status</span>
-                          <span className={`text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full border ${
-                            act.status === 'Completed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                            act.status === 'Pending' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 
-                            'bg-red-500/10 text-red-400 border-red-500/20'
-                          }`}>
-                            {act.status === 'Completed' ? 'Successful' : act.status}
-                          </span>
+                          {(() => {
+                            const s = (act.status || '').toLowerCase();
+                            const isSuccess = s === 'completed' || s === 'confirmed' || s === 'success' || s === 'successful' || s === 'paid';
+                            const isPending = s.includes('pending') || s === 'processing';
+                            const isExpired = s === 'expired';
+
+                            const badgeClass = isSuccess
+                              ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                              : isPending
+                                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                                : 'bg-red-500/10 text-red-400 border-red-500/20';
+
+                            const label = isSuccess ? 'Successful' : (isPending ? 'Pending' : (isExpired ? 'Expired' : (act.status || 'Failed')));
+
+                            return (
+                              <span className={`text-[10px] sm:text-xs font-bold px-3 py-1 rounded-full border ${badgeClass}`}>
+                                {label}
+                              </span>
+                            );
+                          })()}
                         </div>
 
                         {/* Desktop Date */}

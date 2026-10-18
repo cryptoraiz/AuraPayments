@@ -813,15 +813,15 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   );
 
   return (
-    <div className={`flex flex-col md:flex-row items-center md:items-start justify-center gap-3 sm:gap-4 md:gap-5 w-full mx-auto transition-all ${activeTab === 'swap' && (quote || quoteLoading || quoteError) ? 'max-w-5xl' : 'max-w-[450px]'}`}>
-      <div className="bg-dark-card border border-dark-border rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl w-full max-w-[450px] shrink-0">
+    <div className={`flex flex-col lg:flex-row items-center lg:items-start justify-center gap-4 lg:gap-5 w-full mx-auto transition-all ${activeTab === 'swap' && (quote || quoteLoading || quoteError) ? 'max-w-5xl' : 'max-w-[480px]'}`}>
+      <div className="bg-dark-card border border-dark-border rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-2xl w-full max-w-[480px] shrink-0">
 
         {/* Tabs */}
-        <div className="flex items-center justify-between mb-2 sm:mb-3">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div className="flex gap-1 bg-dark-bg rounded-xl p-1">
             {['swap', 'bridge'].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`px-4 sm:px-5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all capitalize ${activeTab === tab ? 'bg-dark-card text-white shadow-sm' : 'text-dark-muted hover:text-white'}`}>
+                className={`px-4 sm:px-5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all capitalize ${activeTab === tab ? 'bg-dark-card text-white shadow-sm' : 'text-dark-muted hover:text-white'}`}>
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
@@ -899,16 +899,16 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {activeTab === 'swap' && (
           <div className="flex flex-col gap-1">
             {/* From */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between transition-all">
-              <div className="text-xs sm:text-sm font-medium text-dark-muted mb-2 flex justify-between">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
+              <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>You pay</span>
               </div>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col items-start w-full">
                   <input type="number" placeholder="0" value={amount}
                     onChange={(e) => { setAmount(e.target.value); setSwapStatus('idle'); setSwapError(''); }}
-                    className="w-full bg-transparent text-left text-2xl sm:text-3xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
-                  <div className="h-4 flex items-center text-[11px] font-medium text-dark-muted mt-0.5">
+                    className="w-full bg-transparent text-left text-4xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
+                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
                     {inputUsd && inputUsd !== '--' ? `~$ ${inputUsd}` : <span className="invisible">~$ 0.00</span>}
                   </div>
                 </div>
@@ -916,10 +916,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                   <button onClick={() => { setSelectingFor('in'); setIsSwapModalOpen(true); }}
                     className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg group">
                     <TokenIcon token={tokenIn} size="sm" />
-                    <span className="font-bold text-white text-base sm:text-lg tracking-wide">{tokenIn.symbol}</span>
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    <span className="font-bold text-white text-lg tracking-wide">{tokenIn.symbol}</span>
+                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </button>
-                  <span className={`flex items-center gap-1.5 text-[10px] sm:text-[11px] mt-1.5 font-semibold cursor-pointer transition-colors ${isInsufficientBalance ? 'text-red-400 font-bold' : 'text-dark-muted hover:text-white'}`}
+                  <span className={`flex items-center gap-1.5 text-[11px] mt-2 font-semibold cursor-pointer transition-colors ${isInsufficientBalance ? 'text-red-400 font-bold' : 'text-dark-muted hover:text-white'}`}
                     onClick={() => { if (balInData) setAmount(balInData.formatted); }}>
                     Balance: {fmtInSwap} {tokenIn.symbol}
                   </span>
@@ -950,20 +950,20 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* To */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between transition-all">
-              <div className="text-xs sm:text-sm font-medium text-dark-muted mb-2 flex justify-between">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
+              <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>You receive</span>
               </div>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col items-start w-full">
-                  <div className="w-full text-left text-2xl sm:text-3xl font-black tracking-tight min-w-0 h-8 sm:h-9 flex items-center">
+                  <div className="w-full text-left text-4xl font-black tracking-tight min-w-0 h-10 flex items-center">
                     {quoteLoading
-                      ? <span className="text-dark-muted text-2xl sm:text-3xl animate-pulse">...</span>
+                      ? <span className="text-dark-muted text-4xl animate-pulse">...</span>
                       : outputAmount
                         ? <span className="text-white truncate">{outputAmount}</span>
                         : <span className="text-dark-border">0</span>}
                   </div>
-                  <div className="h-4 flex items-center text-[11px] font-medium text-dark-muted mt-0.5">
+                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
                     {quoteLoading && amount && Number(amount) > 0 ? (
                       <span className="text-dark-muted animate-pulse">~$ ...</span>
                     ) : outputUsd && outputUsd !== '--' ? (
@@ -977,10 +977,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                   <button onClick={() => { setSelectingFor('out'); setIsSwapModalOpen(true); }}
                     className="flex items-center gap-2 bg-dark-card border border-dark-border hover:bg-dark-border/80 transition-all rounded-full py-1.5 px-3 shadow-lg group">
                     <TokenIcon token={tokenOut} size="sm" />
-                    <span className="font-bold text-white text-base sm:text-lg tracking-wide">{tokenOut.symbol}</span>
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    <span className="font-bold text-white text-lg tracking-wide">{tokenOut.symbol}</span>
+                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </button>
-                  <span className="flex items-center gap-1.5 text-[10px] sm:text-[11px] mt-1.5 text-dark-muted font-semibold cursor-pointer hover:text-white transition-colors">
+                  <span className="flex items-center gap-1.5 text-[11px] mt-2 text-dark-muted font-semibold cursor-pointer hover:text-white transition-colors">
                     Balance: {fmtOutSwap} {tokenOut.symbol}
                   </span>
                 </div>
@@ -993,11 +993,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {activeTab === 'bridge' && (
           <div className="flex flex-col gap-1">
             {/* From */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between transition-all">
-              <div className="text-xs sm:text-sm font-medium text-dark-muted mb-2 flex justify-between">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
+              <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>Bridge from</span>
               </div>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col items-start w-full">
                   <input type="number" placeholder="0" value={amount}
                     onChange={(e) => { 
@@ -1011,8 +1011,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                         setQuote(null);
                       }
                     }}
-                    className="w-full bg-transparent text-left text-2xl sm:text-3xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
-                  <div className="h-4 flex items-center text-[11px] font-medium text-dark-muted mt-0.5">
+                    className="w-full bg-transparent text-left text-4xl font-black text-white placeholder-dark-border outline-none tracking-tight min-w-0" />
+                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
                     {inputUsd && inputUsd !== '--' ? `~$ ${inputUsd}` : <span className="invisible">~$ 0.00</span>}
                   </div>
                 </div>
@@ -1025,10 +1025,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                          <ChainBadge chain={bridgeChainIn} />
                       </div>
                     </div>
-                    <span className="font-bold text-white text-base sm:text-lg tracking-wide">{bridgeTokenIn.symbol}</span>
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    <span className="font-bold text-white text-lg tracking-wide">{bridgeTokenIn.symbol}</span>
+                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </button>
-                  <span className={`flex items-center gap-1.5 text-[10px] sm:text-[11px] mt-1.5 font-semibold cursor-pointer transition-colors ${isInsufficientBalance ? 'text-red-400 font-bold' : 'text-dark-muted hover:text-white'}`}
+                  <span className={`flex items-center gap-1.5 text-[11px] mt-2 font-semibold cursor-pointer transition-colors ${isInsufficientBalance ? 'text-red-400 font-bold' : 'text-dark-muted hover:text-white'}`}
                     onClick={() => { if (bridgeBalInData) setAmount(bridgeBalInData.formatted); }}>
                     Balance: {fmtInBridge} {bridgeTokenIn.symbol}
                   </span>
@@ -1060,18 +1060,18 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* To */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between transition-all">
-              <div className="text-xs sm:text-sm font-medium text-dark-muted mb-2 flex justify-between">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
+              <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>Bridge to</span>
               </div>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col items-start w-full">
-                  <div className="w-full text-left text-2xl sm:text-3xl font-black tracking-tight min-w-0 h-8 sm:h-9 flex items-center">
+                  <div className="w-full text-left text-4xl font-black tracking-tight min-w-0 h-10 flex items-center">
                     {outputAmount
                       ? <span className="text-white truncate">{outputAmount}</span>
                       : <span className="text-dark-border">0</span>}
                   </div>
-                  <div className="h-4 flex items-center text-[11px] font-medium text-dark-muted mt-0.5">
+                  <div className="h-5 flex items-center text-xs font-medium text-dark-muted mt-1">
                     {outputUsd && outputUsd !== '--' ? (
                       <span className="text-dark-muted">~$ {outputUsd}</span>
                     ) : (
@@ -1088,10 +1088,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                          <ChainBadge chain={bridgeChainOut} />
                       </div>
                     </div>
-                    <span className="font-bold text-white text-base sm:text-lg tracking-wide">{bridgeTokenOut.symbol}</span>
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    <span className="font-bold text-white text-lg tracking-wide">{bridgeTokenOut.symbol}</span>
+                    <svg className="w-5 h-5 text-dark-muted group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                   </button>
-                  <span className="flex items-center gap-1.5 text-[10px] sm:text-[11px] mt-1.5 text-dark-muted font-semibold cursor-pointer hover:text-white transition-colors">
+                  <span className="flex items-center gap-1.5 text-[11px] mt-2 text-dark-muted font-semibold cursor-pointer hover:text-white transition-colors">
                     Balance: {fmtOutBridge} {bridgeTokenOut.symbol}
                   </span>
                 </div>
@@ -1102,9 +1102,9 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Bridge Detailed Info */}
         {activeTab === 'bridge' && (
-          <div className="mt-3 mb-1 px-1 flex flex-col gap-3">
+          <div className="mt-5 mb-2 px-1 flex flex-col gap-6">
             <div className="flex justify-start">
-               <button onClick={() => setIsReceiverModalOpen(true)} className="flex items-center gap-2 px-3 py-1.5 bg-dark-bg/60 hover:bg-dark-border transition-colors border border-dark-border/50 rounded-full text-xs font-bold text-white shadow-sm">
+               <button onClick={() => setIsReceiverModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-dark-bg/60 hover:bg-dark-border transition-colors border border-dark-border/50 rounded-full text-xs font-bold text-white shadow-sm">
                  {receiverAddress ? (
                    <>
                      <div className="w-4 h-4 rounded-full bg-blue-500 shadow-inner flex-shrink-0" />
@@ -1118,16 +1118,16 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                  )}
                </button>
             </div>
-            <div className="flex flex-col gap-2 px-1">
-               <div className="flex items-center justify-between text-xs sm:text-sm">
+            <div className="flex flex-col gap-3 px-1">
+               <div className="flex items-center justify-between text-sm">
                  <span className="text-dark-muted font-medium">Bridge Fee</span>
                  <span className="text-emerald-400 font-bold">{BRIDGE_FEE > 0 ? `${BRIDGE_FEE.toFixed(2)} ${bridgeTokenIn.symbol}` : 'Free (0.00 USDC)'}</span>
                </div>
-               <div className="flex items-center justify-between text-xs sm:text-sm">
+               <div className="flex items-center justify-between text-sm">
                  <span className="text-dark-muted font-medium">Estimated Time</span>
                  <span className="text-white font-bold">{getEstimatedTime(bridgeChainIn?.id, bridgeChainOut?.id)}</span>
                </div>
-               <div className="flex items-center justify-between text-xs sm:text-sm">
+               <div className="flex items-center justify-between text-sm">
                  <span className="text-dark-muted font-medium">You Receive</span>
                  <span className="text-white font-bold">{Number(amount) > 0 && netBridgeAmount > 0 ? `${outputAmount} ${bridgeTokenOut.symbol}` : '--'}</span>
                </div>
@@ -1137,7 +1137,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Swap Transparency Info */}
         {activeTab === 'swap' && (
-          <div className="mt-2.5 pt-2 px-1 flex flex-col gap-1.5 border-t border-dark-border/40 text-[11px] sm:text-xs text-dark-muted">
+          <div className="mt-4 pt-3 px-1 flex flex-col gap-2 border-t border-dark-border/40 text-xs text-dark-muted">
             <div className="flex items-center justify-between">
               <span>Slippage Tolerance</span>
               <strong className="text-white font-mono">{slippage}%</strong>
@@ -1162,12 +1162,12 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Action Button */}
         <button onClick={handleSwap} disabled={btnDisabled}
-          className={`w-full mt-2.5 py-2.5 rounded-xl sm:rounded-2xl transition-all active:scale-[0.98] ${
+          className={`w-full mt-3 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all active:scale-[0.98] ${
             !address 
-              ? 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold text-sm'
+              ? 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold text-sm sm:text-base'
               : btnDisabled 
-                ? 'bg-white/[0.04] border border-white/[0.05] cursor-not-allowed opacity-60 text-white font-bold text-sm' 
-                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 cursor-pointer shadow-[0_0_20px_rgba(39,117,202,0.3)] hover:shadow-[0_0_25px_rgba(39,117,202,0.5)] text-white font-bold text-sm'
+                ? 'bg-white/[0.04] border border-white/[0.05] cursor-not-allowed opacity-60 text-white font-bold text-sm sm:text-base' 
+                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 cursor-pointer shadow-[0_0_20px_rgba(39,117,202,0.3)] hover:shadow-[0_0_25px_rgba(39,117,202,0.5)] text-white font-bold text-sm sm:text-base'
           }`}>
           {btnLabel}
         </button>
@@ -1203,10 +1203,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
       {/* Route Selection Side Panel (Desktop Beside / Mobile Stacked) */}
       {activeTab === 'swap' && Boolean(amount && Number(String(amount).replace(',', '.')) > 0) && (
-        <div className="w-full max-w-[450px] md:w-[320px] lg:w-[340px] bg-dark-card border border-dark-border rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl flex flex-col justify-between transition-all shrink-0">
+        <div className="w-full max-w-[480px] lg:w-[360px] bg-dark-card border border-dark-border rounded-3xl p-5 shadow-2xl flex flex-col justify-between transition-all shrink-0">
           <div>
             {/* Header */}
-            <div className="flex items-center justify-between pb-2 mb-2 sm:mb-3 border-b border-dark-border/40">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-dark-border/40">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-xs font-bold uppercase tracking-wider text-white">Route Selection</span>
@@ -1216,17 +1216,17 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
             {/* Content */}
             {quoteLoading && !quote && dexQuotes.length === 0 ? (
-              <div className="py-6 flex flex-col items-center justify-center gap-2 text-dark-muted">
+              <div className="py-10 flex flex-col items-center justify-center gap-2 text-dark-muted">
                 <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                 <span className="text-xs font-medium animate-pulse">Calculating best route...</span>
               </div>
             ) : quoteError && dexQuotes.length === 0 ? (
-              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center justify-between">
                 <span>{quoteError}</span>
                 <span className="text-[10px] text-dark-muted">Check token liquidity</span>
               </div>
             ) : dexQuotes.length > 0 ? (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5">
                 {(isQuotesExpanded
                   ? dexQuotes
                   : (dexQuotes.find(q => q.id === selectedDEX) ? [dexQuotes.find(q => q.id === selectedDEX)] : dexQuotes.slice(0, 1))
@@ -1248,15 +1248,15 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
                         }
                         fetchQuote(true, q.id);
                       }}
-                      className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
+                      className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all cursor-pointer ${
                         isSelected
                           ? 'border-blue-500/60 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.12)]'
                           : 'border-dark-border/60 bg-dark-bg/40 hover:border-dark-border/80'
                       }`}
                     >
                       {/* Left: Brand Logo + Name + Best Price Badge */}
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-lg bg-[#0E1525] border border-white/10 p-1 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-[#0E1525] border border-white/10 p-1.5 flex items-center justify-center shrink-0 shadow-sm overflow-hidden">
                           <img
                             src={q.logo}
                             alt={q.name}
