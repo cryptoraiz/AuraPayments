@@ -59,8 +59,8 @@ export default function FAQPage() {
   }, [openIndex])
 
   return (
-    <section className="flex-1 flex items-center justify-center p-4 md:p-6 h-full min-h-0">
-      <div className="w-full max-w-6xl mx-auto space-y-6 h-full flex flex-col justify-center">
+    <section className="flex-1 flex flex-col items-center justify-start p-4 md:p-6 pb-16 w-full">
+      <div className="w-full max-w-3xl mx-auto space-y-6 flex flex-col">
         {/* Hero Compacto */}
         <div className="relative text-center space-y-2 opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]">
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-500/20 rounded-full blur-[50px] pointer-events-none"></div>
@@ -72,7 +72,7 @@ export default function FAQPage() {
         {/* FAQs in Single Column */}
         <div
           ref={faqContainerRef}
-          className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent opacity-0 animate-[slideDown_0.5s_ease-out_0.2s_forwards] space-y-4 max-w-3xl mx-auto w-full"
+          className="space-y-4 w-full opacity-0 animate-[slideDown_0.5s_ease-out_0.2s_forwards]"
           style={{ animationFillMode: 'forwards' }}
         >
           {faqs.map((faq, index) => (

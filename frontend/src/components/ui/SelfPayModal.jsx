@@ -24,7 +24,7 @@ export default function SelfPayModal({ isOpen, onClose, walletAddress }) {
 
             {/* Modal */}
             <div
-                className="relative w-full max-w-md animate-modal-in"
+                className="relative w-full max-w-md max-h-[90dvh] overflow-y-auto animate-modal-in"
                 onClick={(e) => e.stopPropagation()}
                 style={{ animation: 'modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
             >

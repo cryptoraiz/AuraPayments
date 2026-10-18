@@ -133,7 +133,7 @@ export default function TradeHistoryModal({ isOpen, onClose, filterType = 'all' 
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.95, opacity: 0, y: 20 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className="bg-[#1C1C1E] border border-dark-border rounded-[32px] w-full max-w-[420px] shadow-2xl overflow-hidden p-8 text-center relative"
+                    className="bg-[#1C1C1E] border border-dark-border rounded-[32px] w-full max-w-[420px] max-h-[90dvh] overflow-y-auto shadow-2xl p-6 md:p-8 text-center relative"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button onClick={onClose} className="absolute top-5 right-5 text-dark-muted hover:text-white transition-colors">
@@ -186,7 +186,7 @@ export default function TradeHistoryModal({ isOpen, onClose, filterType = 'all' 
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0.95, opacity: 0, y: 20 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className="bg-[#1C1C1E] border border-dark-border rounded-[32px] w-full max-w-[420px] h-[580px] shadow-2xl overflow-hidden p-6 relative flex flex-col"
+                    className="bg-[#1C1C1E] border border-dark-border rounded-[32px] w-full max-w-[420px] h-[88dvh] max-h-[580px] min-h-[380px] shadow-2xl overflow-hidden p-6 relative flex flex-col"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button onClick={onClose} className="absolute top-5 right-5 text-dark-muted hover:text-white transition-colors z-10 bg-black/40 p-2 rounded-full backdrop-blur-md">

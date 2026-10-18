@@ -53,7 +53,7 @@ export default function ReceivingWalletModal({ isOpen, onClose, onSave, initialA
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="bg-dark-card border border-dark-border rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col"
+            className="bg-dark-card border border-dark-border rounded-3xl w-full max-w-md max-h-[90dvh] overflow-y-auto shadow-2xl flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

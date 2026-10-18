@@ -374,7 +374,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-[#1C1C1E] border border-white/10 rounded-[32px] w-full max-w-[420px] shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden p-6 relative"
+          className="bg-[#1C1C1E] border border-white/10 rounded-[32px] w-full max-w-[420px] max-h-[90dvh] overflow-y-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] p-6 relative"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}

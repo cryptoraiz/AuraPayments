@@ -52,11 +52,11 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-dark-card border border-dark-border rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[550px]"
+          className="bg-dark-card border border-dark-border rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-[88dvh] max-h-[580px] min-h-[400px]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Left Sidebar (Networks) */}
-          <div className="w-full md:w-[280px] bg-dark-bg border-r border-dark-border/50 flex flex-col flex-shrink-0">
+          <div className="w-full md:w-[280px] max-h-[160px] md:max-h-none bg-dark-bg border-b md:border-b-0 md:border-r border-dark-border/50 flex flex-col flex-shrink-0">
             <div className="p-4 border-b border-dark-border/50">
               <div className="relative">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">

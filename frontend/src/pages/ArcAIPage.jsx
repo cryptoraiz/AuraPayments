@@ -150,13 +150,13 @@ export default function ArcAIPage() {
   ];
 
   return (
-    <section className="w-full pt-8 pb-6 overflow-hidden flex flex-col h-[calc(100vh-128px)]">
+    <section className="w-full flex-1 flex flex-col py-4 md:py-6 px-3 sm:px-6 max-w-7xl mx-auto">
       
       {/* Command Center Main Grid */}
-      <div className="w-full max-w-7xl mx-auto px-6 h-full flex gap-6 items-stretch">
+      <div className="w-full h-[calc(100dvh-130px)] min-h-[540px] flex gap-6 items-stretch">
         
         {/* LEFT COLUMN: Agent Status */}
-        <div className="hidden lg:flex w-[280px] flex-col gap-6 h-full">
+        <div className="hidden lg:flex w-[260px] xl:w-[280px] flex-col gap-6 h-full overflow-y-auto pr-1">
           {/* Agent Identity Card */}
           <div className="bg-dark-card border border-dark-border rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-[0_0_30px_rgba(37,99,235,0.3)] mb-4 p-1">
@@ -390,7 +390,7 @@ export default function ArcAIPage() {
         </div>
 
         {/* RIGHT COLUMN: Prompts and Logs */}
-        <div className="hidden xl:flex w-[300px] flex-col gap-6 h-full">
+        <div className="hidden xl:flex w-[280px] flex-col gap-6 h-full overflow-y-auto pr-1">
           {/* Suggested Actions */}
           <div className="bg-dark-card border border-dark-border rounded-3xl p-6 shadow-2xl">
             <h3 className="text-xs font-black text-dark-muted uppercase tracking-widest mb-4">Suggested Actions</h3>

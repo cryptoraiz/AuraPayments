@@ -37,7 +37,7 @@ export default function TokenSelectorModal({ isOpen, onClose, onSelect, selected
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-dark-card border border-dark-border rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col"
+          className="bg-dark-card border border-dark-border rounded-3xl w-full max-w-md max-h-[88dvh] shadow-2xl overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -69,7 +69,7 @@ export default function TokenSelectorModal({ isOpen, onClose, onSelect, selected
           </div>
 
           {/* Token List */}
-          <div className="overflow-y-auto max-h-[400px] p-2 hide-scrollbar">
+          <div className="overflow-y-auto max-h-[50dvh] md:max-h-[400px] p-2 hide-scrollbar">
             {filtered.length === 0 ? (
               <div className="text-center py-8 text-dark-muted text-sm">No tokens found</div>
             ) : filtered.map((token) => (

@@ -298,7 +298,7 @@ export default function PayPage() {
     // ERROR STATE UI
     if (error) {
         return (
-            <div className="flex-1 flex items-center justify-center p-4 h-full min-h-0 w-full">
+            <div className="flex-1 flex items-center justify-center p-4 py-12 w-full">
                 <div className="relative group max-w-sm w-full">
                     {/* Background Glow */}
                     <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity animate-pulse"></div>
@@ -355,7 +355,7 @@ export default function PayPage() {
     // SAFETY CHECK - LOADING STATE
     if (isLoading) {
         return (
-            <div className="flex-1 flex items-center justify-center h-full min-h-0 w-full">
+            <div className="flex-1 flex items-center justify-center py-16 w-full">
                 <div className="text-center">
                     <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                     <p className="text-gray-400">Verifying status...</p>
@@ -368,7 +368,7 @@ export default function PayPage() {
     // If we are NOT loading, and have NO Error (handled above), but also NO Data
     if (!paymentData || !paymentData.recipientWallet) {
         return (
-            <div className="flex-1 flex items-center justify-center p-4 h-full min-h-0 w-full">
+            <div className="flex-1 flex items-center justify-center p-4 py-12 w-full">
                 <div className="max-w-md w-full bg-red-500/10 border border-red-500/20 rounded-2xl p-8 text-center space-y-4">
                     <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto text-red-500 text-3xl">
                         ?
@@ -403,7 +403,7 @@ export default function PayPage() {
         const displayHash = txHash || paymentData.txHash;
 
         return (
-            <section className="flex-1 flex items-center justify-center p-4 pb-8 h-full min-h-0">
+            <section className="flex-1 flex items-center justify-center p-4 pb-16">
 
                 <div className="max-w-md w-full">
                     <div className="relative group">
@@ -480,7 +480,7 @@ export default function PayPage() {
     if (isExpired && paymentData.status !== 'paid') {
 
         return (
-            <section className="flex-1 flex items-center justify-center p-4 pb-8 h-full min-h-0">
+            <section className="flex-1 flex items-center justify-center p-4 pb-16">
                 <div className="max-w-md w-full opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]">
                     <div className="relative group perspective-[1000px]">
 
@@ -545,7 +545,7 @@ export default function PayPage() {
 
     // MAIN FORM STATE
     return (
-        <section className="flex-1 flex flex-col items-center justify-start py-4 w-full h-full min-h-0 overflow-y-auto">
+        <section className="flex-1 flex flex-col items-center justify-start py-4 pb-16 w-full">
             <div className="max-w-4xl w-full">
                 <div className="relative group" onMouseMove={handleMouseMove}>
                     {/* Spotlight Effect - Follows cursor */}

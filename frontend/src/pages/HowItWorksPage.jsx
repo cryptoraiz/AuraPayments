@@ -4,9 +4,9 @@ export default function HowItWorksPage() {
   const [showIllustration, setShowIllustration] = useState(false)
 
   return (
-    <section className="flex-1 flex items-center justify-center p-4 md:p-6 h-full min-h-0">
+    <section className="flex-1 flex flex-col items-center justify-start py-8 px-4 sm:px-6 pb-16 w-full">
 
-      <div className="w-full max-w-7xl mx-auto space-y-8 h-full flex flex-col justify-center">
+      <div className="w-full max-w-6xl mx-auto space-y-8 flex flex-col">
         {/* Compact Hero */}
         <div className="relative text-center space-y-3 opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]">
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-blue-500/20 rounded-full blur-[50px] pointer-events-none"></div>
@@ -17,7 +17,7 @@ export default function HowItWorksPage() {
             </div>
           </div>
 
-          <h1 className="relative text-4xl md:text-5xl font-black">
+          <h1 className="relative text-3xl sm:text-4xl md:text-5xl font-black">
             Simple in <span className="gradient-text">3 steps</span>
           </h1>
           <p className="relative text-sm text-gray-400 max-w-2xl mx-auto">
@@ -26,7 +26,7 @@ export default function HowItWorksPage() {
         </div>
 
         {/* 3 Step Grid */}
-        <div className="grid md:grid-cols-3 gap-6 flex-1 min-h-0">
+        <div className="grid md:grid-cols-3 gap-6">
           {/* Step 1 */}
           <div
             className="relative group opacity-0 animate-[slideDown_0.5s_ease-out_0.2s_forwards]"

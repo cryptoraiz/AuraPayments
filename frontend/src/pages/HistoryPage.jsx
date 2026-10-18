@@ -78,7 +78,7 @@ export default function HistoryPage() {
 
     if (!isConnected) return (
         <>
-            <section className="flex-1 flex flex-col items-center justify-center p-8 min-h-0 w-full relative overflow-hidden">
+            <section className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 py-12 w-full relative">
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
                 <div className="relative w-full max-w-md">
