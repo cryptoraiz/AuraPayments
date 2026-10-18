@@ -120,7 +120,8 @@ export default function HistoryPage() {
     );
 
     return (
-        <section className="flex-1 flex flex-col p-4 md:p-6 pb-12 w-full items-center">
+        <section className="flex-1 flex flex-col overflow-hidden min-h-0 w-full items-center">
+            <div className="overflow-y-auto flex-1 min-h-0 flex flex-col p-4 md:p-6 pb-12 w-full items-center">
             <div className="w-full max-w-3xl flex flex-col flex-1 space-y-6">
 
                 {/* Header Container */}
@@ -312,6 +313,7 @@ export default function HistoryPage() {
                     )}
 
                 </div>
+            </div>
             </div>
         </section>
     );

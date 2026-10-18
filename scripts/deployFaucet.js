@@ -46,7 +46,7 @@ async function main() {
     console.log("ABI saved to frontend/src/config/FaucetABI.json");
 
     // Setup Provider and Wallet
-    const provider = new ethers.JsonRpcProvider('https://rpc.testnet.arc.network');
+    const provider = new ethers.JsonRpcProvider('https://rpc.testnet.arc.io');
     let privateKey = process.env.FAUCET_PRIVATE_KEY;
     if (!privateKey) throw new Error("Missing FAUCET_PRIVATE_KEY env variable");
     

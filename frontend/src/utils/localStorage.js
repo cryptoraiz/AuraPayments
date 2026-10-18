@@ -11,19 +11,7 @@ export const getPaymentLinks = () => {
     try {
         const links = localStorage.getItem(STORAGE_KEY);
         if (!links) return [];
-        const parsed = JSON.parse(links);
-        let changed = false;
-        const normalized = parsed.map(link => {
-            if (Number(link.createdAt) >= ARC_MAINNET_LAUNCH && link.chainId !== 5042) {
-                changed = true;
-                return { ...link, chainId: 5042, network: 'Arc Mainnet' };
-            }
-            return link;
-        });
-        if (changed) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-        }
-        return normalized;
+        return JSON.parse(links);
     } catch (error) {
         console.error('Error reading payment links:', error);
         return [];
@@ -37,11 +25,11 @@ export const savePaymentLink = (linkData) => {
     try {
         const links = getPaymentLinks();
         links.push({
-            ...linkData,
-            createdAt: Date.now(),
             status: 'pending',
+            createdAt: Date.now(),
             chainId: 5042,
-            network: 'Arc Mainnet'
+            network: 'Arc Mainnet',
+            ...linkData,
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
         return true;
@@ -80,27 +68,23 @@ export const ARC_MAINNET_LAUNCH = 1791849600000;
  */
 export const isTestnetInvoice = (item) => {
     if (!item) return false;
-    // Items created on or after Mainnet launch date (Oct 13, 2026) are strictly Mainnet
-    const createdAtNum = Number(item.createdAt || 0);
-    if (createdAtNum >= ARC_MAINNET_LAUNCH) {
-        return false;
-    }
     const chainIdNum = Number(item.chainId);
     // Explicit Testnet Chain IDs
     if (chainIdNum === 5042002 || chainIdNum === 11155111 || chainIdNum === 84532 || chainIdNum === 421614 || chainIdNum === 11155420 || chainIdNum === 80002) {
         return true;
     }
     const net = (item.network || '').toLowerCase();
-    if (net.includes('testnet') || net.includes('sepolia')) {
-        return true;
-    }
-    // Items created before Mainnet launch date (Oct 13, 2026) are 100% testnet
-    if (createdAtNum > 0 && createdAtNum < ARC_MAINNET_LAUNCH) {
+    if (net.includes('testnet') || net.includes('sepolia') || net.includes('amoy')) {
         return true;
     }
     // Explicit Mainnet markers
     if (chainIdNum === 5042 || net.includes('mainnet')) {
         return false;
+    }
+    // Legacy heuristic: items created before Mainnet launch date without chainId
+    const createdAtNum = Number(item.createdAt || 0);
+    if (createdAtNum > 0 && createdAtNum < ARC_MAINNET_LAUNCH) {
+        return true;
     }
     return false;
 };

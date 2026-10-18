@@ -70,7 +70,7 @@
   }
 
   .input-float {
-    @apply w-full px-4 py-6 border-2 border-slate-700/20 rounded-2xl transition-all duration-300;
+    @apply w-full px-3.5 sm:px-4 py-2.5 sm:py-3 md:py-3.5 text-xs sm:text-sm border-2 border-slate-700/20 rounded-xl sm:rounded-2xl transition-all duration-300;
     background-color: rgb(15 23 42 / 0.5) !important;
     color: white !important;
     caret-color: white !important;
@@ -93,7 +93,7 @@
   }
 
   .label-float {
-    @apply absolute top-6 left-4 text-slate-400 transition-all duration-300 pointer-events-none;
+    @apply absolute top-2.5 sm:top-3 md:top-3.5 left-3.5 sm:left-4 text-xs sm:text-sm text-slate-400 transition-all duration-300 pointer-events-none;
   }
 
   .input-float:focus+.label-float,
@@ -560,5 +560,42 @@
 
   .premium-button:active {
     transform: translateY(-1px) scale(0.98);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SMART MULTI-SCREEN AUTO-PROPORTION ENGINE
+   Dynamically harmonizes padding, typography, and card heights
+   across monitor sizes: Ultrawide, Desktop, Laptops (1366x768 /
+   1080p scaled), Tablets, and Mobile phones (Android / iOS).
+   ───────────────────────────────────────────────────────────── */
+
+/* Laptops & Notebooks with compact vertical viewports (<= 820px) */
+@media (max-height: 820px) {
+  /* Tighter, crisp padding for cards on notebook screens */
+  .notebook-auto-fit {
+    padding: 0.75rem !important;
+  }
+  
+  /* Scale down vertical spacers */
+  .py-6, .py-8 {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+}
+
+/* Very compact displays or 1366x768 at 125% scaling (height <= 720px) */
+@media (max-height: 720px) {
+  h1 {
+    font-size: 1.25rem !important;
+    line-height: 1.3 !important;
+  }
+}
+
+/* Mobile & Handheld (width < 640px) */
+@media (max-width: 640px) {
+  /* Prevent horizontal cutoffs and micro-scrolls */
+  body, html {
+    overflow-x: hidden;
   }
 }

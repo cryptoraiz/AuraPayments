@@ -9,11 +9,12 @@ export default function FaucetPage() {
   const isMainnet = chainId === arcMainnet.id;
 
   return (
-    <section className="flex-1 flex flex-col items-center justify-start pt-8 md:pt-16 pb-16 w-full bg-dark-bg relative">
+    <section className="flex-1 flex flex-col overflow-hidden min-h-0 w-full bg-dark-bg relative">
       
       {/* Background Depth Effects */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
 
+      <div className="flex-1 overflow-y-auto w-full flex flex-col items-center pt-8 md:pt-16 pb-16">
       <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 relative z-10 flex flex-col items-center">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-black text-white mb-3 tracking-tight">Testnet Faucets</h1>
@@ -74,6 +75,7 @@ export default function FaucetPage() {
             </motion.div>
           </div>
         </div>
+      </div>
       </div>
     </section>
   );

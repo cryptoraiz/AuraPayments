@@ -4,7 +4,7 @@ export default function HowItWorksPage() {
   const [showIllustration, setShowIllustration] = useState(false)
 
   return (
-    <section className="flex-1 flex flex-col items-center justify-start py-8 px-4 sm:px-6 pb-16 w-full">
+    <section className="flex-1 overflow-y-auto min-h-0 py-8 px-4 sm:px-6 pb-16 w-full">
 
       <div className="w-full max-w-6xl mx-auto space-y-8 flex flex-col">
         {/* Compact Hero */}

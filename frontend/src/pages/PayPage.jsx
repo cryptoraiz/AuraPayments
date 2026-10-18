@@ -9,7 +9,7 @@ import WalletModal from '../components/ui/WalletModal'
 import { toast } from 'sonner'
 import { parseUnits, formatUnits } from 'viem'
 import { ERC20_ABI } from '../utils/abis'
-import { arcMainnet } from '../config/wagmi'
+import { arcMainnet, arcTestnet } from '../config/wagmi'
 import SelfPayModal from '../components/ui/SelfPayModal'
 
 // Official Arc Mainnet Token Addresses
@@ -47,14 +47,19 @@ export default function PayPage() {
     const { switchChain, switchChainAsync } = useSwitchChain()
     const { writeContractAsync } = useWriteContract()
 
-    // Check token balance on Arc Mainnet
-    const tokenAddress = paymentData?.currency === 'EURC' ? EURC_ADDRESS : USDC_ADDRESS;
+    // Check token balance on the designated invoice network (Arc Mainnet or Arc Testnet)
+    const isTargetTestnet = paymentData?.chainId === arcTestnet.id || paymentData?.network?.toLowerCase()?.includes('testnet');
+    const targetChainId = isTargetTestnet ? arcTestnet.id : arcMainnet.id;
+    const targetNetworkName = isTargetTestnet ? 'Arc Testnet' : 'Arc Mainnet';
+    const targetEurcAddress = isTargetTestnet ? '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a' : EURC_ADDRESS;
+    const tokenAddress = paymentData?.currency === 'EURC' ? targetEurcAddress : USDC_ADDRESS;
+
     const { data: balance } = useReadContract({
         address: tokenAddress,
         abi: ERC20_ABI,
         functionName: 'balanceOf',
         args: [address],
-        chainId: arcMainnet.id,
+        chainId: targetChainId,
         query: {
             enabled: !!(address && paymentData?.amount && isConnected)
         }
@@ -209,16 +214,16 @@ export default function PayPage() {
             return
         }
 
-        if (chainId !== arcMainnet.id) {
+        if (chainId !== targetChainId) {
             try {
                 if (switchChainAsync) {
-                    await switchChainAsync({ chainId: arcMainnet.id })
+                    await switchChainAsync({ chainId: targetChainId })
                 } else if (switchChain) {
-                    await switchChain({ chainId: arcMainnet.id })
+                    await switchChain({ chainId: targetChainId })
                 }
             } catch (err) {
                 console.error('[Payment] Switch chain error:', err)
-                toast.error('Please switch to Arc Mainnet in your wallet to pay')
+                toast.error(`Please switch to ${targetNetworkName} in your wallet to pay`)
                 return
             }
         }
@@ -226,13 +231,13 @@ export default function PayPage() {
         setIsPaying(true)
 
         try {
-            // Direct on-chain ERC20 transfer strictly on Arc Mainnet
+            // Direct on-chain ERC20 transfer on invoice designated network
             const confirmedHash = await writeContractAsync({
                 address: tokenAddress,
                 abi: ERC20_ABI,
                 functionName: 'transfer',
                 args: [paymentData.recipientWallet, requiredAmount],
-                chainId: arcMainnet.id,
+                chainId: targetChainId,
             })
             await handlePaymentSuccess(confirmedHash, address)
         } catch (err) {
@@ -276,7 +281,7 @@ export default function PayPage() {
             console.error('Failed to sync payment status:', err)
         }
 
-        // Save sent payment strictly on Arc Mainnet
+        // Save sent payment with invoice designated network
         saveSentPayment({
             id: paymentData?.id || linkId,
             recipientName: paymentData.recipientName,
@@ -286,8 +291,8 @@ export default function PayPage() {
             description: paymentData.description,
             txHash: confirmedHash,
             payer: address,
-            chainId: arcMainnet.id,
-            network: 'Arc Mainnet'
+            chainId: targetChainId,
+            network: targetNetworkName
         })
 
         setIsPaying(false)
@@ -545,8 +550,9 @@ export default function PayPage() {
 
     // MAIN FORM STATE
     return (
-        <section className="flex-1 flex flex-col items-center justify-start py-4 pb-16 w-full">
-            <div className="max-w-4xl w-full">
+        <section className="flex-1 flex flex-col overflow-hidden min-h-0 w-full">
+            <div className="overflow-y-auto flex-1 min-h-0 flex flex-col items-center py-4 pb-16 w-full">
+                <div className="max-w-4xl w-full">
                 <div className="relative group" onMouseMove={handleMouseMove}>
                     {/* Spotlight Effect - Follows cursor */}
                     <div
@@ -703,6 +709,7 @@ export default function PayPage() {
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
             <WalletModal
                 isOpen={isWalletModalOpen}

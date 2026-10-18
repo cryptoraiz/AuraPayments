@@ -22,7 +22,7 @@ export const handleRelayerBridge = async (req, res) => {
             84532:    'https://sepolia.base.org',                    // Base Sepolia
             421614:   'https://sepolia-rollup.arbitrum.io/rpc',      // Arbitrum Sepolia
             11155420: 'https://sepolia.optimism.io',                 // Optimism Sepolia
-            5042002:  'https://rpc.testnet.arc.network',             // Arc Testnet
+            5042002:  'https://rpc.testnet.arc.io',                    // Arc Testnet
             // Mainnets
             8453:     'https://mainnet.base.org',                    // Base Mainnet
             42161:    'https://arb1.arbitrum.io/rpc',                // Arbitrum One

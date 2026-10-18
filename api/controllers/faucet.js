@@ -4,7 +4,7 @@ import { db } from '../lib/store.js';
 // Configuration
 const FAUCET_AMOUNT = "100"; // Amount of USDC (native gas) to send
 const COOLDOWN_HOURS = 24;
-const ARC_RPC_URL = 'https://rpc.testnet.arc.network';
+const ARC_RPC_URL = 'https://rpc.testnet.arc.io';
 
 // Load wallet once if possible, or per request
 // Note: process.env.FAUCET_PRIVATE_KEY should be set

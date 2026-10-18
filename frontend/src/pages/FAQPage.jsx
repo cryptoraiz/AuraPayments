@@ -59,7 +59,7 @@ export default function FAQPage() {
   }, [openIndex])
 
   return (
-    <section className="flex-1 flex flex-col items-center justify-start p-4 md:p-6 pb-16 w-full">
+    <section className="flex-1 overflow-y-auto min-h-0 p-4 md:p-6 w-full">
       <div className="w-full max-w-3xl mx-auto space-y-6 flex flex-col">
         {/* Hero Compacto */}
         <div className="relative text-center space-y-2 opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]">

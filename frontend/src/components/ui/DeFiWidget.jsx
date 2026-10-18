@@ -78,14 +78,18 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [amount,    setAmount]    = useState('');
   
   // Swap State 
-  const [tokenIn,  setTokenIn]  = useState(getTokenBySymbol('USDC', arcMainnet.id));
-  const [tokenOut, setTokenOut] = useState(getTokenBySymbol('EURC', arcMainnet.id));
+  const isInitiallyTestnet = connectedChainId === arcTestnet.id;
+  const initialArcId = isInitiallyTestnet ? arcTestnet.id : arcMainnet.id;
+  const initialCounterChainId = isInitiallyTestnet ? 84532 : 8453;
+
+  const [tokenIn,  setTokenIn]  = useState(() => getTokenBySymbol('USDC', initialArcId));
+  const [tokenOut, setTokenOut] = useState(() => getTokenBySymbol('EURC', initialArcId));
   
   // Bridge State 
-  const [bridgeChainIn,   setBridgeChainIn]   = useState(getChainById(arcMainnet.id));
-  const [bridgeTokenIn,   setBridgeTokenIn]   = useState(getTokenBySymbol('USDC', arcMainnet.id));
-  const [bridgeChainOut,  setBridgeChainOut]  = useState(getChainById(8453)); // Base Mainnet
-  const [bridgeTokenOut,  setBridgeTokenOut]  = useState(getTokenBySymbol('USDC', 8453));
+  const [bridgeChainIn,   setBridgeChainIn]   = useState(() => getChainById(initialArcId));
+  const [bridgeTokenIn,   setBridgeTokenIn]   = useState(() => getTokenBySymbol('USDC', initialArcId));
+  const [bridgeChainOut,  setBridgeChainOut]  = useState(() => getChainById(initialCounterChainId));
+  const [bridgeTokenOut,  setBridgeTokenOut]  = useState(() => getTokenBySymbol('USDC', initialCounterChainId));
 
   // Modals State 
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
@@ -155,8 +159,11 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [swapError,        setSwapError]        = useState('');
   const [txHash,           setTxHash]           = useState(null);
 
-  // Aura Payments Swap is on Arc Mainnet
-  const isSupportedArcChain = connectedChainId === arcMainnet.id;
+  // Aura Payments Swap supports Arc Mainnet and Arc Testnet
+  const isCurrentTestnet = connectedChainId === arcTestnet.id;
+  const isCurrentMainnet = !isCurrentTestnet;
+  const activeSwapChainId = isCurrentTestnet ? arcTestnet.id : arcMainnet.id;
+  const isSupportedArcChain = connectedChainId === arcMainnet.id || connectedChainId === arcTestnet.id;
   const isWrongChain = address && !isSupportedArcChain;
 
   // Swap Balances 
@@ -164,23 +171,23 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   // we pass token: undefined so wagmi reads native balance instead of calling balanceOf.
   const isNativeIn  = tokenIn?.isNative || tokenIn?.symbol === 'USDC' || tokenIn?.address?.toLowerCase()  === '0x3600000000000000000000000000000000000000';
   const isNativeOut = tokenOut?.isNative || tokenOut?.symbol === 'USDC' || tokenOut?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000';
-  const isCurrentMainnet = true;
-  const activeSwapChainId = arcMainnet.id;
 
-  // Sync bridge chains and swap tokens to Mainnet
+  // Sync bridge chains and swap tokens whenever connectedChainId changes
   useEffect(() => {
-    setTokenIn(getTokenBySymbol('USDC', arcMainnet.id));
-    setTokenOut(getTokenBySymbol('EURC', arcMainnet.id));
+    const isTest = connectedChainId === arcTestnet.id;
+    const currentArcId = isTest ? arcTestnet.id : arcMainnet.id;
+    const defaultCounterChainId = isTest ? 84532 : 8453; // Base Sepolia on Testnet, Base Mainnet on Mainnet
+
+    setTokenIn(getTokenBySymbol('USDC', currentArcId));
+    setTokenOut(getTokenBySymbol('EURC', currentArcId));
     
-    setBridgeChainIn(prevIn => {
-      if (!prevIn || prevIn.isTestnet) return getChainById(arcMainnet.id);
-      return prevIn;
-    });
-    setBridgeChainOut(prevOut => {
-      if (!prevOut || prevOut.isTestnet) return getChainById(8453); // Base Mainnet
-      return prevOut;
-    });
-  }, []);
+    setBridgeChainIn(getChainById(currentArcId));
+    setBridgeTokenIn(getTokenBySymbol('USDC', currentArcId));
+    setBridgeChainOut(getChainById(defaultCounterChainId));
+    setBridgeTokenOut(getTokenBySymbol('USDC', defaultCounterChainId));
+
+    queryClient.invalidateQueries();
+  }, [connectedChainId, queryClient]);
 
   // Invariant Guard: Source and Destination networks must NEVER be the same
   useEffect(() => {
@@ -386,21 +393,22 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         }
       }
 
-      // 3. Try Tower Multi-DEX Aggregator on Mainnet if Tower selected
-      if (activeDEX === 'tower' && TOWER_KEY_PRD) {
+      // 3. Try Tower Multi-DEX Aggregator if Tower selected
+      const activeTowerKey = isCurrentMainnet ? TOWER_KEY_PRD : TOWER_KEY_TEST;
+      if (activeDEX === 'tower' && activeTowerKey) {
         try {
           const res = await fetch(`${TOWER_API}/api/public/swap/quote`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-api-key': TOWER_KEY_PRD
+              'x-api-key': activeTowerKey
             },
             body: JSON.stringify({
               inputToken: tokenIn.address,
               outputToken: tokenOut.address,
               inputAmount: rawAmount,
               slippageTolerance: Math.round(Number(slippage || 0.5) * 100),
-              chainId: 5042
+              chainId: activeSwapChainId
             })
           });
           const resData = await res.json();
@@ -472,7 +480,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         method:  'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': activeSynthraKey },
         body: JSON.stringify({
-          chainId:   ARC_CHAIN_ID,
+          chainId:   activeSwapChainId,
           tokenIn:   tokenIn.address,
           tokenOut:  tokenOut.address,
           amount:    rawAmount,
@@ -639,7 +647,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
     }
 
     if (isWrongChain) {
-      await handleSwitchNetwork(arcMainnet.id);
+      await handleSwitchNetwork(activeSwapChainId);
       return;
     }
 
@@ -805,15 +813,15 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   );
 
   return (
-    <div className={`flex flex-col lg:flex-row items-center lg:items-start justify-center gap-5 w-full mx-auto transition-all ${activeTab === 'swap' && (quote || quoteLoading || quoteError) ? 'max-w-5xl' : 'max-w-[480px]'}`}>
-      <div className="bg-dark-card border border-dark-border rounded-3xl p-5 shadow-2xl w-full max-w-[480px] shrink-0">
+    <div className={`flex flex-col lg:flex-row items-center lg:items-start justify-center gap-4 lg:gap-5 w-full mx-auto transition-all ${activeTab === 'swap' && (quote || quoteLoading || quoteError) ? 'max-w-5xl' : 'max-w-[460px]'}`}>
+      <div className="bg-dark-card border border-dark-border rounded-2xl sm:rounded-3xl p-3 sm:p-4 md:p-5 shadow-2xl w-full max-w-[460px] shrink-0 overflow-y-auto" style={{ maxHeight: 'calc(100dvh - 120px)' }}>
 
         {/* Tabs */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div className="flex gap-1 bg-dark-bg rounded-xl p-1">
             {['swap', 'bridge'].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all capitalize ${activeTab === tab ? 'bg-dark-card text-white shadow-sm' : 'text-dark-muted hover:text-white'}`}>
+                className={`px-4 sm:px-5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all capitalize ${activeTab === tab ? 'bg-dark-card text-white shadow-sm' : 'text-dark-muted hover:text-white'}`}>
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
@@ -891,7 +899,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {activeTab === 'swap' && (
           <div className="flex flex-col gap-1">
             {/* From */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-6 min-h-[136px] flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>You pay</span>
               </div>
@@ -942,7 +950,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* To */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-6 min-h-[136px] flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>You receive</span>
               </div>
@@ -985,7 +993,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
         {activeTab === 'bridge' && (
           <div className="flex flex-col gap-1">
             {/* From */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-6 min-h-[136px] flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>Bridge from</span>
               </div>
@@ -1052,7 +1060,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
             </div>
 
             {/* To */}
-            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-5 pb-6 min-h-[136px] flex flex-col justify-between transition-all">
+            <div className="bg-dark-bg/80 border border-dark-border/60 hover:border-dark-border rounded-2xl p-3 sm:p-4 md:p-5 md:pb-6 min-h-[110px] sm:min-h-[130px] flex flex-col justify-between transition-all">
               <div className="text-sm font-medium text-dark-muted mb-3 flex justify-between">
                 <span>Bridge to</span>
               </div>
@@ -1154,12 +1162,12 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
 
         {/* Action Button */}
         <button onClick={handleSwap} disabled={btnDisabled}
-          className={`w-full mt-4 py-4 rounded-2xl transition-all active:scale-[0.98] ${
+          className={`w-full mt-3 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl transition-all active:scale-[0.98] ${
             !address 
-              ? 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold text-lg'
+              ? 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] text-white font-bold text-sm sm:text-base'
               : btnDisabled 
-                ? 'bg-white/[0.04] border border-white/[0.05] cursor-not-allowed opacity-60 text-white font-bold text-lg' 
-                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 cursor-pointer shadow-[0_0_20px_rgba(39,117,202,0.3)] hover:shadow-[0_0_25px_rgba(39,117,202,0.5)] text-white font-bold text-lg'
+                ? 'bg-white/[0.04] border border-white/[0.05] cursor-not-allowed opacity-60 text-white font-bold text-sm sm:text-base' 
+                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 cursor-pointer shadow-[0_0_20px_rgba(39,117,202,0.3)] hover:shadow-[0_0_25px_rgba(39,117,202,0.5)] text-white font-bold text-sm sm:text-base'
           }`}>
           {btnLabel}
         </button>

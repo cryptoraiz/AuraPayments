@@ -684,7 +684,7 @@ export default function BridgeModal({ isOpen, onClose, amount, fromChain, toChai
             <div className="relative mb-3">
               <div className="w-14 h-14 rounded-full bg-[#2775CA]/10 border border-[#2775CA]/20 flex items-center justify-center p-2.5 shadow-[0_0_20px_rgba(39,117,202,0.25)]">
                 <img
-                  src={token?.iconImg || 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png'}
+                  src={token?.iconImg || '/tokens/usdc.svg'}
                   alt={token?.symbol || 'USDC'}
                   className="w-full h-full object-contain"
                 />

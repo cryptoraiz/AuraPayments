@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAccount, useConnect, useChainId, useSwitchChain } from 'wagmi'
-import { arcMainnet } from '../../config/wagmi'
+import { arcMainnet, arcTestnet } from '../../config/wagmi'
 import { v4 as uuidv4 } from 'uuid'
 import CurrencySelect from '../ui/CurrencySelect'
 import { savePaymentLink } from '../../utils/localStorage'
@@ -31,7 +31,7 @@ export default function PaymentForm({ theme = 'modern' }) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
   const styles = {
-    container: "relative bg-dark-card border border-dark-border rounded-3xl p-6 md:p-8 shadow-2xl overflow-hidden",
+    container: "relative bg-dark-card border border-dark-border rounded-2xl sm:rounded-3xl p-3 sm:p-4 md:p-5 shadow-2xl overflow-hidden",
     textPrimary: "text-white",
     textSecondary: "text-dark-muted",
     inputBg: "bg-dark-bg border border-dark-border/50 text-white placeholder:text-transparent hover:border-dark-border focus:border-blue-500/50 transition-all",
@@ -80,8 +80,12 @@ export default function PaymentForm({ theme = 'modern' }) {
     }
 
     try {
-      // Auto-switch wallet to Arc Mainnet if on another chain
-      if (chainId !== arcMainnet.id && (switchChainAsync || switchChain)) {
+      const isTestnet = chainId === arcTestnet.id
+      const activeChainId = isTestnet ? arcTestnet.id : arcMainnet.id
+      const activeNetworkName = isTestnet ? 'Arc Testnet' : 'Arc Mainnet'
+
+      // Auto-switch wallet to supported Arc network if on another chain
+      if (chainId !== arcMainnet.id && chainId !== arcTestnet.id && (switchChainAsync || switchChain)) {
         try {
           if (switchChainAsync) {
             await switchChainAsync({ chainId: arcMainnet.id })
@@ -89,7 +93,7 @@ export default function PaymentForm({ theme = 'modern' }) {
             await switchChain({ chainId: arcMainnet.id })
           }
         } catch (switchErr) {
-          console.warn('Switch to Arc Mainnet was not completed:', switchErr)
+          console.warn('Switch to Arc network was not completed:', switchErr)
         }
       }
 
@@ -102,8 +106,8 @@ export default function PaymentForm({ theme = 'modern' }) {
         recipientWallet: formData.wallet,
         createdAt: Date.now(),
         status: 'pending',
-        chainId: arcMainnet.id,
-        network: 'Arc Mainnet'
+        chainId: activeChainId,
+        network: activeNetworkName
       }
 
       // 1. Save locally first so the invoice is never lost
@@ -117,7 +121,7 @@ export default function PaymentForm({ theme = 'modern' }) {
       // 3. Notify other components (Navbar badge, InvoiceHistory) immediately
       window.dispatchEvent(new Event('invoice_updated'));
 
-      toast.success('Payment Link Created on Arc Mainnet!')
+      toast.success(`Payment Link Created on ${activeNetworkName}!`)
 
       // 4. Sync to backend (non-blocking for UI)
       try {
@@ -129,8 +133,8 @@ export default function PaymentForm({ theme = 'modern' }) {
           amount: formData.amount,
           currency: formData.currency,
           description: formData.description,
-          chainId: arcMainnet.id,
-          network: 'Arc Mainnet'
+          chainId: activeChainId,
+          network: activeNetworkName
         }
         await invoiceAPI.create(backendPayload)
       } catch (backendError) {
@@ -164,7 +168,7 @@ export default function PaymentForm({ theme = 'modern' }) {
       <div className={styles.container}>
 
         {/* Header */}
-        <div className="flex items-start gap-3 mb-6 transition-all duration-300">
+        <div className="flex items-start gap-2.5 sm:gap-3 mb-2 sm:mb-3 md:mb-5 transition-all duration-300">
           <span className="text-2xl">{generatedLink ? '✨' : '💎'}</span>
           <div>
             <h2 className={`text-xl font-bold ${styles.textPrimary}`}>{generatedLink ? 'Invoice Created!' : 'New Invoice'}</h2>
@@ -176,7 +180,7 @@ export default function PaymentForm({ theme = 'modern' }) {
 
         {!generatedLink ? (
           /* FORM VIEW */
-          <form onSubmit={handleSubmit} className="space-y-4 animate-[slideDown_0.3s_ease-out]">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 animate-[slideDown_0.3s_ease-out]">
             {/* Name */}
             <div className="input-group">
               <input
@@ -289,7 +293,7 @@ export default function PaymentForm({ theme = 'modern' }) {
                 e.preventDefault();
                 setIsWalletModalOpen(true);
               } : undefined}
-              className={`relative overflow-hidden w-full px-6 py-4 rounded-2xl font-bold text-lg text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${isConnected
+              className={`relative overflow-hidden w-full px-5 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${isConnected
                 ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-[0_0_20px_rgba(39,117,202,0.3)] hover:shadow-[0_0_25px_rgba(39,117,202,0.5)]'
                 : 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.05] shadow-lg'
                 }`}

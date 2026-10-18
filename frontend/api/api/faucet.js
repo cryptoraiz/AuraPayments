@@ -1,7 +1,7 @@
 const { ethers } = require('ethers');
 
 const FAUCET_AMOUNT = "100"; 
-const ARC_RPC_URL = 'https://rpc.testnet.arc.network';
+const ARC_RPC_URL = 'https://rpc.testnet.arc.io';
 const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
 const USDC_DECIMALS = 18;
 

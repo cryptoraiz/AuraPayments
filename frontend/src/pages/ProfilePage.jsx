@@ -37,73 +37,67 @@ const safeDate = (val) => {
 
 // Portfolio tokens on Arc Mainnet
 export const MAINNET_TOKENS = [
-  { symbol: 'USDC',   name: 'USD Coin (Arc)',       address: null,                                         decimals: 6, color: 'bg-blue-400',    iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png', isNative: true },
-  { symbol: 'EURC',   name: 'Euro Coin (Circle)',   address: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1', decimals: 6, color: 'bg-indigo-500',  iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c/logo.png' },
+  { symbol: 'USDC',   name: 'USD Coin (Arc)',       address: null,                                         decimals: 6, color: 'bg-blue-400',    iconImg: '/tokens/usdc.svg', isNative: true },
+  { symbol: 'EURC',   name: 'Euro Coin (Circle)',   address: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1', decimals: 6, color: 'bg-indigo-500',  iconImg: '/tokens/eurc.svg' },
   { symbol: 'cirBTC', name: 'Circle Bitcoin',       address: '0x171A4217b86A807A64eB94757Db6849fb4bDbAA0', decimals: 8, color: 'bg-orange-500', iconImg: '/cirbtc.svg' },
 ];
 
 // Portfolio tokens on Arc Testnet
 export const TESTNET_TOKENS = [
-  { symbol: 'USDC',   name: 'USD Coin (Arc)',   address: null,                                               decimals: 18, color: 'bg-blue-400',   iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png', isNative: true },
-  { symbol: 'USDT',   name: 'Tether USD',       address: '0x175CdB1D338945f0D851A741ccF787D343E57952',       decimals: 18, color: 'bg-green-500',  iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png' },
-  { symbol: 'EURC',   name: 'Euro Coin',        address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',       decimals: 6,  color: 'bg-indigo-500', iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c/logo.png' },
-  { symbol: 'WUSDC',  name: 'Wrapped USDC',     address: '0x911b4000D3422F482F4062a913885f7b035382Df',       decimals: 18, color: 'bg-blue-500',   iconImg: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png' },
+  { symbol: 'USDC',   name: 'USD Coin (Arc)',   address: null,                                               decimals: 18, color: 'bg-blue-400',   iconImg: '/tokens/usdc.svg', isNative: true },
+  { symbol: 'USDT',   name: 'Tether USD',       address: '0x175CdB1D338945f0D851A741ccF787D343E57952',       decimals: 18, color: 'bg-green-500',  iconImg: '/tokens/usdt.svg' },
+  { symbol: 'EURC',   name: 'Euro Coin',        address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',       decimals: 6,  color: 'bg-indigo-500', iconImg: '/tokens/eurc.svg' },
+  { symbol: 'WUSDC',  name: 'Wrapped USDC',     address: '0x911b4000D3422F482F4062a913885f7b035382Df',       decimals: 18, color: 'bg-blue-500',   iconImg: '/tokens/usdc.svg' },
   { symbol: 'cirBTC', name: 'Circle Bitcoin',   address: '0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF',       decimals: 8,  color: 'bg-orange-500', iconImg: '/cirbtc.svg' },
 ];
 
 const NetworkBadge = ({ chain }) => {
   const c = (chain || '').toLowerCase();
   
-  if (c.includes('arc')) return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#121A2F] flex items-center justify-center">
-      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M3.5 20.9988C3.64596 16.5923 4.39308 12.48 5.64212 9.28212C7.22346 5.23096 9.51327 3 12.0881 3C14.6629 3 16.9527 5.23096 18.5346 9.28269C19.3573 11.3896 19.9625 13.8935 20.3213 16.6171C20.3537 16.8606 20.3808 17.1075 20.4085 17.3544C20.4177 17.3694 20.4229 17.3838 20.4212 17.3954C20.4212 17.3954 20.6317 18.7119 20.6767 20.9994H20.6531C20.3404 20.7427 16.6533 17.846 10.5413 18.6848C10.6337 17.6504 10.7606 16.6442 10.9244 15.6796C10.9331 15.6306 10.9423 15.5827 10.951 15.5337C13.3481 15.4615 15.4463 15.7396 17.0554 16.1048C17.0496 16.0667 17.0444 16.0275 17.0381 15.9894C16.7075 13.9298 16.2194 12.0444 15.59 10.4331C14.5613 7.79827 13.2188 6.16154 12.0875 6.16154C10.9562 6.16154 9.61365 7.79827 8.585 10.4331C8.33577 11.0706 8.10904 11.7502 7.90596 12.4667C7.62038 13.4712 7.38038 14.5483 7.18827 15.6796C6.90442 17.351 6.72731 19.1429 6.66212 21H3.5V20.9988Z" />
-      </svg>
-    </div>
-  );
-  if (c.includes('polygon')) return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-white flex items-center justify-center">
-      <svg className="w-2 h-2 text-[#8247E5]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6L4.2 7.1v9L12 20.6l7.8-4.5v-9L12 2.6zm5.8 11.2l-5.8 3.4-5.8-3.4V7.1l5.8-3.4 5.8 3.4v6.7z"/></svg>
-    </div>
-  );
-  if (c.includes('base')) return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#0052FF] flex items-center justify-center">
-      <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-3-12a3 3 0 100 6 3 3 0 000-6zm6 0a3 3 0 100 6 3 3 0 000-6z"/></svg>
-    </div>
-  );
-  if (c.includes('optimism')) return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#FF0420] flex items-center justify-center">
-      <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm1 14H9v-2h4v2zm0-4H9V8h4v4z"/></svg>
-    </div>
-  );
-  if (c.includes('arbitrum')) return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#28A0F0] flex items-center justify-center">
-      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 20h20L12 2zm0 4.2l5.5 10H6.5L12 6.2z"/></svg>
-    </div>
-  );
-  if (c.includes('ethereum')) return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-[#627EEA] flex items-center justify-center">
-      <svg className="w-2 h-2 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/></svg>
-    </div>
-  );
   if (c.includes('invoice')) return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-green-500 flex items-center justify-center">
+    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-green-500 flex items-center justify-center shadow-sm">
       <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>
     </div>
   );
-  
+
+  let iconSrc = '/arc-branded.svg';
+  let altText = 'Arc';
+  let bgClass = 'bg-[#121A2F]';
+
+  if (c.includes('polygon')) {
+    iconSrc = '/chains/polygon.svg';
+    altText = 'Polygon';
+    bgClass = 'bg-white';
+  } else if (c.includes('base')) {
+    iconSrc = '/chains/base.svg';
+    altText = 'Base';
+    bgClass = 'bg-white';
+  } else if (c.includes('optimism')) {
+    iconSrc = '/chains/optimism.svg';
+    altText = 'Optimism';
+    bgClass = 'bg-white';
+  } else if (c.includes('arbitrum')) {
+    iconSrc = '/chains/arbitrum.svg';
+    altText = 'Arbitrum';
+    bgClass = 'bg-[#121A2F]';
+  } else if (c.includes('ethereum') || c.includes('sepolia')) {
+    iconSrc = '/chains/ethereum.svg';
+    altText = 'Ethereum';
+    bgClass = 'bg-[#121A2F]';
+  }
+
   return (
-    <div className="absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg bg-zinc-600 flex items-center justify-center">
-      <span className="text-[6px] font-bold text-white uppercase">{c.charAt(0)}</span>
+    <div className={`absolute -bottom-1 -right-1 w-[16px] h-[16px] rounded-full border border-dark-bg ${bgClass} overflow-hidden p-[2px] flex items-center justify-center shadow-sm`}>
+      <img src={iconSrc} alt={altText} className="w-full h-full object-contain rounded-full" />
     </div>
   );
 };
 
 const getTokenIcon = (symbol) => {
-  if (!symbol) return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png';
+  if (!symbol) return '/tokens/usdc.svg';
   const allTokens = [...TESTNET_TOKENS, ...MAINNET_TOKENS];
   const token = allTokens.find(t => t.symbol?.toUpperCase() === symbol.toUpperCase());
-  return token ? token.iconImg : 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png';
+  return token ? token.iconImg : '/tokens/usdc.svg';
 };
 
 // LocalStorage Cache Helper for instant display with 0ms delay
@@ -129,7 +123,8 @@ function usePortfolioBalances(address, chainId) {
   const isTestnet = chainId === arcTestnet.id;
 
   const cached = useMemo(() => getCachedPortfolio(address, !isTestnet), [address, isTestnet]);
-  const hasLoadedRef = useRef(!!cached);
+  const hasValidCache = !!cached && Array.isArray(cached) && cached.some(v => Number(v) > 0);
+  const hasLoadedRef = useRef(hasValidCache);
 
   // Mainnet balances
   const usdcMainnet    = useBalance({ address, chainId: arcMainnet.id, query: { enabled: !!address && !isTestnet, refetchInterval: 8_000, staleTime: 5_000 } });
@@ -176,7 +171,7 @@ function usePortfolioBalances(address, chainId) {
   ]);
 
   const activeUsdc = isTestnet ? usdcTestnet : usdcMainnet;
-  const isInitialLoading = !hasLoadedRef.current && activeUsdc.isPending;
+  const isInitialLoading = !hasLoadedRef.current && (activeUsdc.isPending || activeUsdc.isLoading);
 
   return { loading: isInitialLoading, balances };
 }
@@ -533,11 +528,12 @@ export default function ProfilePage() {
     : 'linear-gradient(135deg, #2563eb, #9333ea)';
 
   return (
-    <section className="flex-1 flex flex-col items-center justify-start py-4 md:py-6 w-full pb-12">
+    <section className="flex-1 flex flex-col overflow-hidden min-h-0 w-full">
+      <div className="overflow-y-auto flex-1 min-h-0 flex flex-col items-center justify-start py-2 sm:py-3 md:py-5 pb-8">
       <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex flex-col gap-4 relative z-20">
         
         {/* Profile Header (Total Balance Card) */}
-        <div className="bg-dark-card border border-dark-border rounded-3xl p-4 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
+        <div className="bg-dark-card border border-dark-border rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
           {/* Ambient Glow inside card */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
           
@@ -617,7 +613,7 @@ export default function ProfilePage() {
           <>
             {/* Tab: Assets */}
             <div
-              className={`col-start-1 row-start-1 w-full bg-dark-card border border-dark-border rounded-3xl overflow-hidden shadow-2xl flex-col min-h-[480px] ${
+              className={`col-start-1 row-start-1 w-full bg-dark-card border border-dark-border rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl flex-col min-h-0 flex-1 ${
                 activeTab === 'assets' ? 'flex' : 'hidden'
               }`}
             >
@@ -744,11 +740,10 @@ export default function ProfilePage() {
                                 <div className="w-8 h-8 rounded-full bg-dark-input border border-dark-border/50 flex items-center justify-center text-dark-muted">
                                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                                 </div>
-                                <NetworkBadge chain={defaultArcLabel} />
                               </div>
-                              <div className="flex flex-col max-w-[120px]">
+                              <div className="flex flex-col max-w-[140px]">
                                 <div className="font-bold text-white text-sm truncate">{act.type === 'Send' ? (act.recipientName || 'Wallet') : (act.recipientName || 'Payment Request')}</div>
-                                <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{defaultArcLabel}</div>
+                                <div className="text-[11px] text-dark-muted uppercase font-bold tracking-wider">{act.type === 'Receive' ? 'Client' : 'Recipient'}</div>
                               </div>
                             </>
                           )}
@@ -851,6 +846,7 @@ export default function ProfilePage() {
             </div>
           </>
         </div>
+      </div>
       </div>
     </section>
   );

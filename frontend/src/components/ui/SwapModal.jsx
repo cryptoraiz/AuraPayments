@@ -347,9 +347,12 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
   };
 
   useEffect(() => {
+    let timer = null;
     if (isOpen) {
-      // Inicia automaticamente o fluxo assim que o modal abre
-      executeSwapFlow();
+      // Inicia suavemente o fluxo após a transição de abertura do modal
+      timer = setTimeout(() => {
+        executeSwapFlow();
+      }, 120);
     } else {
       // Reseta estado quando fecha
       setCurrentStep(0);
@@ -357,26 +360,29 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
       setErrorMsg('');
       setSwapTxHash('');
     }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [isOpen]);
-
-  if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      >
+      {isOpen && (
         <motion.div
-          initial={{ scale: 0.95, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-[#1C1C1E] border border-white/10 rounded-[32px] w-full max-w-[420px] max-h-[90dvh] overflow-y-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] p-6 relative"
-          onClick={(e) => e.stopPropagation()}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
         >
+          <motion.div
+            initial={{ scale: 0.96, opacity: 0, y: 10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.96, opacity: 0, y: 10 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 350 }}
+            className="bg-[#1C1C1E] border border-white/10 rounded-[32px] w-full max-w-[420px] max-h-[90dvh] overflow-y-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
           {/* Close Button */}
           <button onClick={onClose} className="absolute top-5 right-5 text-dark-muted hover:text-white transition-colors">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -461,6 +467,7 @@ export default function SwapModal({ isOpen, onClose, tokenIn, tokenOut, amountIn
           )}
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 }

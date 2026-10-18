@@ -11,11 +11,12 @@ export default function InvoicePage() {
   }, []);
 
   return (
-    <section className="flex-1 flex flex-col items-center justify-start pt-4 pb-12 w-full">
+    <section className="flex-1 flex flex-col overflow-hidden min-h-0 w-full">
+      <div className="overflow-y-auto flex-1 min-h-0 flex flex-col items-center justify-start pt-2 sm:pt-3 pb-4 w-full">
       <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 flex flex-col items-center">
-        <div className="text-center mb-2">
-          <h1 className="text-3xl font-bold text-white mb-0">Invoice 2.0</h1>
-          <p className="text-dark-muted">Create professional crypto payment links instantly.</p>
+        <div className="text-center mb-1.5 sm:mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-0.5">Invoice 2.0</h1>
+          <p className="text-dark-muted text-xs sm:text-sm">Create professional crypto payment links instantly.</p>
         </div>
 
         {/* Tabs */}
@@ -53,7 +54,7 @@ export default function InvoicePage() {
             className="w-full flex justify-center transition-opacity duration-200"
             style={{ display: activeTab === 'create' ? 'flex' : 'none' }}
           >
-            <div className="w-full max-w-[540px] relative min-h-[540px] h-auto flex flex-col">
+            <div className="w-full max-w-[540px] relative min-h-0 h-auto flex flex-col">
               <div className="flex-1 w-full">
                 <PaymentForm theme="modern" />
               </div>
@@ -68,6 +69,7 @@ export default function InvoicePage() {
           </div>
         </div>
 
+      </div>
       </div>
     </section>
   );

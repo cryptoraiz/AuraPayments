@@ -8,7 +8,8 @@ import { arcMainnet, arcTestnet } from '../../config/wagmi';
 
 export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedChain, selectedToken }) {
   const chainId = useChainId();
-  const chains = getChainsByMode(true);
+  const isMainnet = chainId === arcMainnet.id;
+  const chains = getChainsByMode(isMainnet);
   const { address } = useAccount();
   const queryClient = useQueryClient();
 

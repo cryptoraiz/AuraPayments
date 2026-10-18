@@ -8,8 +8,8 @@ export default function TokenSelectorModal({ isOpen, onClose, onSelect, selected
   const tokens = getAllTokens();
   const { address } = useAccount();
   const chainId = useChainId();
-  const isMainnet = true;
-  const activeArcChainId = arcMainnet.id;
+  const isMainnet = chainId === arcMainnet.id;
+  const activeArcChainId = isMainnet ? arcMainnet.id : arcTestnet.id;
   const [search, setSearch] = useState('');
 
   if (!isOpen) return null;
@@ -17,7 +17,7 @@ export default function TokenSelectorModal({ isOpen, onClose, onSelect, selected
   const filtered = tokens.filter(t => {
     const isArcToken = isMainnet 
       ? t.chainId === arcMainnet.id
-      : (t.chainId === arcTestnet.id || t.symbol === 'USDC' && !t.chainId);
+      : t.chainId === arcTestnet.id;
     if (!isArcToken) return false;
     return t.symbol.toLowerCase().includes(search.toLowerCase()) ||
            t.name.toLowerCase().includes(search.toLowerCase());
@@ -114,7 +114,7 @@ function TokenIcon({ token }) {
 }
 
 function TokenRow({ token, onSelect, isSelected, userAddress, activeArcChainId, isMainnet }) {
-  const isNativeUSDC = isMainnet ? token.symbol === 'USDC' : token.isNative;
+  const isNativeUSDC = token.isNative || token.symbol === 'USDC' || token.address?.toLowerCase() === '0x3600000000000000000000000000000000000000';
   const tokenAddress = isNativeUSDC ? undefined : token.address;
 
   const { data: balanceData } = useBalance({

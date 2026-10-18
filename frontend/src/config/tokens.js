@@ -7,7 +7,7 @@ export const TOKENS = [
   {
     symbol:   'USDC',
     name:     'USD Coin (Arc)',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0x3600000000000000000000000000000000000000',
     decimals: 6,
     color:    'bg-blue-400',
@@ -17,7 +17,7 @@ export const TOKENS = [
   {
     symbol:   'EURC',
     name:     'Euro Coin (Circle)',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c/logo.png',
+    iconImg:  '/tokens/eurc.svg',
     address:  '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1',
     decimals: 6,
     color:    'bg-indigo-500',
@@ -35,9 +35,19 @@ export const TOKENS = [
 
   // Arc Testnet Tokens (chainId: 5042002)
   {
+    symbol:   'USDC',
+    name:     'USD Coin',
+    iconImg:  '/tokens/usdc.svg',
+    address:  '0x3600000000000000000000000000000000000000',
+    decimals: 18,
+    color:    'bg-blue-400',
+    chainId:  5042002,
+    isNative: true,
+  },
+  {
     symbol:   'USDT',
     name:     'Tether USD',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
+    iconImg:  '/tokens/usdt.svg',
     address:  '0x175CdB1D338945f0D851A741ccF787D343E57952',
     decimals: 18,
     color:    'bg-green-500',
@@ -46,7 +56,7 @@ export const TOKENS = [
   {
     symbol:   'EURC',
     name:     'Euro Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c/logo.png',
+    iconImg:  '/tokens/eurc.svg',
     address:  '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',
     decimals: 6,
     color:    'bg-indigo-500',
@@ -55,7 +65,7 @@ export const TOKENS = [
   {
     symbol:   'WUSDC',
     name:     'Wrapped USDC',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0x911b4000D3422F482F4062a913885f7b035382Df',
     decimals: 18,
     color:    'bg-blue-500',
@@ -74,7 +84,7 @@ export const TOKENS = [
     // USDC on Base Sepolia
     symbol:   'USDC',
     name:     'USD Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
     decimals: 6,
     color:    'bg-blue-400',
@@ -84,7 +94,7 @@ export const TOKENS = [
     // USDC on Arbitrum Sepolia
     symbol:   'USDC',
     name:     'USD Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
     decimals: 6,
     color:    'bg-blue-400',
@@ -94,7 +104,7 @@ export const TOKENS = [
     // USDC on Ethereum Sepolia
     symbol:   'USDC',
     name:     'USD Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
     decimals: 6,
     color:    'bg-blue-400',
@@ -104,7 +114,7 @@ export const TOKENS = [
     // USDC on Optimism Sepolia
     symbol:   'USDC',
     name:     'USD Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0x5fd84259d66Cd46123540766Be93DFE6D43130D7',
     decimals: 6,
     color:    'bg-blue-400',
@@ -114,7 +124,7 @@ export const TOKENS = [
     // USDC on Base Mainnet
     symbol:   'USDC',
     name:     'USD Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     decimals: 6,
     color:    'bg-blue-400',
@@ -124,7 +134,7 @@ export const TOKENS = [
     // USDC on Arbitrum One
     symbol:   'USDC',
     name:     'USD Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
     decimals: 6,
     color:    'bg-blue-400',
@@ -134,7 +144,7 @@ export const TOKENS = [
     // USDC on Optimism Mainnet
     symbol:   'USDC',
     name:     'USD Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
     decimals: 6,
     color:    'bg-blue-400',
@@ -144,7 +154,7 @@ export const TOKENS = [
     // USDC on Ethereum Mainnet
     symbol:   'USDC',
     name:     'USD Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
     decimals: 6,
     color:    'bg-blue-400',
@@ -154,7 +164,7 @@ export const TOKENS = [
     // USDC on Polygon PoS
     symbol:   'USDC',
     name:     'USD Coin',
-    iconImg:  'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+    iconImg:  '/tokens/usdc.svg',
     address:  '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
     decimals: 6,
     color:    'bg-blue-400',

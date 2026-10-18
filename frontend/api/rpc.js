@@ -1,12 +1,12 @@
 // Vercel Serverless Function — Proxy for Arc Testnet RPC
 // Solves CORS: browser communicates with /api/rpc (same domain), and Vercel server
-// forwards to rpc.testnet.arc.network without CORS restrictions.
+// forwards to rpc.testnet.arc.io without CORS restrictions.
 
 export const config = {
   runtime: 'edge', // Edge Runtime = minimal global latency
 };
 
-const ARC_RPC_URL = 'https://rpc.testnet.arc.network';
+const ARC_RPC_URL = 'https://rpc.testnet.arc.io';
 
 export default async function handler(req) {
   // Handle CORS preflight requests

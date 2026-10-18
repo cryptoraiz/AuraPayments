@@ -36,8 +36,8 @@ export const arcTestnet = {
     symbol: 'USDC',
   },
   rpcUrls: {
-    default: { http: ['https://rpc.testnet.arc.network'] },
-    public: { http: ['https://rpc.testnet.arc.network'] },
+    default: { http: ['https://rpc.testnet.arc.io', 'https://arc-testnet-rpc.publicnode.com', 'https://5042002.rpc.thirdweb.com'] },
+    public: { http: ['https://rpc.testnet.arc.io', 'https://arc-testnet-rpc.publicnode.com', 'https://5042002.rpc.thirdweb.com'] },
   },
   blockExplorers: {
     default: { name: 'ArcScan', url: 'https://testnet.arcscan.app' },
@@ -66,12 +66,16 @@ export const config = createConfig({
   transports: {
     // Arc Mainnet transport with resilient fallback
     [arcMainnet.id]: fallback([
-      http('https://rpc.mainnet.arc.io'),
       http('https://5042.rpc.thirdweb.com'),
+      http('https://rpc.mainnet.arc.io'),
     ]),
 
-    // Use our Vercel proxy to avoid CORS - the proxy forwards to rpc.testnet.arc.network server-side
-    [arcTestnet.id]: http(import.meta.env.PROD ? '/api/rpc' : 'https://rpc.testnet.arc.network'),
+    // Arc Testnet transport with resilient fallback
+    [arcTestnet.id]: fallback([
+      http('https://rpc.testnet.arc.io'),
+      http('https://arc-testnet-rpc.publicnode.com'),
+      http('https://5042002.rpc.thirdweb.com'),
+    ]),
 
     [mainnet.id]: fallback([
       http('https://ethereum-rpc.publicnode.com'),

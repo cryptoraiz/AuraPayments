@@ -22,7 +22,7 @@ export const CHAINS = [
     id: 11155111,
     key: 'SEPOLIA',
     name: 'Ethereum Sepolia',
-    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    icon: '/chains/ethereum.svg',
     color: 'bg-indigo-500',
     isTestnet: true,
     explorer: 'https://sepolia.etherscan.io'
@@ -31,7 +31,7 @@ export const CHAINS = [
     id: 84532,
     key: 'BASE_SEPOLIA',
     name: 'Base Sepolia',
-    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png',
+    icon: '/chains/base.svg',
     color: 'bg-blue-500',
     isTestnet: true,
     explorer: 'https://sepolia.basescan.org'
@@ -40,7 +40,7 @@ export const CHAINS = [
     id: 11155420,
     key: 'OPTIMISM_SEPOLIA',
     name: 'Optimism Sepolia',
-    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png',
+    icon: '/chains/optimism.svg',
     color: 'bg-red-500',
     isTestnet: true,
     explorer: 'https://sepolia-optimism.etherscan.io'
@@ -49,7 +49,7 @@ export const CHAINS = [
     id: 421614,
     key: 'ARBITRUM_SEPOLIA',
     name: 'Arbitrum Sepolia',
-    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png',
+    icon: '/chains/arbitrum.svg',
     color: 'bg-blue-400',
     isTestnet: true,
     explorer: 'https://sepolia.arbiscan.io'
@@ -59,7 +59,7 @@ export const CHAINS = [
     id: 8453,
     key: 'BASE_MAINNET',
     name: 'Base',
-    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png',
+    icon: '/chains/base.svg',
     color: 'bg-blue-500',
     isTestnet: false,
     explorer: 'https://basescan.org'
@@ -68,7 +68,7 @@ export const CHAINS = [
     id: 42161,
     key: 'ARBITRUM_MAINNET',
     name: 'Arbitrum One',
-    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png',
+    icon: '/chains/arbitrum.svg',
     color: 'bg-blue-400',
     isTestnet: false,
     explorer: 'https://arbiscan.io'
@@ -77,7 +77,7 @@ export const CHAINS = [
     id: 10,
     key: 'OPTIMISM_MAINNET',
     name: 'Optimism',
-    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png',
+    icon: '/chains/optimism.svg',
     color: 'bg-red-500',
     isTestnet: false,
     explorer: 'https://optimistic.etherscan.io'
@@ -86,7 +86,7 @@ export const CHAINS = [
     id: 1,
     key: 'ETHEREUM_MAINNET',
     name: 'Ethereum',
-    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    icon: '/chains/ethereum.svg',
     color: 'bg-indigo-500',
     isTestnet: false,
     explorer: 'https://etherscan.io'
@@ -95,7 +95,7 @@ export const CHAINS = [
     id: 137,
     key: 'POLYGON_MAINNET',
     name: 'Polygon',
-    icon: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+    icon: '/chains/polygon.svg',
     color: 'bg-purple-500',
     isTestnet: false,
     explorer: 'https://polygonscan.com'

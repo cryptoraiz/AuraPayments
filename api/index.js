@@ -132,7 +132,7 @@ async function handleRelayerBridge(req, res) {
             84532:    'https://sepolia.base.org',
             421614:   'https://sepolia-rollup.arbitrum.io/rpc',
             11155420: 'https://sepolia.optimism.io',
-            5042002:  'https://rpc.testnet.arc.network',
+            5042002:  'https://rpc.testnet.arc.io',
             8453:     'https://mainnet.base.org',
             42161:    'https://arb1.arbitrum.io/rpc',
             10:       'https://mainnet.optimism.io',
@@ -391,7 +391,7 @@ async function getDb() {
 // --- FAUCET CONSTANTS ---
 const FAUCET_AMOUNT = "100"; // Updated to 100 as per UI promise
 const COOLDOWN_HOURS = 24;
-const ARC_RPC_URL = 'https://rpc.testnet.arc.network';
+const ARC_RPC_URL = 'https://rpc.testnet.arc.io';
 
 // --- FAUCET HANDLERS ---
 

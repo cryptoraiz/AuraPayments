@@ -41,60 +41,84 @@ export default function Navbar() {
     connect({ connector })
   }
 
-  // Switch wallet to Arc Mainnet if not already on it
-  const handleSwitchToMainnet = async () => {
-    if (chainId === arcMainnet.id) {
+  const isTestnet = chainId === arcTestnet.id
+  const isMainnet = chainId === arcMainnet.id
+
+  // Toggle between Arc Mainnet and Arc Testnet
+  const handleToggleNetwork = async () => {
+    if (!isConnected) {
+      setShowWalletModal(true)
       return
     }
+
+    // Toggle: If currently on Mainnet, target is Testnet. If on Testnet (or other), target is Mainnet.
+    const targetChain = isMainnet ? arcTestnet : arcMainnet
+
     try {
       if (switchChainAsync) {
-        await switchChainAsync({ chainId: arcMainnet.id })
+        await switchChainAsync({ chainId: targetChain.id })
       } else {
-        await switchChain({ chainId: arcMainnet.id })
+        await switchChain({ chainId: targetChain.id })
       }
       queryClient.invalidateQueries()
     } catch (err) {
       if (err.code === 4001 || err.message?.includes('rejected')) {
         return
       }
-      await attemptRawSwitchTo(arcMainnet)
+      const success = await attemptRawSwitchTo(targetChain)
+      if (success) {
+        queryClient.invalidateQueries()
+      }
     }
   }
 
   // Raw Switch Implementation (Fallback)
   const attemptRawSwitchTo = async (targetChain) => {
     try {
-      const provider = await connector?.getProvider()
+      let provider = await connector?.getProvider()
+      if (!provider && typeof window !== 'undefined' && window.ethereum) {
+        provider = window.ethereum
+      }
       if (!provider) throw new Error('No provider')
 
       const chainIdHex = `0x${targetChain.id.toString(16)}`
+      const isTargetMainnet = targetChain.id === arcMainnet.id
 
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: chainIdHex }],
         })
+        return true
       } catch (switchError) {
-        if (switchError.code === 4902 || switchError.data?.originalError?.code === 4902) {
-          const isMainnet = targetChain.id === arcMainnet.id
+        if (
+          switchError.code === 4902 || 
+          switchError.data?.originalError?.code === 4902 ||
+          switchError.message?.includes('4902') ||
+          switchError.message?.includes('Unrecognized chain')
+        ) {
           await provider.request({
             method: 'wallet_addEthereumChain',
             params: [{
               chainId: chainIdHex,
-              chainName: targetChain.name,
+              chainName: isTargetMainnet ? 'Arc' : 'Arc Network Testnet',
               nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
-              rpcUrls: isMainnet ? ['https://rpc.mainnet.arc.io'] : ['https://rpc.testnet.arc.network'],
-              blockExplorerUrls: isMainnet ? ['https://explorer.arc.io'] : ['https://testnet.arcscan.app']
+              rpcUrls: isTargetMainnet 
+                ? ['https://5042.rpc.thirdweb.com', 'https://rpc.mainnet.arc.io'] 
+                : ['https://rpc.testnet.arc.io', 'https://arc-testnet-rpc.publicnode.com', 'https://5042002.rpc.thirdweb.com'],
+              blockExplorerUrls: isTargetMainnet ? ['https://explorer.arc.io'] : ['https://testnet.arcscan.app']
             }]
           })
+          return true
         } else {
           throw switchError
         }
       }
-      return true
     } catch (rawErr) {
       console.error("Raw Switch failed:", rawErr)
-      toast.error(`Error switching to ${targetChain.name}. Try manually in your wallet.`, { duration: 4000 })
+      if (!rawErr.message?.includes('rejected') && rawErr.code !== 4001) {
+        toast.error(`Error switching to ${targetChain.id === arcMainnet.id ? 'Arc Mainnet' : 'Arc Testnet'}. Try manually in your wallet.`, { duration: 4000 })
+      }
       return false
     }
   }
@@ -104,30 +128,30 @@ export default function Navbar() {
   return (
     <>
       <nav className="sticky top-0 z-50 backdrop-blur-xl bg-dark-bg/90 border-b border-dark-border">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3.5">
           <div className="flex items-center justify-between">
             {/* Logo + Links */}
-            <div className="flex items-center gap-12">
-              <Link to="/" className="flex items-center gap-3 group">
-                <div className="relative w-10 h-10 flex items-center justify-center">
+            <div className="flex items-center gap-6 lg:gap-10">
+              <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group">
+                <div className="relative w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 flex items-center justify-center">
                   <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-sm group-hover:bg-blue-500/35 transition-all"></div>
                   <img
                     src="/aura-icon.svg"
                     alt="Aura Payments"
-                    className="relative w-10 h-10 object-contain group-hover:scale-105 transition-transform duration-200"
+                    className="relative w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
                   />
                 </div>
                 <div className="flex items-center gap-1.5 leading-none">
-                  <span className="text-xl font-bold tracking-tight text-white group-hover:text-blue-100 transition-colors">
+                  <span className="text-lg sm:text-xl font-bold tracking-tight text-white group-hover:text-blue-100 transition-colors">
                     Aura
                   </span>
-                  <span className="text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-400 to-cyan-300">
+                  <span className="text-lg sm:text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-400 to-cyan-300">
                     Payments
                   </span>
                 </div>
               </Link>
 
-              <div className="hidden md:flex items-center gap-8">
+              <div className="hidden md:flex items-center gap-5 lg:gap-8">
                 <Link
                   to="/profile"
                   className={`text-sm font-medium transition ${isActive('/profile') ? 'text-white' : 'text-dark-muted hover:text-white'
@@ -173,15 +197,33 @@ export default function Navbar() {
 
             {/* Right Buttons */}
             <div className="flex items-center gap-3">
-              {/* Network Badge - Always Arc Mainnet */}
+              {/* Dynamic Network Badge & Toggle */}
               <button
-                onClick={handleSwitchToMainnet}
-                title="Arc Mainnet"
-                className="px-2.5 sm:px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 hover:border-blue-500/40 hover:bg-white/5 transition-all group cursor-pointer text-white"
+                onClick={handleToggleNetwork}
+                title={`Currently on ${isTestnet ? 'Arc Testnet' : 'Arc Mainnet'}. Click to switch to ${isTestnet ? 'Arc Mainnet' : 'Arc Testnet'}`}
+                className={`px-2.5 sm:px-3 py-2 rounded-xl border text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer group active:scale-95 ${
+                  isTestnet
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400'
+                    : 'bg-dark-card border-dark-border text-white hover:border-green-500/40 hover:bg-white/5'
+                }`}
               >
-                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-                <span className="hidden sm:inline">Arc Mainnet</span>
-                <span className="sm:hidden">Mainnet</span>
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    isTestnet
+                      ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)] animate-pulse'
+                      : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
+                  }`}
+                ></div>
+                <span className="hidden sm:inline">{isTestnet ? 'Arc Testnet' : 'Arc Mainnet'}</span>
+                <span className="sm:hidden">{isTestnet ? 'Testnet' : 'Mainnet'}</span>
+                <svg
+                  className="w-3 h-3 text-dark-muted group-hover:text-white transition-transform group-hover:rotate-180 duration-300 ml-0.5 opacity-70"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
               </button>
 
               {/* Wallet Button */}

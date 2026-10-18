@@ -480,8 +480,8 @@ export default function InvoiceHistory({ onUpdateStats }) {
     );
 
     return (
-        <section className="flex-1 flex flex-col px-4 md:px-0 py-2 min-h-[540px] w-full items-center">
-            <div className="w-full max-w-4xl flex flex-col flex-1 min-h-[540px] space-y-4">
+        <section className="flex-1 flex flex-col px-4 md:px-0 py-1 w-full items-center">
+            <div className="w-full max-w-4xl flex flex-col flex-1 space-y-3 sm:space-y-4">
 
                 {/* Header & Controls Container */}
                 <div className="flex flex-col gap-4 opacity-0 animate-[fadeIn_0.5s_ease-out_forwards]">
