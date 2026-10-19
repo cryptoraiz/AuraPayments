@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi'
@@ -208,17 +207,11 @@ export default function Navbar() {
               {/* Dynamic Network Badge & Toggle */}
               <button
                 onClick={handleToggleNetwork}
-                title={
-                  !isWalletAligned && isConnected
-                    ? `Wallet is on another network. Click to switch wallet to ${isTestnet ? 'Arc Testnet' : 'Arc Mainnet'}.`
-                    : `Currently on ${isTestnet ? 'Arc Testnet' : 'Arc Mainnet'}. Click to switch to ${isTestnet ? 'Arc Mainnet' : 'Arc Testnet'}`
-                }
+                title={`Currently on ${isTestnet ? 'Arc Testnet' : 'Arc Mainnet'}. Click to switch to ${isTestnet ? 'Arc Mainnet' : 'Arc Testnet'}`}
                 className={`px-2.5 sm:px-3 py-2 rounded-xl border text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer group active:scale-95 ${
-                  !isWalletAligned && isConnected
-                    ? 'bg-amber-500/15 border-amber-500/60 text-amber-200 hover:bg-amber-500/25'
-                    : isTestnet
-                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400'
-                      : 'bg-dark-card border-dark-border text-white hover:border-green-500/40 hover:bg-white/5'
+                  isTestnet
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400'
+                    : 'bg-dark-card border-dark-border text-white hover:border-green-500/40 hover:bg-white/5'
                 }`}
               >
                 <div
