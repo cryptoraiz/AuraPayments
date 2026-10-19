@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getAllTokens } from '../../config/tokens';
-import { getAllChains, getChainsByMode } from '../../config/chains';
-import { useAccount, useBalance, useChainId } from 'wagmi';
+import { getAllTokens, getTokenBySymbol } from '../../config/tokens';
+import { getAllChains, getChainsByMode, getChainById } from '../../config/chains';
+import { useAccount, useBalance } from 'wagmi';
 import { useActiveArcChain } from '../../hooks/useActiveArcChain';
 
 export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedChain, selectedToken, selectingFor = 'in' }) {
   const { isMainnet } = useActiveArcChain();
-  const chains = getChainsByMode(isMainnet);
+  const chains = useMemo(() => getChainsByMode(isMainnet), [isMainnet]);
   const { address } = useAccount();
 
   // Initialize directly from selectedChain to prevent re-render flicker on open
@@ -16,7 +16,7 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
     if (selectedChain && chains.some(c => c.id === selectedChain.id)) {
       return selectedChain;
     }
-    return chains[0];
+    return chains[0] || getChainById(5042);
   });
 
   const [search, setSearch] = useState('');
@@ -38,14 +38,19 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
     return () => window.removeEventListener('resize', checkNotebook);
   }, []);
 
-  // Sync activeChain only when selectedChain ID truly changes (not on isOpen toggle)
+  // When modal opens or selectedChain changes from parent, sync activeChain
   useEffect(() => {
-    if (selectedChain && chains.some(c => c.id === selectedChain.id)) {
+    if (isOpen && selectedChain && chains.some(c => c.id === selectedChain.id)) {
       setActiveChain(selectedChain);
-    } else if (!chains.some(c => c.id === activeChain?.id)) {
-      setActiveChain(chains[0]);
     }
-  }, [selectedChain?.id, isMainnet, chains]);
+  }, [isOpen, selectedChain?.id, chains]);
+
+  // Fallback if current activeChain is not part of the active mode (e.g. mainnet vs testnet toggle)
+  useEffect(() => {
+    if (activeChain && !chains.some(c => c.id === activeChain.id)) {
+      setActiveChain(chains[0] || getChainById(5042));
+    }
+  }, [chains, activeChain?.id]);
 
   // Reset internal search filter when closed
   useEffect(() => {
@@ -61,14 +66,27 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
   // Filter only to USDC for the active chain
   const tokens = getAllTokens().filter(t => {
     if (t.symbol !== 'USDC') return false;
-    if (t.chainId) return t.chainId === activeChain.id;
-    return activeChain.id === 5042 || activeChain.id === 5042002; // tokens without chainId belong to Arc
+    if (t.chainId) return t.chainId === activeChain?.id;
+    return activeChain?.id === 5042 || activeChain?.id === 5042002; // tokens without chainId belong to Arc
   }).filter(t => {
     if (!search) return true;
     return t.symbol.toLowerCase().includes(search.toLowerCase()) ||
            t.name.toLowerCase().includes(search.toLowerCase()) ||
            t.address?.toLowerCase().includes(search.toLowerCase());
   });
+
+  const handleChainClick = (chain) => {
+    // If user clicks the currently active chain again, immediately confirm selection
+    if (activeChain?.id === chain.id) {
+      const token = tokens[0] || getTokenBySymbol('USDC', chain.id);
+      if (token) {
+        onSelect({ chain, token });
+        onClose();
+        return;
+      }
+    }
+    setActiveChain(chain);
+  };
 
   if (typeof document === 'undefined') return null;
 
@@ -112,22 +130,38 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
                 </div>
               </div>
               
-              <div className={`flex-1 overflow-y-auto hide-scrollbar ${isNotebook ? 'p-1.5' : 'p-2'}`}>
-                <div className={`${isNotebook ? 'text-[9px] px-2 mb-1 mt-1' : 'text-[10px] px-3 mb-2 mt-2'} font-bold text-dark-muted uppercase tracking-wider`}>Top Chains</div>
-                {filteredChains.map((chain) => (
-                  <button
-                    key={chain.id}
-                    onClick={() => setActiveChain(chain)}
-                    className={`w-full flex items-center ${isNotebook ? 'gap-2 px-2.5 py-1.5 rounded-lg text-xs' : 'gap-3 px-3 py-2.5 rounded-xl text-sm'} transition-colors duration-150 font-medium ${
-                      activeChain.id === chain.id 
-                        ? 'bg-dark-card text-white shadow-sm border border-dark-border/50' 
-                        : 'text-dark-muted hover:bg-dark-card/50 hover:text-white border border-transparent'
-                    }`}
-                  >
-                    <NetworkIcon chain={chain} size={isNotebook ? 'xs' : 'sm'} />
-                    <span className="truncate">{chain.name}</span>
-                  </button>
-                ))}
+              <div className={`flex-1 overflow-y-auto hide-scrollbar ${isNotebook ? 'p-1.5' : 'p-2'} space-y-1`}>
+                <div className={`${isNotebook ? 'text-[9px] px-2 mb-1 mt-1' : 'text-[10px] px-3 mb-2 mt-2'} font-bold text-dark-muted uppercase tracking-wider`}>
+                  Top Chains
+                </div>
+                {filteredChains.map((chain) => {
+                  const isActive = activeChain?.id === chain.id;
+                  const isCurrentSelection = selectedChain?.id === chain.id;
+                  return (
+                    <button
+                      key={chain.id}
+                      type="button"
+                      onClick={() => handleChainClick(chain)}
+                      className={`w-full flex items-center justify-between ${
+                        isNotebook ? 'gap-2 px-2.5 py-2 rounded-lg text-xs' : 'gap-3 px-3 py-2.5 rounded-xl text-sm'
+                      } transition-all duration-150 font-medium cursor-pointer ${
+                        isActive 
+                          ? 'bg-blue-600/20 text-white shadow-sm border border-blue-500/40' 
+                          : 'text-dark-muted hover:bg-dark-card/60 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <NetworkIcon chain={chain} size={isNotebook ? 'xs' : 'sm'} />
+                        <span className="truncate font-semibold">{chain.name}</span>
+                      </div>
+                      {isCurrentSelection && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30 shrink-0">
+                          In use
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -248,20 +282,50 @@ function TokenRow({ token, chain, onSelect, isSelected, userAddress, isNotebook 
 
   return (
     <button
+      type="button"
       onClick={onSelect}
-      className={`w-full flex items-center justify-between ${isNotebook ? 'p-2 rounded-xl' : 'p-3 rounded-2xl'} transition-colors duration-150 hover:bg-dark-bg/80 group ${isSelected ? 'bg-blue-500/10 border border-blue-500/20' : 'border border-transparent'}`}
+      className={`w-full flex items-center justify-between ${
+        isNotebook ? 'p-2.5 rounded-xl' : 'p-3.5 rounded-2xl'
+      } transition-all duration-150 group cursor-pointer ${
+        isSelected 
+          ? 'bg-blue-500/15 border border-blue-500/40 shadow-sm' 
+          : 'bg-dark-bg/40 hover:bg-dark-bg/80 border border-dark-border/40 hover:border-blue-500/30'
+      }`}
     >
       <div className={`flex items-center ${isNotebook ? 'gap-2.5' : 'gap-3'}`}>
         <TokenIcon token={token} size={isNotebook ? 'sm' : 'md'} />
-        <div className="flex flex-col items-start">
-          <span className={`font-bold text-white ${isNotebook ? 'text-sm' : 'text-base'} tracking-wide`}>{token.symbol}</span>
-          <span className={`${isNotebook ? 'text-[10px]' : 'text-xs'} text-dark-muted font-medium`}>{token.name}</span>
+        <div className="flex flex-col items-start text-left">
+          <div className="flex items-center gap-1.5">
+            <span className={`font-bold text-white ${isNotebook ? 'text-sm' : 'text-base'} tracking-wide`}>
+              {token.symbol}
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-semibold uppercase">
+              {chain?.name}
+            </span>
+          </div>
+          <span className={`${isNotebook ? 'text-[10px]' : 'text-xs'} text-dark-muted font-medium`}>
+            {token.name}
+          </span>
         </div>
       </div>
-      <div className="flex flex-col items-end text-right">
-        <span className={`${isNotebook ? 'text-[10px] mb-0.5' : 'text-xs mb-1'} text-blue-400 font-mono opacity-80`}>{token.address.slice(0, 6)}...{token.address.slice(-4)}</span>
-        <div className="flex items-center gap-2">
-           <span className={`font-semibold text-white ${isNotebook ? 'text-xs sm:text-sm' : 'text-base'}`}>{displayBalance}</span>
+      <div className="flex items-center gap-3">
+        <div className="flex flex-col items-end text-right">
+          <span className={`${isNotebook ? 'text-[10px] mb-0.5' : 'text-xs mb-1'} text-blue-400 font-mono opacity-80`}>
+            {token.address ? `${token.address.slice(0, 6)}...${token.address.slice(-4)}` : ''}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <span className={`font-semibold text-white ${isNotebook ? 'text-xs sm:text-sm' : 'text-base'}`}>
+              {displayBalance}
+            </span>
+            <span className="text-[10px] text-dark-muted">USDC</span>
+          </div>
+        </div>
+        <div className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all ${
+          isSelected
+            ? 'bg-blue-500 text-white shadow-sm'
+            : 'bg-blue-600/20 text-blue-300 group-hover:bg-blue-600 group-hover:text-white border border-blue-500/30'
+        }`}>
+          {isSelected ? 'Selected' : 'Select'}
         </div>
       </div>
     </button>
