@@ -113,3 +113,10 @@ export function getAllChains() {
 export function getChainsByMode(isMainnet = false) {
   return CHAINS.filter((c) => c.isTestnet === !isMainnet);
 }
+
+export function isTestnetChainId(id) {
+  const numId = Number(id);
+  const chain = CHAINS.find((c) => c.id === numId);
+  if (chain) return chain.isTestnet;
+  return [5042002, 11155111, 84532, 11155420, 421614].includes(numId);
+}

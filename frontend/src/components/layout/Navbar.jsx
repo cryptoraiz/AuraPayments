@@ -15,7 +15,7 @@ export default function Navbar() {
   const { connect, connectors } = useConnect()
   const { disconnect } = useDisconnect()
   const { count: notificationCount } = useInvoiceNotifications()
-  const { chainId, isMainnet, isTestnet, networkName, setWindowChainId } = useActiveArcChain()
+  const { chainId, isMainnet, isTestnet, networkName, setWindowChainId, setNetworkMode, toggleNetworkMode, isWalletAligned } = useActiveArcChain()
   const { switchChain, switchChainAsync } = useSwitchChain()
   const queryClient = useQueryClient()
   const [showWalletModal, setShowWalletModal] = useState(false)
@@ -38,19 +38,27 @@ export default function Navbar() {
       }
     }
   }, [queryClient])
+
   const handleWalletSelect = (connector) => {
     connect({ connector })
   }
 
-  // Toggle between Arc Mainnet and Arc Testnet
+  // Toggle between Arc Mainnet and Arc Testnet, or align wallet if misaligned
   const handleToggleNetwork = async () => {
     if (!isConnected) {
-      setShowWalletModal(true)
+      toggleNetworkMode()
       return
     }
 
-    // Toggle: If currently on Mainnet, target is Testnet. If on Testnet (or other), target is Mainnet.
-    const targetChain = isMainnet ? arcTestnet : arcMainnet
+    // If wallet is not on the active network, switch wallet to current mode's Arc chain
+    let targetChain
+    if (!isWalletAligned) {
+      targetChain = isMainnet ? arcMainnet : arcTestnet
+    } else {
+      // If already aligned, toggle to the other mode
+      const nextMode = toggleNetworkMode()
+      targetChain = nextMode === 'mainnet' ? arcMainnet : arcTestnet
+    }
 
     try {
       if (switchChainAsync) {
@@ -200,11 +208,17 @@ export default function Navbar() {
               {/* Dynamic Network Badge & Toggle */}
               <button
                 onClick={handleToggleNetwork}
-                title={`Currently on ${isTestnet ? 'Arc Testnet' : 'Arc Mainnet'}. Click to switch to ${isTestnet ? 'Arc Mainnet' : 'Arc Testnet'}`}
+                title={
+                  !isWalletAligned && isConnected
+                    ? `Wallet is on another network. Click to switch wallet to ${isTestnet ? 'Arc Testnet' : 'Arc Mainnet'}.`
+                    : `Currently on ${isTestnet ? 'Arc Testnet' : 'Arc Mainnet'}. Click to switch to ${isTestnet ? 'Arc Mainnet' : 'Arc Testnet'}`
+                }
                 className={`px-2.5 sm:px-3 py-2 rounded-xl border text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer group active:scale-95 ${
-                  isTestnet
-                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400'
-                    : 'bg-dark-card border-dark-border text-white hover:border-green-500/40 hover:bg-white/5'
+                  !isWalletAligned && isConnected
+                    ? 'bg-amber-500/15 border-amber-500/60 text-amber-200 hover:bg-amber-500/25'
+                    : isTestnet
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400'
+                      : 'bg-dark-card border-dark-border text-white hover:border-green-500/40 hover:bg-white/5'
                 }`}
               >
                 <div

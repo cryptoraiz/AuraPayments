@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAccount, useBalance, useChainId, useConnect, useSwitchChain } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { arcMainnet, arcTestnet } from '../../config/wagmi';
+import { useActiveArcChain } from '../../hooks/useActiveArcChain';
 import { toast } from 'sonner';
 import { getTokenBySymbol, TOKENS } from '../../config/tokens';
 import { getChainById } from '../../config/chains';
@@ -39,6 +40,7 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const { switchChain, switchChainAsync } = useSwitchChain();
   const navigate = useNavigate();
   const connectedChainId = useChainId();
+  const { isMainnet, isTestnet, chainId: activeArcChainId } = useActiveArcChain();
   const queryClient = useQueryClient();
   const { prices } = useTokenPrices();
 
@@ -84,9 +86,8 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [amount,    setAmount]    = useState(() => queryAmount || '');
   
   // Swap State 
-  const isInitiallyTestnet = connectedChainId === arcTestnet.id;
-  const initialArcId = isInitiallyTestnet ? arcTestnet.id : arcMainnet.id;
-  const initialCounterChainId = isInitiallyTestnet ? 84532 : 8453;
+  const initialArcId = isMainnet ? arcMainnet.id : arcTestnet.id;
+  const initialCounterChainId = isMainnet ? 8453 : 84532;
 
   const [tokenIn,  setTokenIn]  = useState(() => {
     if (queryFrom) {
@@ -211,10 +212,10 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const [txHash,           setTxHash]           = useState(null);
 
   // Aura Payments Swap supports Arc Mainnet and Arc Testnet
-  const isCurrentTestnet = connectedChainId === arcTestnet.id;
-  const isCurrentMainnet = !isCurrentTestnet;
-  const activeSwapChainId = isCurrentTestnet ? arcTestnet.id : arcMainnet.id;
-  const isSupportedArcChain = connectedChainId === arcMainnet.id || connectedChainId === arcTestnet.id;
+  const isCurrentTestnet = !isMainnet;
+  const isCurrentMainnet = isMainnet;
+  const activeSwapChainId = isMainnet ? arcMainnet.id : arcTestnet.id;
+  const isSupportedArcChain = connectedChainId === activeSwapChainId;
   const isWrongChain = address && !isSupportedArcChain;
 
   // Swap Balances 
@@ -223,33 +224,35 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
   const isNativeIn  = tokenIn?.isNative || tokenIn?.symbol === 'USDC' || tokenIn?.address?.toLowerCase()  === '0x3600000000000000000000000000000000000000';
   const isNativeOut = tokenOut?.isNative || tokenOut?.symbol === 'USDC' || tokenOut?.address?.toLowerCase() === '0x3600000000000000000000000000000000000000';
 
-  // Sync bridge chains and swap tokens whenever connectedChainId changes
+  // Sync bridge chains and swap tokens whenever isMainnet or connectedChainId changes
   useEffect(() => {
-    const isTest = connectedChainId === arcTestnet.id;
-    const currentArcId = isTest ? arcTestnet.id : arcMainnet.id;
-    const defaultCounterChainId = isTest ? 84532 : 8453; // Base Sepolia on Testnet, Base Mainnet on Mainnet
+    const currentArcId = isMainnet ? arcMainnet.id : arcTestnet.id;
+    const defaultCounterChainId = isMainnet ? 8453 : 84532; // Base Mainnet on Mainnet, Base Sepolia on Testnet
 
     setTokenIn(getTokenBySymbol('USDC', currentArcId));
     setTokenOut(getTokenBySymbol('EURC', currentArcId));
     
-    setBridgeChainIn(getChainById(currentArcId));
-    setBridgeTokenIn(getTokenBySymbol('USDC', currentArcId));
-    setBridgeChainOut(getChainById(defaultCounterChainId));
-    setBridgeTokenOut(getTokenBySymbol('USDC', defaultCounterChainId));
+    // Enforce strict testnet/mainnet segregation on bridge chains
+    const expectedTestnet = !isMainnet;
+    if (bridgeChainIn?.isTestnet !== expectedTestnet || bridgeChainOut?.isTestnet !== expectedTestnet) {
+      setBridgeChainIn(getChainById(currentArcId));
+      setBridgeTokenIn(getTokenBySymbol('USDC', currentArcId));
+      setBridgeChainOut(getChainById(defaultCounterChainId));
+      setBridgeTokenOut(getTokenBySymbol('USDC', defaultCounterChainId));
+    }
 
     queryClient.invalidateQueries();
-  }, [connectedChainId, queryClient]);
+  }, [isMainnet, connectedChainId, queryClient]);
 
   // Invariant Guard: Source and Destination networks must NEVER be the same
   useEffect(() => {
     if (bridgeChainIn && bridgeChainOut && bridgeChainIn.id === bridgeChainOut.id) {
-      const isMainnet = !bridgeChainIn.isTestnet;
       const complementary = isMainnet
         ? (bridgeChainIn.id === arcMainnet.id ? getChainById(8453) : getChainById(arcMainnet.id))
         : (bridgeChainIn.id === arcTestnet.id ? getChainById(84532) : getChainById(arcTestnet.id));
       setBridgeChainOut(complementary);
     }
-  }, [bridgeChainIn, bridgeChainOut]);
+  }, [bridgeChainIn, bridgeChainOut, isMainnet]);
 
   const { data: balInData, refetch: refetchBalIn } = useBalance({
     address,
@@ -677,7 +680,6 @@ export default function DeFiWidget({ defaultTab = 'swap' }) {
       }
 
       if (bridgeChainIn.id === bridgeChainOut.id) {
-        const isMainnet = !bridgeChainIn.isTestnet;
         const complementary = isMainnet
           ? (bridgeChainIn.id === arcMainnet.id ? getChainById(8453) : getChainById(arcMainnet.id))
           : (bridgeChainIn.id === arcTestnet.id ? getChainById(84532) : getChainById(arcTestnet.id));

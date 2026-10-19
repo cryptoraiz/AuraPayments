@@ -4,11 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getAllTokens } from '../../config/tokens';
 import { getAllChains, getChainsByMode } from '../../config/chains';
 import { useAccount, useBalance, useChainId } from 'wagmi';
-import { arcMainnet } from '../../config/wagmi';
+import { useActiveArcChain } from '../../hooks/useActiveArcChain';
 
 export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedChain, selectedToken, selectingFor = 'in' }) {
-  const chainId = useChainId();
-  const isMainnet = chainId === arcMainnet.id;
+  const { isMainnet } = useActiveArcChain();
   const chains = getChainsByMode(isMainnet);
   const { address } = useAccount();
 
@@ -43,8 +42,10 @@ export default function NetworkTokenModal({ isOpen, onClose, onSelect, selectedC
   useEffect(() => {
     if (selectedChain && chains.some(c => c.id === selectedChain.id)) {
       setActiveChain(selectedChain);
+    } else if (!chains.some(c => c.id === activeChain?.id)) {
+      setActiveChain(chains[0]);
     }
-  }, [selectedChain?.id]);
+  }, [selectedChain?.id, isMainnet, chains]);
 
   // Reset internal search filter when closed
   useEffect(() => {
